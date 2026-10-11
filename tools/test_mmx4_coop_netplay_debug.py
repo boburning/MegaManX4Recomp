@@ -45,6 +45,7 @@ def main():
     parser.add_argument('--campaign', type=int, choices=(0, 1), default=0)
     parser.add_argument('--doors', action='store_true', help='Also traverse the P2-led Cyber door')
     parser.add_argument('--train-only',action='store_true',help='Qualify both Slash Split background panes and CRCs')
+    parser.add_argument('--latch-only',action='store_true',help='Qualify the native Mushroom latch and matching peer state')
     parser.set_defaults(latency=0, jitter=0, seed=714, delay=2,
                         frontend='headless-opengl', boot_timeout=100, phase_timeout=35)
     args = parser.parse_args()
@@ -75,6 +76,53 @@ def main():
         exercise = Exercise(args, peers, report)
         exercise.boot(args.campaign)
         debug = NetplayDevelopment(ports[2], ports[3])
+        if args.latch_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            runtime=NetplayRuntime(debug)
+            debug.fixture(5,3)
+            runtime.fixture(1,3,1,args.campaign)
+            report['stage_skip_overlays']=[peer.request('overlay_status') for peer in peers]
+            for seat,overlay in enumerate(report['stage_skip_overlays']):
+                if overlay['save_menu_open']:
+                    print('Development packet opened the host save menu on peer',seat,flush=True)
+                    runtime.input(0xdfff,seat)
+                    time.sleep(.15)
+            runtime.release()
+            runtime.wait_playable(45,advance_dialogue=True)
+            runtime.fixture(3,3)
+            runtime.wait_playable(45,advance_dialogue=True)
+            def latch(label):
+                observations=[]
+                for seat,peer in enumerate(peers):
+                    pool=peer.read(0x80165A30,32*0x8c)
+                    found=[]
+                    for index in range(32):
+                        actor=pool[index*0x8c:(index+1)*0x8c]
+                        if actor[0] and actor[1]==13 and struct.unpack_from('<h',actor,14)[0]==488:
+                            found.append(dict(state=actor[4],action=actor[5]))
+                    if len(found)!=1:raise AssertionError((label,seat,found))
+                    observations.append(found[0])
+                    debug.peers[seat].screenshot(args.output/(label+'-peer'+str(seat)+'.png'))
+                report['observations'].append(dict(label=label,latches=observations))
+                return observations
+            runtime.teleport(1,6114,592)
+            runtime.teleport(0,6152,452)
+            exercise.wait_ticks(6)
+            waiting=latch('partner-below')
+            if any(p!={'state':1,'action':0} for p in waiting):
+                raise AssertionError(('Latch closed over the visible partner',waiting))
+            tick=min(peer.status()['tick'] for peer in peers)
+            exercise.checkpoint('Mushroom visible-partner wait CRC',tick,min_digests=2)
+            runtime.teleport_both(6152,452)
+            exercise.wait_ticks(32)
+            closed=latch('both-clear')
+            if any(p['state']!=2 and p['action']!=1 for p in closed):
+                raise AssertionError(('Latch failed to close after both clear',closed))
+            tick=min(peer.status()['tick'] for peer in peers)
+            exercise.checkpoint('Mushroom native closure CRC',tick,min_digests=2)
+            report.update(status='passed',native_latch=True)
+            print('Netplay: native latch waits for the visible partner and closes with matching peer CRCs',flush=True)
+            return
         if args.train_only:
             if args.cameras!='split':raise ValueError('Train scenery qualification requires --cameras split')
             from mmx4_netplay_runtime import NetplayRuntime
@@ -178,6 +226,7 @@ def main():
         for peer in peers:
             try:
                 report.setdefault('failure_states', []).append(peer.observe())
+                report.setdefault('failure_overlays', []).append(peer.request('overlay_status'))
             except Exception:
                 pass
         raise

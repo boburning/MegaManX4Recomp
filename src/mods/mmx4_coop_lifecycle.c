@@ -3,6 +3,7 @@
  * P1 owns the one native campaign/save record, including all upgrades.
  * Only P2's transient health/ammo/weapon and menu/pickup ownership live here. */
 #include "mmx4_coop_internal.h"
+#include "mod_netplay.h"
 #include "gpu.h"
 #include "ws_view_anchor.h"
 #include <string.h>
@@ -1050,13 +1051,20 @@ static int fan_latch(CPUState *cpu,uint32_t address) {
         {(int16_t)(body_word(body,8)>>16),(int16_t)(body_word(body,12)>>16),1}};
     int camera_x=(int16_t)psx_mod_read_half(0x801419BAu);
     int camera_y=(int16_t)psx_mod_read_half(0x801419BEu);
-    WsViewAnchor view={0};gpu_ws_bg2d_get_view(0,&view);
-    /* Wait only for the partner visible in this shared view. A dead,
-     * withdrawn, warping or distant player must not hold the stage open. */
-    for(unsigned seat=0;seat<2;++seat) {
-        int x=players[seat].world_x-camera_x,y=players[seat].world_y-camera_y;
-        if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
-    }
+    WsViewAnchor view={0};
+    if(psx_mod_netplay_is_active()) {
+        /* Own-view render anchors can differ between peers. Shared decisions
+         * use only the admitted aspect and canonical native camera limits. */
+        int aspect=psx_mod_netplay_aspect();
+        int extra=aspect==2?120:aspect==1?53:0;
+        view=ws_view_anchor(extra,camera_x,(int16_t)psx_mod_read_half(0x801419CEu),
+            (int16_t)psx_mod_read_half(0x801419CCu));
+    }else gpu_ws_bg2d_get_view(0,&view);
+    /* Wait only for the visible partner. Camera following runs after this
+     * actor pass, so the advancing player may cross its top edge this tick.
+     * A dead, withdrawn, warping or distant partner must not hold it open. */
+    int x=players[1].world_x-camera_x,y=players[1].world_y-camera_y;
+    if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
     uint32_t player_box=body_word(body,0x68),platform_box=psx_mod_read_word(actor+0x68);
     if(!player_box || !platform_box)return 0;
     /* Original800C36E8 closes only when PLAYER's collision bottom clears
