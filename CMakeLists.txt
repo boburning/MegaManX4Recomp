@@ -85,6 +85,7 @@ set(MMX4_COOP_CONTRACT_FILES
     game.toml src/mods/mmx4_coop_plugin.c src/mods/mmx4_coop_lifecycle.c
     src/mods/mmx4_coop_combat.c src/mods/mmx4_coop_assets.c src/mods/mmx4_coop_audio.c
     src/mods/mmx4_coop_internal.h src/mods/mmx4_coop_assets.h
+    src/mods/mmx4_coop_snapshot.h
     src/mods/mmx4_coop_views.c src/mods/mmx4_coop_views.h
     src/mods/mmx4_coop_split.c src/mods/mmx4_coop_web.c
     src/mods/mmx4_coop_debug_protocol.c src/mods/mmx4_coop_debug_protocol.h
@@ -111,6 +112,9 @@ set(MMX4_COOP_FRAMEWORK_CONTRACT_FILES
     runtime/src/render_pass.c runtime/include/mod_plugins.h
     runtime/src/mod_netplay.c runtime/include/mod_netplay.h
     runtime/src/mod_runtime.cpp runtime/include/mod_runtime.h runtime/src/mod_texture_banks.c
+    runtime/src/mod_snapshot.c runtime/include/mod_snapshot.h
+    runtime/src/boot_state.c runtime/include/boot_state.h
+    runtime/src/memory.c runtime/include/mod_memory.h
     runtime/src/host_osd.c runtime/include/host_osd.h
     runtime/src/gpu.c runtime/include/mod_capcom_bg2d.h
     runtime/src/spu.c runtime/include/spu.h runtime/src/mod_guest_services.c)
@@ -170,6 +174,9 @@ if(BUILD_TESTING)
     add_test(NAME mmx4_coop_background_test COMMAND mmx4_coop_background_test)
     find_package(Python3 3.11 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
+        add_test(NAME mmx4_diagnostic_replay_prepare_test
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_replay_mmx4_diagnostics.py")
         add_test(NAME mmx4_release_config_test
             COMMAND "${Python3_EXECUTABLE}"
                     "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_release_config.py")

@@ -6,6 +6,8 @@ extern "C" {
 /* A replay overrides accepted seat input, never physical device bindings. */
 int mmx4_diagnostics_resolve_input(unsigned seat,uint16_t *buttons);
 void mmx4_diagnostics_reset(void);
+/* A native input callback has a host stack until its guest call returns. */
+int mmx4_diagnostics_snapshot_ready(void);
 #ifdef __cplusplus
 }
 #endif

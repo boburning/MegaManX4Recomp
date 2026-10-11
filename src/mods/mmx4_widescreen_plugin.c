@@ -4,6 +4,7 @@
 #include "mod_visible_placements.h"
 #include "mod_netplay.h"
 #include "mmx4_coop_internal.h"
+#include "mmx4_coop_snapshot.h"
 #include <string.h>
 
 #define LAYERS 0x801419b0u
@@ -14,6 +15,23 @@ static uint32_t arena, object_begin, placement_state;
 static int object_pending, object_screen, supplemental_scan;
 static uint32_t view_object_begin;
 static int view_object_pending,view_object_screen,view_supplemental_scan;
+int mmx4_widescreen_snapshot_ready(void) {
+    return !supplemental_scan && !psx_mod_local_view_scope();
+}
+int mmx4_widescreen_snapshot(Mmx4SnapshotIO *snapshot) {
+    mmx4_snapshot_fixed(snapshot,arena);
+    mmx4_snapshot_fixed(snapshot,placement_state);
+    MMX4_SNAPSHOT_U32(snapshot,object_begin);
+    MMX4_SNAPSHOT_BOOL(snapshot,object_pending);
+    MMX4_SNAPSHOT_BOOL(snapshot,object_screen);
+    mmx4_snapshot_fixed(snapshot,0); /* No suspended placement scan. */
+    if(snapshot->mode==MMX4_SNAPSHOT_READ) {
+        supplemental_scan=0;
+        view_object_begin=0;
+        view_object_pending=view_object_screen=view_supplemental_scan=0;
+    }
+    return snapshot->ok;
+}
 void mmx4_widescreen_view_save(void) {
     view_object_begin=object_begin;view_object_pending=object_pending;
     view_object_screen=object_screen;view_supplemental_scan=supplemental_scan;

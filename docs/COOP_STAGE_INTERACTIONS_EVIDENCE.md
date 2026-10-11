@@ -320,3 +320,50 @@ The exact section2 staircase-arrival footage for item34 is unavailable in the
 specified clip range. Frame-by-frame review of IMG0757's later lift retry
 at5.77–6.47seconds shows ordinary beams, overlapping circular arrival
 sprites, then both normal bodies. This does not qualify the missing report.
+
+## Offline co-op states and diagnostic baselines, October 11
+
+Offline co-op now registers a versioned, pointer-free host snapshot provider.
+It preserves both native player contexts, lifecycle/menu ownership, combat/web
+state, private audio headers, Split/widescreen state and immutable texture-bank
+descriptors alongside the guest/device snapshot. Resource initialization runs
+before a possible first-PC load. Immutable SPU sample banks wait for hardware
+initialization and rebind once per hardware epoch. The provider excludes live
+guest-call/projection stacks; shared save/load and rewind defer until the
+continuation context is safe. Network user state jumps remain blocked.
+
+Native Windows QA39 uses X/P1 and QA40 uses Zero/P1. Both drive the mapped F7
+panel and actual Square Save/Cross Load, move both bodies, restore positions,
+restore P2 after a fatal HP fixture, and restore a settled P2-owned native pause
+menu that P2 can unpause. They select/accept and cancel real F8 rewind history,
+then start a new process with slot0 auto-load and attack with both characters.
+QA44 repeats the final shared safe-context changes with X/P1. All retain both
+healthy active bodies and the original roster; inspected warm/cold/rewound
+screenshots preserve complete sprites and aligned HUDs.
+
+Successful offline state loads and rewind start a fresh diagnostic segment
+with their complete baseline.pst. Checked loaders notify only after accepting
+the restored PC; failed loads roll back quietly and do not split recordings.
+The replay runtime compares the actual restored image against the required
+baseline before admitting input rows. QA41 cold-load playback verifies152
+hashes; QA42 raw-rewind playback verifies48. QA45 repeats cold-load playback
+on the final X/P1 build and verifies155 hashes. Native Linux focused serializer,
+no-provider handoff, arena reset, RAM geometry, diagnostics and replay-preparation
+tests pass. Direct AppImage playback by the helper is rejected with extraction
+instructions; extracted native Linux payloads use copied libraries and private
+mod/settings/data roots. This is not full Linux gameplay qualification.
+
+Final two-peer native LAN QA43 reaches original gameplay, exercises movement
+and attacks for each seat, and matches99 core/mod CRC samples through tick3201.
+Its last closed-menu save-unavailable assertion was invalid: that field reports
+the currently displayed message, not capability while the menu is closed.
+Network request refusal remains covered by the shared title-policy test. This
+LAN check does not qualify a Discord login, WAN path or full network playback.
+
+Session review also found enhancement allocation cursors and packet/texture
+registrations surviving lobby teardown. The runtime now retires those resources
+after renderer teardown and before each activation. Focused tests qualify
+five large identical allocation layouts,20 packet/bank reuses, active-pass
+refusal, journal retirement and preservation of ordinary RAM/scratchpad. A
+complete UI-driven rematch remains additional coverage rather than a claimed
+native result.

@@ -12,18 +12,20 @@ static unsigned transfer_busy;
 static PSXModFunctionFilterCallback sound_filter,key_filter,stop_filter,status_filter,volume_filter,off_filter;
 static uint32_t private_bank,private_active,private_stops;
 static unsigned private_plays,private_volumes;
+static uint32_t sample_epoch,sample_registrations,guest_writes;
 static uint8_t *ptr(uint32_t a) {
     if((a&0xFF000000u)==0x8F000000u) {CHECK(a-0x8F000000u<sizeof private_ram);return private_ram+a-0x8F000000u;}
     CHECK((a&0x1FFFFFFFu)<sizeof ram);return ram+(a&0x1FFFFFFFu);
 }
 uint8_t psx_mod_read_byte(uint32_t a) {return *ptr(a);}
-void psx_mod_write_byte(uint32_t a,uint8_t v) {*ptr(a)=v;}
+void psx_mod_write_byte(uint32_t a,uint8_t v) {*ptr(a)=v;++guest_writes;}
 uint16_t psx_mod_read_half(uint32_t a) {return (uint16_t)((unsigned)*ptr(a)|(unsigned)*ptr(a+1)<<8);}
 uint32_t psx_mod_read_word(uint32_t a) {return (uint32_t)*ptr(a)|(uint32_t)*ptr(a+1)<<8|(uint32_t)*ptr(a+2)<<16|(uint32_t)*ptr(a+3)<<24;}
-void psx_mod_write_word(uint32_t a,uint32_t v) {for(unsigned i=0;i<4;++i)*ptr(a+i)=(uint8_t)(v>>(i*8));}
+void psx_mod_write_word(uint32_t a,uint32_t v) {for(unsigned i=0;i<4;++i)*ptr(a+i)=(uint8_t)(v>>(i*8));++guest_writes;}
 int psx_mod_host_write_ram(uint32_t a,const void *p,uint32_t n) {memcpy(ptr(a),p,n);return 1;}
 uint32_t psx_mod_alloc_guest_memory(uint32_t n,uint32_t align) {(void)align;uint32_t a=0x8F000000u+allocated;allocated+=n;CHECK(allocated<=sizeof private_ram);return a;}
-int psx_mod_spu_sample_bank(uint32_t b,const void *p,uint32_t n) {CHECK(b>=12 && b<16 && p && n==32);registered|=1u<<b;return 1;}
+uint32_t psx_mod_spu_sample_bank_epoch(void) {return sample_epoch;}
+int psx_mod_spu_sample_bank(uint32_t b,const void *p,uint32_t n) {CHECK(sample_epoch && b>=12 && b<16 && p && n==32);registered|=1u<<b;++sample_registrations;return 1;}
 int psx_mod_spu_bind_voice_bank(unsigned v,uint32_t b) {CHECK(v==20);pending_bank=b;return 1;}
 int psx_mod_spu_private_voice_play(unsigned v,uint32_t b,const uint16_t regs[8],unsigned mode) {
     CHECK(v==20 && b>=12 && b<16 && regs[2]==0x1234 && regs[3]==8 && regs[7]==8 && mode==2);
@@ -94,18 +96,32 @@ uint32_t psx_mod_call_guest_uncharged(CPUState *cpu,uint32_t a,uint32_t ra,uint3
 }
 static void put(uint8_t *p,uint32_t n) {for(unsigned i=0;i<4;++i)p[i]=(uint8_t)(n>>(i*8));}
 int main(void) {
-    CHECK(sound_filter && key_filter);mmx4_coop_audio_reset();
+    CHECK(sound_filter && key_filter);CHECK(mmx4_coop_audio_activate());
     uint8_t full[10240]={0};put(full,14);put(full+4,sizeof full);
     /* Zero-sized unrelated members, then two typed header/body pairs. */
     for(unsigned i=10;i<14;++i) {put(full+8+i*8,(i&1)?(i==11?0x20101:0x20301):6);put(full+12+i*8,(i&1)?32:44);}
     for(unsigned at=2048;at<=6144;at+=4096) {
         put(full+at,12);put(full+at+4,32);full[at+8]=0x83;memcpy(full+at+12,"pBAV",4);
     }
+    /* Activation can reconstruct immutable archives before SPU boot. */
+    for(unsigned character=0;character<2;++character)
+        CHECK(mmx4_coop_audio_prepare(character,full,sizeof full,0));
+    CHECK(!registered && !sample_registrations && !mmx4_coop_audio_snapshot_ready());
+    sample_epoch=1;
     for(unsigned character=0;character<2;++character) {
         CHECK(mmx4_coop_audio_load(character,full,sizeof full));
         CHECK(mmx4_coop_audio_load(character,full,sizeof full));
     }
     CHECK(registered==0xF000 && allocated==0x8020);
+    CHECK(sample_registrations==4);
+    uint32_t writes_before=guest_writes;
+    for(unsigned i=0;i<20;++i)CHECK(mmx4_coop_audio_snapshot_ready());
+    CHECK(sample_registrations==4 && guest_writes==writes_before);
+    /* A fresh SPU boot invalidates host residency without changing title
+     * headers or advancing gameplay. Rebind exactly once in that epoch. */
+    sample_epoch=2;registered=0;
+    for(unsigned i=0;i<20;++i)CHECK(mmx4_coop_audio_snapshot_ready());
+    CHECK(registered==0xF000 && sample_registrations==8 && guest_writes==writes_before);
     psx_mod_write_byte(MMX4_PLAY,6);
     for(unsigned character=0;character<2;++character)for(unsigned group=1;group<=3;group+=2) {
         psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)character);
@@ -141,7 +157,7 @@ int main(void) {
     CPUState voice={0};voice.gpr[4]=20;voice.gpr[5]=3;
     CHECK(key_filter(&voice,KEY_ON) && !pending_bank);
     /* Truncated or wrong typed archives cannot publish a partial bank. */
-    mmx4_coop_audio_reset();CHECK(!mmx4_coop_audio_load(0,full,sizeof full-1));
+    allocated=0;CHECK(mmx4_coop_audio_activate());CHECK(!mmx4_coop_audio_load(0,full,sizeof full-1));
     full[8+11*8]=0;CHECK(!mmx4_coop_audio_load(0,full,sizeof full));
     puts("X4 co-op private audio routing checks passed");return 0;
 }

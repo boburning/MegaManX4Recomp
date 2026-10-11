@@ -292,7 +292,9 @@ def prepare_peer(args, case: Path, seat: int, ports: list[int], jitter: bool,
     tomllib.loads(source)  # Refuse malformed config before starting any process.
     config.write_text(source, encoding="utf-8")
     environment = {key: value for key, value in os.environ.items()
-                   if not key.upper().startswith(("PSX_", "RNET_"))}
+                   if not key.upper().startswith(("PSX_", "RNET_", "LNG_", "MMX4_DIAGNOSTIC_", "MMX4_RECOMP_"))
+                   and key not in ("APPIMAGE", "APPDIR", "RECOMP_APPIMAGE_PATH")}
+    environment['MMX4_RECOMP_DATA_DIR'] = str(directory)
     environment.update(PSX_NET_TRANSPORT="lan", PSX_NET_MODE="delay",
                        PSX_RENDER_PASS_VERIFY="1",
                        RNET_SIM_LATENCY_MS=str(args.latency if jitter else 0),

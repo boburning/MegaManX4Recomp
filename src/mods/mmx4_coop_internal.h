@@ -2,9 +2,24 @@
 #define MMX4_COOP_INTERNAL_H
 #include <stdint.h>
 #include "cpu_state.h"
+#include "mmx4_coop_snapshot.h"
 
 void mmx4_coop_audio_reset(void);
+int mmx4_coop_audio_activate(void);
+int mmx4_coop_audio_prepare(unsigned character,const uint8_t *file,uint32_t size,int initialize_guest);
 int mmx4_coop_audio_load(unsigned character,const uint8_t *file,uint32_t size);
+int mmx4_coop_audio_snapshot_ready(void);
+int mmx4_coop_audio_snapshot(Mmx4SnapshotIO *s);
+int mmx4_coop_lifecycle_snapshot_ready(void);
+int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s);
+int mmx4_coop_combat_snapshot_ready(void);
+int mmx4_coop_combat_snapshot(Mmx4SnapshotIO *s);
+int mmx4_coop_web_snapshot_ready(void);
+int mmx4_coop_web_snapshot(Mmx4SnapshotIO *s);
+int mmx4_coop_split_snapshot_ready(void);
+int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s);
+int mmx4_widescreen_snapshot_ready(void);
+int mmx4_widescreen_snapshot(Mmx4SnapshotIO *s);
 #include "mod_plugins.h"
 #include "mmx4_coop_views.h"
 #define MMX4_PLAYER 0x801418C8u
@@ -61,6 +76,7 @@ void mmx4_coop_lifecycle_project(void);
 void mmx4_coop_lifecycle_follow_progress(uint8_t *body,unsigned character);
 void mmx4_coop_lifecycle_restore(void);
 void mmx4_coop_lifecycle_reset(void);
+void mmx4_coop_lifecycle_activate(void);
 void mmx4_coop_lifecycle_enrolled(CPUState *cpu);
 int mmx4_coop_lifecycle_can_enroll(void);
 void mmx4_coop_lifecycle_tick(CPUState *cpu);

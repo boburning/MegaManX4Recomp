@@ -12,6 +12,7 @@
 #include "mmx4_coop_views.h"
 #include "mod_netplay.h"
 #include "psx_netplay.h"
+#include "mod_snapshot.h"
 #include "gpu.h"
 #include <stdlib.h>
 #include <string.h>
@@ -34,9 +35,9 @@ typedef struct {
     uint32_t sprites, assembly, colors, palette;
     uint32_t menu[5],menu_gfx;
     uint16_t *ui_pixels;
-    uint8_t *file; uint32_t size; Mmx4Asset compressed; unsigned loaded;
+    uint8_t *file; uint32_t size; Mmx4Asset compressed; unsigned loaded,initialized;
 } CharacterAssets;
-typedef struct { uint32_t source; uint16_t id,tile; uint8_t colors[32]; } SpriteBank;
+typedef struct { uint32_t source; uint16_t id,tile,tiles; uint8_t colors[32]; } SpriteBank;
 typedef struct {uint16_t page,clut,uv,id,colors[16];unsigned character;} UiBank;
 static PlayerContext second,first;
 static CharacterAssets assets[2];
@@ -67,6 +68,9 @@ static Mmx4DebugDecoder development_decoder;
 #endif
 static unsigned menu_texture_owner=2;
 static unsigned upload_guard;
+/* Original executable constants, reconstructed before guest code is mapped. */
+static uint16_t ui_layout[11][2];
+static unsigned ui_layout_ready;
 static void diagnostics(void);
 
 static uint32_t le32(const uint8_t *p) {
@@ -115,10 +119,29 @@ static uint32_t guest(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) {
     memcpy(cpu->gpr,r,sizeof r);memcpy(cpu->gte_data,data,sizeof data);memcpy(cpu->gte_ctrl,ctrl,sizeof ctrl);
     cpu->pc=pc;cpu->hi=hi;cpu->lo=lo;return result;
 }
+static int prepare_ui_layout(void) {
+    if(ui_layout_ready)return 1;
+    uint32_t size=0;
+    if(!psx_mod_read_disc_file("SLUS_005.61",NULL,0,&size) || size<0x800 || size>0x200000u)return 0;
+    uint8_t *file=malloc(size);if(!file)return 0;
+    int valid=psx_mod_read_disc_file("SLUS_005.61",file,size,&size) && size>=0x800 &&
+        !memcmp(file,"PS-X EXE",8);
+    uint32_t base=valid?le32(file+0x18):0,bytes=valid?le32(file+0x1C):0;
+    uint32_t delta=0x800F1614u-base;
+    if(!valid || base>0x800F1614u || bytes>size-0x800u || delta>bytes ||
+       sizeof ui_layout>bytes-delta)valid=0;
+    if(valid)for(unsigned type=0;type<11;++type) {
+        const uint8_t *entry=file+0x800u+delta+type*4u;
+        ui_layout[type][0]=(uint16_t)(entry[0]|entry[1]<<8);
+        ui_layout[type][1]=(uint16_t)(entry[2]|entry[3]<<8);
+        if(ui_layout[type][0]>960 || ui_layout[type][1]>496)valid=0;
+    }
+    free(file);ui_layout_ready=(unsigned)valid;return valid;
+}
 static int retain_ui(CharacterAssets *a,const Mmx4Asset *v) {
     unsigned type=v->type&255,layout=(v->type>>8)&255;
-    if(type>10 || layout>2 || v->size%2048)return 0;
-    unsigned x=psx_mod_read_half(0x800F1614u+type*4),y=psx_mod_read_half(0x800F1616u+type*4),base_y=y&256;
+    if(!ui_layout_ready || type>10 || layout>2 || v->size%2048)return 0;
+    unsigned x=ui_layout[type][0],y=ui_layout[type][1],base_y=y&256;
     for(size_t at=0;at<v->size;at+=2048) {
         if(x+64>1024 || y+16>512)return 0;
         for(unsigned row=0;row<16;++row)for(unsigned column=0;column<64;++column) {
@@ -130,34 +153,52 @@ static int retain_ui(CharacterAssets *a,const Mmx4Asset *v) {
     }
     return 1;
 }
-static int load_character(unsigned character) {
+static int prepare_character(unsigned character,int initialize_guest) {
+    if(character>1 || !prepare_ui_layout())return 0;
     CharacterAssets *a=&assets[character];
-    if(a->file)return (int)a->loaded;
+    if(a->loaded && (!initialize_guest || a->initialized))return 1;
     const char *name=character?"ARC/PL01_U.ARC":"ARC/PL00_U.ARC";
-    if(!psx_mod_read_disc_file(name,NULL,0,&a->size) || !(a->file=malloc(a->size)))return 0;
-    if(!psx_mod_read_disc_file(name,a->file,a->size,&a->size))return 0;
+    if(!a->file) {
+        if(!psx_mod_read_disc_file(name,NULL,0,&a->size) || !(a->file=malloc(a->size)))return 0;
+        if(!psx_mod_read_disc_file(name,a->file,a->size,&a->size)) {
+            free(a->file);a->file=NULL;a->size=0;return 0;
+        }
+    }
     Mmx4Asset body,assembly,colors;
     if(!mmx4_coop_arc_asset(a->file,a->size,2,&body) || body.type!=2 ||
        !mmx4_coop_arc_asset(a->file,a->size,9,&assembly) || assembly.type!=3 ||
        !mmx4_coop_arc_asset(a->file,a->size,0,&colors) || colors.type!=9)return 0;
     a->compressed=body;
     if(body.size>0x34000 || assembly.size>0xC000 || colors.size>0x1000)return 0;
-    project(a->sprites,body.data,body.size);project(a->assembly,assembly.data,assembly.size);
-    project(a->colors,colors.data,colors.size);
+    if(initialize_guest) {
+        project(a->sprites,body.data,body.size);project(a->assembly,assembly.data,assembly.size);
+        project(a->colors,colors.data,colors.size);
+    }
     static const unsigned members[5]={6,7,8,14,15};
     static const uint32_t limits[5]={0x1000,0x1000,0x1000,0x1000,0xA000};
     for(unsigned i=0;i<5;++i) {
         Mmx4Asset v;if(!mmx4_coop_arc_asset(a->file,a->size,members[i],&v) || v.size>limits[i])return 0;
-        project(a->menu[i],v.data,v.size);
+        if(initialize_guest)project(a->menu[i],v.data,v.size);
     }
     Mmx4Asset ui,gfx;
     if(!mmx4_coop_arc_asset(a->file,a->size,1,&ui) ||
        !mmx4_coop_arc_asset(a->file,a->size,5,&gfx) || gfx.size!=0x8000)return 0;
-    project(a->menu_gfx,gfx.data,gfx.size);
-    a->ui_pixels=calloc(1024*512,sizeof(uint16_t));
-    a->loaded=a->ui_pixels && retain_ui(a,&ui) && retain_ui(a,&gfx) &&
-        mmx4_coop_audio_load(character,a->file,a->size);
-    return (int)a->loaded;
+    if(!a->loaded) {
+        if(!a->ui_pixels)a->ui_pixels=calloc(1024*512,sizeof(uint16_t));
+        if(!a->ui_pixels || !retain_ui(a,&ui) || !retain_ui(a,&gfx) ||
+           !mmx4_coop_audio_prepare(character,a->file,a->size,0))return 0;
+        a->loaded=1;
+    }
+    if(initialize_guest) {
+        project(a->menu_gfx,gfx.data,gfx.size);
+        if(!mmx4_coop_audio_load(character,a->file,a->size))return 0;
+        a->initialized=1;
+    }
+    return 1;
+}
+static int load_character(unsigned character) {
+    /* Both immutable audio banks must exist before the first residency bind. */
+    return character<2 && prepare_character(character^1u,0) && prepare_character(character,1);
 }
 static void enter_second(void) {
     projected=1;
@@ -642,37 +683,55 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
 static uint32_t character_palette(unsigned character) {
     return character==counterpart?assets[character].palette:psx_mod_read_word(SCRATCH+0x28);
 }
-static uint16_t sprite_bank(unsigned character,uint32_t table,unsigned frame,uint16_t clut,uint16_t tile) {
-    unsigned *count=psx_mod_local_view_scope()?&view_bank_count:&bank_count;
-    SpriteBank *cache=psx_mod_local_view_scope()?view_banks:banks;
-    CharacterAssets *a=&assets[character];uint8_t decoded[32768],colors[32];uint16_t pixels[256*256];
-    if(table<a->sprites || table-a->sprites>=a->compressed.size || clut<0x7800)return 0;
-    size_t offset=table-a->sprites;
-    if(frame*4+4>a->compressed.size-offset)return 0;
-    uint32_t packed=le32(a->compressed.data+offset+frame*4),source=table+(packed&0xFFFFF);
-    unsigned tiles=packed>>20;size_t pal=(size_t)(clut-0x7800)*32,written;
-    if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=a->compressed.size || pal+32>0x1000)return 0;
-    capture(character_palette(character)+(uint32_t)pal,colors,sizeof colors);
-    for(unsigned i=0;i<*count;++i)if(cache[i].source==source && cache[i].tile==tile && !memcmp(cache[i].colors,colors,32))return cache[i].id;
-    if(*count==4096 || !mmx4_coop_decode_sprite(a->compressed.data+source-a->sprites,
-        a->compressed.size-(source-a->sprites),decoded,sizeof decoded,&written) || written!=tiles*128u)return 0;
+static int decode_bank(const SpriteBank *bank,uint8_t decoded[32768]) {
+    if(!bank->tiles || bank->tiles>256)return 0;
+    for(unsigned character=0;character<2;++character) {
+        const CharacterAssets *a=&assets[character];
+        if(!a->loaded || bank->source<a->sprites || bank->source-a->sprites>=a->compressed.size)continue;
+        size_t written=0;
+        return mmx4_coop_decode_sprite(a->compressed.data+bank->source-a->sprites,
+            a->compressed.size-(bank->source-a->sprites),decoded,32768,&written) &&
+            written==(size_t)bank->tiles*128u;
+    }
+    return 0;
+}
+static int define_sprite_bank(const SpriteBank *bank) {
+    uint8_t decoded[32768];uint16_t pixels[256*256];
+    if(!decode_bank(bank,decoded))return 0;
     memset(pixels,0,sizeof pixels);
-    unsigned remaining=tiles,row=0,in=0;
+    unsigned remaining=bank->tiles,row=0,in=0;
     while(remaining) {
         unsigned chunk=remaining<16?remaining:16,width=chunk*16;
         for(unsigned y=0;y<16;++y)for(unsigned x=0;x<width;++x) {
             unsigned index=(decoded[in+(y*width+x)/2]>>((x&1)*4))&15;
-            pixels[(row+y)*256+x]=(uint16_t)(colors[index*2]|colors[index*2+1]<<8);
+            pixels[(row+y)*256+x]=(uint16_t)(bank->colors[index*2]|bank->colors[index*2+1]<<8);
         }
         in+=chunk*128;row+=16;remaining-=chunk;
     }
-    uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xA000u:0x6000u)+*count);
-    if(tile!=UINT16_MAX) {
+    if(bank->tile!=UINT16_MAX) {
         uint16_t part[256];for(unsigned y=0;y<16;++y)for(unsigned x=0;x<16;++x)
-            part[y*16+x]=pixels[(((tile>>8)+y)&255)*256+(((tile&255)+x)&255)];
-        if(!psx_mod_define_texture_bank(id,16,16,part))return 0;
-    }else if(!psx_mod_define_texture_bank(id,256,256,pixels))return 0;
-    cache[*count]=(SpriteBank){source,id,tile,{0}};memcpy(cache[(*count)++].colors,colors,32);return id;
+            part[y*16+x]=pixels[(((bank->tile>>8)+y)&255)*256+(((bank->tile&255)+x)&255)];
+        return psx_mod_define_texture_bank(bank->id,16,16,part);
+    }
+    return psx_mod_define_texture_bank(bank->id,256,256,pixels);
+}
+static uint16_t sprite_bank(unsigned character,uint32_t table,unsigned frame,uint16_t clut,uint16_t tile) {
+    unsigned *count=psx_mod_local_view_scope()?&view_bank_count:&bank_count;
+    SpriteBank *cache=psx_mod_local_view_scope()?view_banks:banks;
+    CharacterAssets *a=&assets[character];uint8_t colors[32];
+    if(table<a->sprites || table-a->sprites>=a->compressed.size || clut<0x7800)return 0;
+    size_t offset=table-a->sprites;
+    if(frame*4+4>a->compressed.size-offset)return 0;
+    uint32_t packed=le32(a->compressed.data+offset+frame*4),source=table+(packed&0xFFFFF);
+    unsigned tiles=packed>>20;size_t pal=(size_t)(clut-0x7800)*32;
+    if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=a->compressed.size || pal+32>0x1000)return 0;
+    capture(character_palette(character)+(uint32_t)pal,colors,sizeof colors);
+    for(unsigned i=0;i<*count;++i)if(cache[i].source==source && cache[i].tile==tile && !memcmp(cache[i].colors,colors,32))return cache[i].id;
+    if(*count==4096)return 0;
+    uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xA000u:0x6000u)+*count);
+    SpriteBank bank={source,id,tile,(uint16_t)tiles,{0}};memcpy(bank.colors,colors,32);
+    if(!define_sprite_bank(&bank))return 0;
+    cache[(*count)++]=bank;return id;
 }
 static void triangle(uint32_t dst,uint32_t next,const uint32_t *q,unsigned a,unsigned b,unsigned c,uint16_t bank) {
     unsigned v[3]={a,b,c};psx_mod_write_word(dst,0x09000000u|(next&0xFFFFFF));
@@ -684,11 +743,33 @@ static void triangle(uint32_t dst,uint32_t next,const uint32_t *q,unsigned a,uns
         psx_mod_write_word(dst+8+i*12,q[2+v[i]*2]);psx_mod_write_word(dst+12+i*12,uv);
     }
 }
+static int define_ui_bank(const UiBank *bank) {
+    if(bank->character>1 || bank->page&0x180 || !assets[bank->character].ui_pixels)return 0;
+    uint16_t pixels[256*256];
+    unsigned bx=(bank->page&15)*64,by=(bank->page&16)*16;
+    unsigned width=bank->uv==UINT16_MAX?256:16;
+    for(unsigned y=0;y<width;++y)for(unsigned x=0;x<width;++x) {
+        unsigned u=bank->uv==UINT16_MAX?x:((bank->uv&255)+x)&255;
+        unsigned v=bank->uv==UINT16_MAX?y:((bank->uv>>8)+y)&255;
+        uint16_t packed=assets[bank->character].ui_pixels[(by+v)*1024+bx+u/4];
+        pixels[y*width+x]=bank->colors[(packed>>((u&3)*4))&15];
+    }
+    return psx_mod_define_texture_bank(bank->id,width,width,pixels);
+}
+static int resolve_texture_bank(uint16_t id) {
+    /* Restore exact DMA IDs from immutable ARC/UI pixels and stored CLUTs.
+     * This callback never allocates guest memory or writes a guest palette. */
+    if(id>=0x6000u && id-0x6000u<bank_count)return define_sprite_bank(&banks[id-0x6000u]);
+    if(id>=0x8000u && id-0x8000u<ui_bank_count)return define_ui_bank(&ui_banks[id-0x8000u]);
+    if(id>=0xA000u && id-0xA000u<view_bank_count)return define_sprite_bank(&view_banks[id-0xA000u]);
+    if(id>=0xB000u && id-0xB000u<view_ui_bank_count)return define_ui_bank(&view_ui_banks[id-0xB000u]);
+    return 0;
+}
 static uint16_t ui_tile(unsigned character,uint16_t page,uint16_t clut,uint16_t uv,int private_colors) {
     unsigned *count=psx_mod_local_view_scope()?&view_ui_bank_count:&ui_bank_count;
     UiBank *cache=psx_mod_local_view_scope()?view_ui_banks:ui_banks;
     if(page&0x180 || !assets[character].ui_pixels)return 0;
-    uint16_t colors[16],pixels[256*256];
+    uint16_t colors[16];
     unsigned cx=(clut&63)*16,cy=clut>>6;
     const uint16_t *vram=gpu_get_vram();
     for(unsigned i=0;i<16;++i)colors[i]=private_colors && clut>=0x7800 && clut<0x7880?
@@ -698,17 +779,10 @@ static uint16_t ui_tile(unsigned character,uint16_t page,uint16_t clut,uint16_t 
         if(b->character==character && b->page==page && b->clut==clut && b->uv==uv && !memcmp(b->colors,colors,32))return b->id;
     }
     if(*count>=4096)return 0;
-    unsigned bx=(page&15)*64,by=(page&16)*16;
-    unsigned width=uv==UINT16_MAX?256:16;
-    for(unsigned y=0;y<width;++y)for(unsigned x=0;x<width;++x) {
-        unsigned u=uv==UINT16_MAX?x:((uv&255)+x)&255,v=uv==UINT16_MAX?y:((uv>>8)+y)&255;
-        uint16_t packed=assets[character].ui_pixels[(by+v)*1024+bx+u/4];
-        pixels[y*width+x]=colors[(packed>>((u&3)*4))&15];
-    }
     uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xB000u:0x8000u)+*count);
-    if(!psx_mod_define_texture_bank(id,width,width,pixels))return 0;
-    UiBank *b=&cache[(*count)++];
-    *b=(UiBank){page,clut,uv,id,{0},character};memcpy(b->colors,colors,32);return id;
+    UiBank bank={page,clut,uv,id,{0},character};memcpy(bank.colors,colors,32);
+    if(!define_ui_bank(&bank))return 0;
+    cache[(*count)++]=bank;return id;
 }
 static int world_draw_visible(void) {
     /* Room setup commits mode6 before initializing the primary body. The
@@ -965,18 +1039,146 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
     local_view_call=0;
     return mmx4_coop_finish(cpu,result);
 }
+static int snapshot_ready(void) {
+    return assets[0].loaded && assets[1].loaded && diagnostic && arena && hud_arena &&
+        !(inside || rendering || projected || camera_call || camera_update_call || hud_call ||
+          upload_guard || local_view_call || psx_mod_local_view_scope()) &&
+        mmx4_coop_lifecycle_snapshot_ready() && mmx4_coop_combat_snapshot_ready() &&
+        mmx4_coop_web_snapshot_ready() && mmx4_coop_audio_snapshot_ready() &&
+        mmx4_coop_split_snapshot_ready() && mmx4_widescreen_snapshot_ready() &&
+        mmx4_diagnostics_snapshot_ready();
+}
+static void snapshot_player(Mmx4SnapshotIO *s,PlayerContext *player) {
+    if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok && s->pos<=s->len &&
+       sizeof player->body<=s->len-s->pos && s->in[s->pos] && s->in[s->pos+2]>1)s->ok=0;
+    mmx4_snapshot_bytes(s,player->body,sizeof player->body);
+    mmx4_snapshot_bytes(s,player->shots,sizeof player->shots);
+    mmx4_snapshot_bytes(s,player->trails,sizeof player->trails);
+    mmx4_snapshot_bytes(s,player->charge_glows,sizeof player->charge_glows);
+    mmx4_snapshot_bytes(s,player->double_body,sizeof player->double_body);
+    mmx4_snapshot_bytes(s,player->vehicle,sizeof player->vehicle);
+}
+static void snapshot_sprite_banks(Mmx4SnapshotIO *s,SpriteBank *cache,unsigned *live_count,uint16_t base) {
+    unsigned count=mmx4_snapshot_integer(s,*live_count,4,4096);
+    if(s->mode==MMX4_SNAPSHOT_READ)*live_count=count;
+    for(unsigned i=0;i<count && s->ok;++i) {
+        SpriteBank bank=cache[i];
+        bank.source=mmx4_snapshot_integer(s,bank.source,4,UINT32_MAX);
+        bank.id=(uint16_t)mmx4_snapshot_integer(s,bank.id,2,UINT16_MAX);
+        bank.tile=(uint16_t)mmx4_snapshot_integer(s,bank.tile,2,UINT16_MAX);
+        bank.tiles=(uint16_t)mmx4_snapshot_integer(s,bank.tiles,2,256);
+        mmx4_snapshot_bytes(s,bank.colors,sizeof bank.colors);
+        if(bank.id!=base+i || !bank.tiles)s->ok=0;
+        if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok) {
+            uint8_t decoded[32768];if(!decode_bank(&bank,decoded))s->ok=0;
+        }
+        if(s->mode==MMX4_SNAPSHOT_READ)cache[i]=bank;
+    }
+    if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
+}
+static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_count,uint16_t base) {
+    unsigned count=mmx4_snapshot_integer(s,*live_count,4,4096);
+    if(s->mode==MMX4_SNAPSHOT_READ)*live_count=count;
+    for(unsigned i=0;i<count && s->ok;++i) {
+        UiBank bank=cache[i];
+        bank.page=(uint16_t)mmx4_snapshot_integer(s,bank.page,2,UINT16_MAX);
+        bank.clut=(uint16_t)mmx4_snapshot_integer(s,bank.clut,2,UINT16_MAX);
+        bank.uv=(uint16_t)mmx4_snapshot_integer(s,bank.uv,2,UINT16_MAX);
+        bank.id=(uint16_t)mmx4_snapshot_integer(s,bank.id,2,UINT16_MAX);
+        for(unsigned color=0;color<16;++color)
+            bank.colors[color]=(uint16_t)mmx4_snapshot_integer(s,bank.colors[color],2,UINT16_MAX);
+        bank.character=mmx4_snapshot_integer(s,bank.character,1,1);
+        if(bank.id!=base+i || bank.page&0x180)s->ok=0;
+        if(s->mode==MMX4_SNAPSHOT_READ)cache[i]=bank;
+    }
+    if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
+}
+static int snapshot_walk(Mmx4SnapshotIO *s) {
+    mmx4_snapshot_fixed(s,0x31503458u); /* X4P1, format version 1 */
+    mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
+    mmx4_snapshot_fixed(s,arena);mmx4_snapshot_fixed(s,hud_arena);mmx4_snapshot_fixed(s,diagnostic);
+    for(unsigned character=0;character<2;++character) {
+        CharacterAssets *a=&assets[character];
+        if(!a->loaded)s->ok=0;
+        mmx4_snapshot_fixed(s,a->sprites);mmx4_snapshot_fixed(s,a->assembly);
+        mmx4_snapshot_fixed(s,a->colors);mmx4_snapshot_fixed(s,a->palette);
+        for(unsigned menu=0;menu<5;++menu)mmx4_snapshot_fixed(s,a->menu[menu]);
+        mmx4_snapshot_fixed(s,a->menu_gfx);mmx4_snapshot_fixed(s,a->size);
+        MMX4_SNAPSHOT_BOOL(s,a->initialized);
+    }
+    snapshot_player(s,&first);
+    uint32_t second_offset=s->pos;
+    snapshot_player(s,&second);
+    unsigned saved_enrolled=mmx4_snapshot_integer(s,enrolled,1,1);
+    if(s->mode==MMX4_SNAPSHOT_READ)enrolled=saved_enrolled;
+    MMX4_SNAPSHOT_FIELD(s,failed,1,9);
+    MMX4_SNAPSHOT_U32(s,frames);MMX4_SNAPSHOT_U16(s,previous_input);
+    unsigned saved_counterpart=mmx4_snapshot_integer(s,counterpart,1,1);
+    if(s->mode==MMX4_SNAPSHOT_READ)counterpart=saved_counterpart;
+    if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok && saved_enrolled &&
+       s->in[second_offset+2]!=saved_counterpart)s->ok=0;
+    MMX4_SNAPSHOT_FIELD(s,menu_texture_owner,1,2);
+    MMX4_SNAPSHOT_BOOL(s,local_view_seat);MMX4_SNAPSHOT_FIELD(s,world_packet_used,4,FRAME_ARENA);
+    MMX4_SNAPSHOT_U32(s,fixture_sequence);MMX4_SNAPSHOT_FIELD(s,fixture_invulnerable,1,3);
+#ifdef MMX4_COOP_NETPLAY_DEBUG
+    mmx4_snapshot_fixed(s,1);
+    for(unsigned i=0;i<7;++i)MMX4_SNAPSHOT_U16(s,development_decoder.words[i]);
+    MMX4_SNAPSHOT_U16(s,development_decoder.previous);
+    MMX4_SNAPSHOT_FIELD(s,development_decoder.next,1,7);
+    MMX4_SNAPSHOT_U32(s,development_decoder.last_sequence);
+    MMX4_SNAPSHOT_BOOL(s,development_decoder.have_previous);
+#else
+    mmx4_snapshot_fixed(s,0);
+#endif
+    snapshot_sprite_banks(s,banks,&bank_count,0x6000u);
+    snapshot_ui_banks(s,ui_banks,&ui_bank_count,0x8000u);
+    snapshot_sprite_banks(s,view_banks,&view_bank_count,0xA000u);
+    snapshot_ui_banks(s,view_ui_banks,&view_ui_bank_count,0xB000u);
+    mmx4_coop_lifecycle_snapshot(s);mmx4_coop_combat_snapshot(s);
+    mmx4_coop_web_snapshot(s);mmx4_coop_audio_snapshot(s);
+    mmx4_coop_split_snapshot(s);mmx4_widescreen_snapshot(s);
+    return s->ok;
+}
+static uint32_t snapshot_bytes(void) {
+    Mmx4SnapshotIO s={NULL,NULL,0,0,MMX4_SNAPSHOT_COUNT,1};
+    return snapshot_walk(&s)?s.pos:0;
+}
+static int snapshot_write(uint8_t *out,uint32_t len) {
+    if(!out || !snapshot_ready())return 0;
+    Mmx4SnapshotIO s={out,NULL,len,0,MMX4_SNAPSHOT_WRITE,1};
+    return snapshot_walk(&s) && s.pos==len;
+}
+static int snapshot_validate(const uint8_t *data,uint32_t len) {
+    if(!data || !snapshot_ready())return 0;
+    Mmx4SnapshotIO s={NULL,data,len,0,MMX4_SNAPSHOT_VALIDATE,1};
+    return snapshot_walk(&s) && s.pos==len;
+}
+static void snapshot_read(const uint8_t *data,uint32_t len) {
+    Mmx4SnapshotIO s={NULL,data,len,0,MMX4_SNAPSHOT_READ,1};
+    snapshot_walk(&s);
+}
+static void snapshot_resources_restored(void) {
+    /* Native DMA may still reference any of the four restored ID ranges. */
+    psx_mod_forget_texture_bank_range(0x6000u,4096);
+    psx_mod_forget_texture_bank_range(0x8000u,4096);
+    psx_mod_forget_texture_bank_range(0xA000u,4096);
+    psx_mod_forget_texture_bank_range(0xB000u,4096);
+    psx_mod_set_texture_bank_resolver(resolve_texture_bank);
+}
 static void activate(void) {
     mmx4_diagnostics_reset();
+    ui_layout_ready=0;memset(ui_layout,0,sizeof ui_layout);
     char cameras[16],layout[24];
     if(!psx_mod_current_option_value("cameras",cameras,sizeof cameras))strcpy(cameras,"unified");
     hud_side_by_side=psx_mod_current_option_value("hud_layout",layout,sizeof layout) &&
         !strcmp(layout,"side_by_side");
     split_views=mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
     memset(&first,0,sizeof first);memset(&second,0,sizeof second);
-    mmx4_coop_audio_reset();
     bank_count=ui_bank_count=inside=enrolled=failed=rendering=projected=camera_call=camera_update_call=hud_call=upload_guard=0;
+    world_packet_used=0;
     view_bank_count=view_ui_bank_count=local_view_call=local_view_seat=0;
     if(!mmx4_coop_split_activate() || !mmx4_coop_web_activate())failed=1;
+    mmx4_coop_lifecycle_activate();mmx4_coop_combat_reset();
     frames=fixture_sequence=fixture_invulnerable=previous_input=0;counterpart=0;menu_texture_owner=2;
 #ifdef MMX4_COOP_NETPLAY_DEBUG
     memset(&development_decoder,0,sizeof development_decoder);
@@ -994,8 +1196,16 @@ static void activate(void) {
     arena=psx_mod_alloc_texture_packet_memory(2*FRAME_ARENA,16);
     hud_arena=psx_mod_alloc_texture_packet_memory(0x10000,16);
     if(!diagnostic || !arena || !hud_arena)failed=1;
-    psx_mod_set_rewind_blocked(1);
-    psx_mod_set_savestate_blocked(1);
+    if(!mmx4_coop_audio_activate())failed=1;
+    /* Host ARC/UI/SPU residency precedes a possible first-PC state load.
+     * Guest character arrays are initialized only by normal native enrollment. */
+    if(!failed && (!prepare_character(0,0) || !prepare_character(1,0)))
+        psx_mod_counter_add("mmx4.coop.snapshot-assets-not-ready",1);
+    psx_mod_set_texture_bank_resolver(resolve_texture_bank);
+    /* The provider captures both native contexts and persistent ownership.
+     * Online user state jumps remain outside the lockstep match protocol. */
+    psx_mod_set_rewind_blocked(psx_mod_netplay_is_active());
+    psx_mod_set_savestate_blocked(psx_mod_netplay_is_active());
     psx_mod_counter_add("mmx4.coop.activated",1);
     psx_mod_counter_add("mmx4.coop.diagnostic-address",diagnostic);
     if(diagnostic) {
@@ -1007,6 +1217,10 @@ static void activate(void) {
     }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
+    static const PSXModSnapshotProvider snapshot={1,snapshot_bytes,snapshot_write,
+        snapshot_validate,snapshot_read,snapshot_ready};
+    psx_mod_register_snapshot_provider(ID,&snapshot);
+    psx_mod_register_savestate_plugin(ID,snapshot_resources_restored);
     static const PSXModNetplayProfile profile={ID,MMX4_COOP_NETPLAY_COMPATIBILITY,0,0,1,1u,
         "mmx4.widescreen",state_digest,1,ID,"coop","cameras","split"};
     psx_mod_register_netplay_profile(&profile);

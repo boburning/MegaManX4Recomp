@@ -42,6 +42,11 @@ CO-OP PLAYTEST
   Player 1 owns the campaign and permanent upgrades. Boss clears are shared;
   the lives counter shows team retries. Player 2 cannot quit the campaign.
 
+  Offline co-op supports save states and rewind. F7 opens save states:
+  Square saves, Cross loads, and Circle goes back, using your configured
+  controller/keyboard bindings. F8 opens rewind when Rewind is enabled.
+  These features are unavailable during a netplay match.
+
   Playtest Diagnostics defaults on. It shows both players' accepted buttons
   and records each run under saves/diagnostics, including starting memory
   cards and mod choices. Keep the session folder for reproducing a report;
@@ -50,6 +55,8 @@ CO-OP PLAYTEST
   the .AppImage file. Memory-card directory changes do not move recordings.
   diagnostics-location.txt in that same application folder gives the exact path.
   Quit normally, then zip the entire named session folder with your bug report.
+  A save-state load or rewind starts a new session with baseline.pst. Include
+  that file along with the inputs, settings and starting memory cards.
   Recordings include starting game saves. Netplay traces are for inspection;
   full netplay replay is not supported.
 

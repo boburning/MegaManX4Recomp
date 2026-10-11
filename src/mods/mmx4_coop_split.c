@@ -16,6 +16,16 @@ static unsigned scanning,bounds_call,supplemental,spatial_call,background_call;
 static uint32_t background_actor,background_dx;
 static unsigned background_parallax;
 
+int mmx4_coop_split_snapshot_ready(void) {
+    return !(scanning || bounds_call || supplemental || spatial_call || background_call ||
+        background_actor || background_dx || background_parallax);
+}
+int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
+    /* Camera/placement bytes are in the framework's guest-memory section. */
+    mmx4_snapshot_fixed(s,state);
+    return s->ok;
+}
+
 static void copy_bytes(uint32_t destination,uint32_t source,unsigned size) {
     for(unsigned offset=0;offset<size;++offset)
         psx_mod_write_byte(destination+offset,psx_mod_read_byte(source+offset));

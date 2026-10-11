@@ -63,6 +63,48 @@ static uint8_t actor_campaign,pool_first_freeze;
 static HitContact hits[SOLID_CAPACITY];
 static unsigned hit_count;
 
+int mmx4_coop_combat_snapshot_ready(void) {
+    return !(combat_call || solid_call || allocation_call || aim_call || effect_allocation_call ||
+        personal_effect_call || particle_allocation_call || particle_init_call || armor_call ||
+        survivor_pool_call || actor_call || actor_suspended || actor_owner || actor_function ||
+        actor_pending || actor_pool || actor_campaign || pool_first_freeze);
+}
+int mmx4_coop_combat_snapshot(Mmx4SnapshotIO *s) {
+    unsigned count=mmx4_snapshot_integer(s,solid_count,4,SOLID_CAPACITY);
+    if(s->mode==MMX4_SNAPSHOT_READ)solid_count=count;
+    uint32_t previous=0;
+    for(unsigned i=0;i<count && s->ok;++i) {
+        uint32_t actor=mmx4_snapshot_integer(s,solids[i].actor,4,UINT32_MAX);
+        if(!actor || !mmx4_snapshot_guest(actor) || actor<=previous)s->ok=0;
+        previous=actor;
+        if(s->mode==MMX4_SNAPSHOT_READ)solids[i].actor=actor;
+        MMX4_SNAPSHOT_U8(s,solids[i].sides);MMX4_SNAPSHOT_U8(s,solids[i].carried);
+        MMX4_SNAPSHOT_U8(s,solids[i].vehicle_sides);MMX4_SNAPSHOT_U8(s,solids[i].vehicle_carried);
+    }
+    count=mmx4_snapshot_integer(s,hit_count,4,SOLID_CAPACITY);
+    if(s->mode==MMX4_SNAPSHOT_READ)hit_count=count;
+    previous=0;
+    for(unsigned i=0;i<count && s->ok;++i) {
+        uint32_t actor=mmx4_snapshot_integer(s,hits[i].actor,4,UINT32_MAX);
+        if(!actor || !mmx4_snapshot_guest(actor) || actor<=previous)s->ok=0;
+        previous=actor;
+        if(s->mode==MMX4_SNAPSHOT_READ)hits[i].actor=actor;
+        MMX4_SNAPSHOT_U8(s,hits[i].token[0]);MMX4_SNAPSHOT_U8(s,hits[i].token[1]);
+    }
+    for(unsigned i=0;i<EFFECT_CAPACITY;++i)MMX4_SNAPSHOT_BOOL(s,second_effect_owner[i]);
+    for(unsigned i=0;i<SECONDARY_CAPACITY;++i)MMX4_SNAPSHOT_FIELD(s,secondary_owner[i],1,2);
+    for(unsigned i=0;i<PARTICLE_CAPACITY;++i) {
+        MMX4_SNAPSHOT_U32(s,particles[i].x);MMX4_SNAPSHOT_U32(s,particles[i].y);
+        MMX4_SNAPSHOT_BOOL(s,particles[i].owner);MMX4_SNAPSHOT_U8(s,particles[i].screen);
+    }
+    MMX4_SNAPSHOT_BOOL(s,armor_owner);MMX4_SNAPSHOT_BOOL(s,armor_skip_update);
+    if(s->mode==MMX4_SNAPSHOT_READ) {
+        memset(solids+solid_count,0,(SOLID_CAPACITY-solid_count)*sizeof solids[0]);
+        memset(hits+hit_count,0,(SOLID_CAPACITY-hit_count)*sizeof hits[0]);
+    }
+    return s->ok;
+}
+
 static HitContact *hit_record(uint32_t actor,int create) {
     unsigned i=0;
     while (i<hit_count && hits[i].actor<actor) ++i;

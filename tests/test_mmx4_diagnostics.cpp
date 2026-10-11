@@ -6,6 +6,7 @@ extern "C" {
 #include "host_osd.h"
 #include "memcard.h"
 #include "mod_netplay.h"
+#include "mod_snapshot.h"
 #include "mod_runtime.h"
 #include "savestate.h"
 #include "sio.h"
@@ -36,6 +37,8 @@ uint32_t psx_mod_read_word(uint32_t a) {return psx_mod_read_half(a)|(uint32_t(ps
 void psx_mod_write_word(uint32_t a,uint32_t v) {psx_mod_write_half(a,(uint16_t)v);psx_mod_write_half(a+2,(uint16_t)(v>>16));}
 int psx_mod_register_activation_plugin(const char*,PSXModActivationCallback) {return 1;}
 int psx_mod_register_function_filter_plugin(const char*,uint32_t,PSXModFunctionFilterCallback) {return 1;}
+int psx_mod_register_snapshot_loaded_observer(const char*,PSXModSnapshotLoadedObserver) {return 1;}
+int psx_mod_register_snapshot_provider(const char*,const PSXModSnapshotProvider*) {return 1;}
 int psx_mod_local_view_scope(void) {return 0;}
 int psx_mod_netplay_is_active(void) {return online;}
 int psx_mod_set_controller_source(uint32_t seat,PSXModControllerSource source) {sources.at(seat)=source;return 1;}
@@ -76,6 +79,13 @@ static void env(const char *v) {
     _putenv_s("MMX4_DIAGNOSTIC_REPLAY",v);
 #else
     setenv("MMX4_DIAGNOSTIC_REPLAY",v,1);
+#endif
+}
+static void baseline_env(const char *v) {
+#ifdef _WIN32
+    _putenv_s("MMX4_DIAGNOSTIC_BASELINE",v);
+#else
+    setenv("MMX4_DIAGNOSTIC_BASELINE",v,1);
 #endif
 }
 int main(int argc,char **argv) {
@@ -163,6 +173,55 @@ int main(int argc,char **argv) {
         if(text.find("\"netplay\": true")!=std::string::npos)network_metadata=true;
     }
     CHECK(network_metadata);
+    // Loading or rewinding starts a new replayable segment with its exact
+    // restored machine image. It must not append a time jump to old inputs.
+    online=false;activate();inputs(&cpu,0x80012328u);
+    const uint8_t restored_image[]={0x50,0x53,0x54,0x0A,0xFE,0x01};
+    state_loaded(restored_image,sizeof restored_image);
+    CHECK(sequence==0 && started && recording.is_open() && pending_baseline.empty());
+    CHECK(counters["mmx4.diagnostics.state-segments"]==1);
+    auto segment_initial=std::make_unique<decltype(memory)>(memory);
+    uint16_t prefix_buttons=0xFF7F;mmx4_diagnostics_resolve_input(1,&prefix_buttons);
+    inputs(&cpu,0x80012328u);
+    auto segment_frame=psx_mod_read_word(FRAME);
+    psx_mod_write_word(FRAME,segment_frame+1);inputs(&cpu,0x80012328u);recording.flush();
+    bool found_baseline=false;
+    std::filesystem::path segment_inputs;
+    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(application_root)/"saves/diagnostics")) {
+        auto baseline=entry.path()/"baseline.pst";
+        if(!std::filesystem::exists(baseline))continue;
+        std::ifstream in(baseline,std::ios::binary);
+        std::string bytes((std::istreambuf_iterator<char>(in)),{});
+        CHECK(bytes.size()==sizeof restored_image && !memcmp(bytes.data(),restored_image,bytes.size()));
+        std::ifstream meta(entry.path()/"session.json");
+        std::string text((std::istreambuf_iterator<char>(meta)),{});
+        CHECK(text.find("\"baseline\": \"baseline.pst\"")!=std::string::npos);
+        segment_inputs=entry.path()/"inputs.csv";
+        found_baseline=true;
+    }
+    CHECK(found_baseline);
+    // A loaded PC can read P2 before the first pad decoder invocation. Start
+    // playback on restore so leading C rows are consumed at that boundary.
+    recording.close();memory=*segment_initial;env(segment_inputs.string().c_str());
+    baseline_env((segment_inputs.parent_path()/"baseline.pst").string().c_str());activate();
+    // A deferred or failed auto-load must never consume ordinary-boot rows.
+    CHECK(inputs(&cpu,0x80012328u) && !started && !replaying && !replay_failed);
+    CHECK(!baseline_loaded && sequence==0);
+    memory=*segment_initial;
+    state_loaded(restored_image,sizeof restored_image);
+    CHECK(started && replaying && !replay_failed && baseline_loaded);
+    prefix_buttons=0xFFFF;CHECK(mmx4_diagnostics_resolve_input(1,&prefix_buttons) && prefix_buttons==0xFF7F);
+    CHECK(inputs(&cpu,0x80012328u) && !replay_failed);
+    psx_mod_write_word(FRAME,segment_frame+1);CHECK(inputs(&cpu,0x80012328u) && !replay_failed);
+    // A different restored image is a refusal, even if its input trace could
+    // accidentally match the short segment.
+    memory=*segment_initial;activate();
+    uint8_t wrong_image[sizeof restored_image];memcpy(wrong_image,restored_image,sizeof wrong_image);
+    wrong_image[sizeof wrong_image-1]^=1;
+    state_loaded(wrong_image,sizeof wrong_image);
+    CHECK(replay_failed && !replaying && !baseline_loaded);
+    baseline_env("");
+    env("");activate();
     // A directory/write failure is visible both on the input display and in
     // the location pointer. It must never show REC with an unusable recording.
     online=false;activate();

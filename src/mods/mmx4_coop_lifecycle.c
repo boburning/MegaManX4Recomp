@@ -57,6 +57,66 @@ static struct { unsigned valid,stage,section,hp[2]; } trace_previous;
 static void start_arrival(CPUState *cpu,unsigned seat);
 static uint32_t body_word(const uint8_t *body,unsigned at);
 
+int mmx4_coop_lifecycle_snapshot_ready(void) {
+    return !(inventory_projected || menu_projecting || normal_guard || menu_guard || world_guard ||
+        pickup_guard || collect_guard || save_guard || reward_guard || death_guard || death_check_guard ||
+        capsule_guard || scene_guard || script_pool_guard || command_guard || control_guard || text_guard ||
+        text_init_guard || flip_guard || warp_guard);
+}
+static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
+    MMX4_SNAPSHOT_BOOL(s,inventory->character);MMX4_SNAPSHOT_U8(s,inventory->hp);
+    mmx4_snapshot_bytes(s,inventory->ammo,sizeof inventory->ammo);
+    MMX4_SNAPSHOT_U8(s,inventory->weapon);
+}
+int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
+    /* Campaign/upgrades are owned by P1's native save record in guest RAM. */
+    snapshot_inventory(s,&second_inventory);snapshot_inventory(s,&saved_inventory);
+    for(unsigned i=0;i<PICKUP_CAPACITY;++i) {
+        uint32_t actor=mmx4_snapshot_integer(s,pickups[i].actor,4,UINT32_MAX);
+        if(!mmx4_snapshot_guest(actor))s->ok=0;
+        if(s->mode==MMX4_SNAPSHOT_READ)pickups[i].actor=actor;
+        MMX4_SNAPSHOT_BOOL(s,pickups[i].owner);
+    }
+    for(unsigned i=0;i<32;++i) {
+        uint32_t actor=mmx4_snapshot_integer(s,scenes[i].actor,4,UINT32_MAX);
+        if(!mmx4_snapshot_guest(actor))s->ok=0;
+        if(s->mode==MMX4_SNAPSHOT_READ)scenes[i].actor=actor;
+        MMX4_SNAPSHOT_U32(s,scenes[i].serial);
+        MMX4_SNAPSHOT_BOOL(s,scenes[i].owner);MMX4_SNAPSHOT_BOOL(s,scenes[i].recovered);
+    }
+    for(unsigned i=0;i<2;++i)MMX4_SNAPSHOT_U16(s,menu_previous[i]);
+    MMX4_SNAPSHOT_U16(s,select_previous);
+    for(unsigned i=0;i<3;++i)MMX4_SNAPSHOT_U16(s,story_pad[i]);
+    MMX4_SNAPSHOT_BOOL(s,inventory_initialized);MMX4_SNAPSHOT_BOOL(s,stage_known);
+    MMX4_SNAPSHOT_FIELD(s,last_stage,1,255);MMX4_SNAPSHOT_FIELD(s,last_section,1,255);
+    MMX4_SNAPSHOT_FIELD(s,last_lives,1,255);
+    MMX4_SNAPSHOT_BOOL(s,carry_resources);MMX4_SNAPSHOT_BOOL(s,carry_dead);
+    MMX4_SNAPSHOT_BOOL(s,carry_first_dead);MMX4_SNAPSHOT_BOOL(s,carry_departure);
+    MMX4_SNAPSHOT_BOOL(s,carry_refill);MMX4_SNAPSHOT_BOOL(s,departed);
+    MMX4_SNAPSHOT_FIELD(s,select_ticks,4,90);MMX4_SNAPSHOT_BOOL(s,select_release);
+    MMX4_SNAPSHOT_BOOL(s,rejoin_pending);MMX4_SNAPSHOT_BOOL(s,full_stage_load);
+    MMX4_SNAPSHOT_BOOL(s,reward_committed);MMX4_SNAPSHOT_BOOL(s,first_before_clear_valid);
+    MMX4_SNAPSHOT_BOOL(s,first_before_clear_dead);
+    MMX4_SNAPSHOT_U8(s,departure_active);MMX4_SNAPSHOT_U8(s,departure_visible);
+    MMX4_SNAPSHOT_U8(s,departure_vehicle_active);MMX4_SNAPSHOT_U8(s,departure_vehicle_visible);
+    MMX4_SNAPSHOT_BOOL(s,menu_active);MMX4_SNAPSHOT_BOOL(s,menu_owner);
+    MMX4_SNAPSHOT_BOOL(s,script_active);MMX4_SNAPSHOT_BOOL(s,script_owner);
+    MMX4_SNAPSHOT_U32(s,script_serial);MMX4_SNAPSHOT_BOOL(s,warp_pending);
+    MMX4_SNAPSHOT_FIELD(s,warp_phase,1,3);MMX4_SNAPSHOT_BOOL(s,warp_owner);
+    MMX4_SNAPSHOT_U32(s,warp_unlocked_ticks);
+    MMX4_SNAPSHOT_U8(s,warp_active);MMX4_SNAPSHOT_U8(s,warp_visible);
+    MMX4_SNAPSHOT_U8(s,warp_vehicle_active);MMX4_SNAPSHOT_U8(s,warp_vehicle_visible);
+    MMX4_SNAPSHOT_U32(s,warp_origin_x);MMX4_SNAPSHOT_U32(s,warp_origin_y);
+    MMX4_SNAPSHOT_BOOL(s,initial_arrival);MMX4_SNAPSHOT_BOOL(s,direct_initial_spawn);
+    if(s->mode==MMX4_SNAPSHOT_READ) {
+        memset(&view_second_inventory,0,sizeof view_second_inventory);
+        memset(&view_saved_inventory,0,sizeof view_saved_inventory);
+        view_inventory_initialized=view_inventory_projected=0;
+        trace_previous.valid=0;
+    }
+    return s->ok;
+}
+
 static void read_bytes(uint32_t address,uint8_t *out,unsigned count) {
     for(unsigned i=0;i<count;++i)out[i]=psx_mod_read_byte(address+i);
 }
@@ -137,6 +197,18 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     departure_vehicle_active=departure_vehicle_visible=0;
     menu_active=menu_owner=menu_projecting=0;
     trace_previous.valid=0;
+}
+void mmx4_coop_lifecycle_activate(void) {
+    /* Reactivation starts a new native runtime; no campaign bytes are touched. */
+    fresh_game(NULL,0);
+    last_stage=last_section=last_lives=0;
+    departure_active=departure_visible=0;
+    normal_guard=menu_guard=world_guard=pickup_guard=0;
+    collect_guard=save_guard=reward_guard=death_guard=death_check_guard=capsule_guard=0;
+    scene_guard=script_pool_guard=command_guard=control_guard=text_guard=text_init_guard=0;
+    memset(&view_second_inventory,0,sizeof view_second_inventory);
+    memset(&view_saved_inventory,0,sizeof view_saved_inventory);
+    view_inventory_initialized=view_inventory_projected=0;
 }
 static void full_stage(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;

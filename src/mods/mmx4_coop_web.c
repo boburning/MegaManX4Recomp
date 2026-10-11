@@ -19,6 +19,16 @@ static WebContact contacts[2][SHOT_COUNT];
 static uint32_t mirror;
 static unsigned busy;
 
+int mmx4_coop_web_snapshot_ready(void) {return !busy;}
+int mmx4_coop_web_snapshot(Mmx4SnapshotIO *s) {
+    mmx4_snapshot_fixed(s,mirror);
+    for(unsigned seat=0;seat<2;++seat)for(unsigned shot=0;shot<SHOT_COUNT;++shot) {
+        MMX4_SNAPSHOT_U8(s,contacts[seat][shot].sides);
+        MMX4_SNAPSHOT_U8(s,contacts[seat][shot].carried);
+    }
+    return s->ok;
+}
+
 static int shot_slot(uint32_t actor) {
     if(actor<SHOTS || actor>=SHOTS+SHOT_COUNT*SHOT_STRIDE ||
        (actor-SHOTS)%SHOT_STRIDE)return -1;

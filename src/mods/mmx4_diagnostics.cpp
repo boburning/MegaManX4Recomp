@@ -2,6 +2,7 @@
  * replay is explicitly requested and refuses network sessions. */
 #include "mod_plugins.h"
 #include "mod_netplay.h"
+#include "mod_snapshot.h"
 #include "mod_runtime.h"
 #include "cpu_state.h"
 #include "execution_profile.h"
@@ -15,6 +16,7 @@ extern "C" {
 #include "mmx4_diagnostics.h"
 #include "mmx4_diagnostic_paths.h"
 #include <array>
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -23,6 +25,7 @@ extern "C" {
 #include <sstream>
 #include <string>
 #include <stdexcept>
+#include <vector>
 #ifndef MMX4_DIAGNOSTIC_BUILD_ID
 #define MMX4_DIAGNOSTIC_BUILD_ID "diagnostic-test-build"
 #endif
@@ -38,6 +41,10 @@ bool started,inside,replaying,replay_failed;
 bool owns_sources;
 bool recording_failed;
 std::string replay_path;
+std::string baseline_path;
+bool baseline_loaded;
+std::vector<uint8_t> expected_baseline;
+std::vector<uint8_t> pending_baseline;
 
 #ifndef MMX4_DIAGNOSTIC_TEST
 std::filesystem::path application_directory() {
@@ -156,7 +163,15 @@ void begin() {
         metadata<<"{\n  \"format_version\": 1,\n  \"input_format\": \"mmx4-input-v2\",\n"
             <<"  \"netplay\": "<<(psx_mod_netplay_is_active()?"true":"false")
             <<",\n  \"execution\": \""<<PSX_EXECUTION_ID
-            <<"\",\n  \"build\": \"" MMX4_DIAGNOSTIC_BUILD_ID "\"\n}\n";
+            <<"\",\n  \"build\": \"" MMX4_DIAGNOSTIC_BUILD_ID "\"";
+        if(!pending_baseline.empty()) {
+            std::ofstream baseline(folder/"baseline.pst",std::ios::binary);
+            baseline.write((const char*)pending_baseline.data(),pending_baseline.size());
+            baseline.close();
+            if(!baseline)throw std::runtime_error("cannot capture restored-state baseline");
+            metadata<<",\n  \"baseline\": \"baseline.pst\"";
+        }
+        metadata<<"\n}\n";
         metadata.close();
         if(!metadata)throw std::runtime_error("cannot capture session metadata");
         const auto settings=PSXRecompV4::mod_runtime_root().parent_path()/"settings.toml";
@@ -192,12 +207,46 @@ void begin() {
             "\nIt includes starting game saves; do not include the game disc or BIOS.");
         fprintf(stderr,"mmx4.diagnostics: recording %s\n",folder.u8string().c_str());
         fflush(stderr);
+        pending_baseline.clear();
     }catch(const std::exception& error) {
         recording.close();
         recording_failed=true;
         recording_location(std::string("Recording FAILED: ")+error.what());
         fprintf(stderr,"mmx4.diagnostics: recording unavailable: %s\n",error.what());
         psx_mod_counter_add("mmx4.diagnostics.recording-failed",1);
+    }
+}
+void state_loaded(const uint8_t *image,uint32_t size) {
+    if(!replay_path.empty()) {
+        // PSX_LOAD_SLOT restores a segment's baseline before its first input.
+        // A later manual jump cannot be reconciled with that segment's rows.
+        if(started)fail("unexpected state load during diagnostic playback");
+        else if(baseline_path.empty() || expected_baseline.size()!=size ||
+                !image || !std::equal(expected_baseline.begin(),expected_baseline.end(),image)) {
+            started=true;fail("restored image does not match required diagnostic baseline");
+        }else {
+            baseline_loaded=true;
+            fprintf(stderr,"mmx4.diagnostics: replay baseline restored\n");
+            fflush(stderr);
+            begin(); // A restored frame can read P2 before the next native pad poll.
+        }
+        return;
+    }
+    if(psx_mod_netplay_is_active()) {
+        if(recording.is_open())recording<<"# network state load\n";
+        return;
+    }
+    recording.flush();recording.close();recording.clear();
+    sequence=0;started=false;recording_failed=false;
+    try {
+        if(!image || !size)throw std::runtime_error("missing restored-state baseline");
+        pending_baseline.assign(image,image+size);
+        begin();
+        psx_mod_counter_add("mmx4.diagnostics.state-segments",1);
+    }catch(const std::exception& error) {
+        recording_failed=true;started=true;
+        recording_location(std::string("Recording FAILED: ")+error.what());
+        fprintf(stderr,"mmx4.diagnostics: state segment failed: %s\n",error.what());
     }
 }
 std::string input_line(unsigned seat,uint16_t buttons) {
@@ -219,6 +268,11 @@ int inputs(CPUState *cpu,uint32_t address) {
     inside=true;
     uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     mmx4_coop_development_mask_pad();
+    /* Auto-loading can be deferred until a safe guest boundary. Never admit
+     * baseline segment rows from a normal boot while that load is pending. */
+    if(!started && !baseline_path.empty() && !baseline_loaded) {
+        inside=false;return mmx4_coop_finish(cpu,result);
+    }
     if(!started)begin();
     Row row=sample();
     if(replaying) {
@@ -262,14 +316,29 @@ void activate() {
     release_sources();
     recording.close();replay.close();recording.clear();replay.clear();
     started=inside=replaying=replay_failed=recording_failed=false;sequence=0;
+    pending_baseline.clear();
+    expected_baseline.clear();baseline_loaded=false;
     replay_buttons={0xFFFFu,0xFFFFu};
     const char *path=getenv("MMX4_DIAGNOSTIC_REPLAY");
     replay_path=path?path:"";
+    const char *baseline=getenv("MMX4_DIAGNOSTIC_BASELINE");
+    baseline_path=baseline?baseline:"";
     recording_location(replay_path.empty()?"Waiting for game inputs. Playtest Diagnostics must be enabled."
         :"Offline diagnostic replay active; no new recording is created.");
     /* Present digital pads during startup and between decoded game inputs;
      * playback also works in a hidden run without physical controllers. */
     if(!replay_path.empty() && !psx_mod_netplay_is_active()) {
+        if(!baseline_path.empty()) {
+            std::ifstream in(std::filesystem::u8path(baseline_path),std::ios::binary|std::ios::ate);
+            auto size=in.tellg();
+            if(!in || size<=0 || size>64*1024*1024) {
+                started=true;fail("required diagnostic baseline is unavailable");return;
+            }
+            expected_baseline.resize(static_cast<size_t>(size));in.seekg(0);
+            if(!in.read((char*)expected_baseline.data(),size)) {
+                started=true;fail("cannot read required diagnostic baseline");return;
+            }
+        }
         psx_mod_set_controller_source(0,first_controller);
         psx_mod_set_controller_source(1,second_controller);owns_sources=true;
     }
@@ -278,7 +347,16 @@ void activate() {
 int coop_inputs(CPUState *cpu,uint32_t address) {
     return psx_mod_netplay_is_active()?inputs(cpu,address):0;
 }
+uint32_t diagnostic_snapshot_bytes() {return 1;}
+int diagnostic_snapshot_write(uint8_t *out,uint32_t len) {
+    if(len!=1)return 0;out[0]=1;return 1;
 }
+int diagnostic_snapshot_validate(const uint8_t *data,uint32_t len) {
+    return len==1 && data[0]==1;
+}
+void diagnostic_snapshot_read(const uint8_t*,uint32_t) {}
+}
+extern "C" int mmx4_diagnostics_snapshot_ready(void) {return !inside;}
 extern "C" int mmx4_diagnostics_resolve_input(unsigned seat,uint16_t *buttons) {
     if(inside || !started || seat>=2 || !buttons)return 0;
     if(replaying) {
@@ -294,6 +372,14 @@ extern "C" int mmx4_diagnostics_resolve_input(unsigned seat,uint16_t *buttons) {
 }
 extern "C" void mmx4_diagnostics_reset(void) {activate();}
 PSX_MOD_CONSTRUCTOR(mmx4_register_diagnostics) {
+    // The stream deliberately starts a new baseline segment after restore.
+    // Its provider gates single-player capture while its guest call is live.
+    static const PSXModSnapshotProvider provider={1,diagnostic_snapshot_bytes,
+        diagnostic_snapshot_write,diagnostic_snapshot_validate,
+        diagnostic_snapshot_read,mmx4_diagnostics_snapshot_ready};
+    psx_mod_register_snapshot_provider("mmx4.diagnostics",&provider);
+    psx_mod_register_snapshot_loaded_observer("mmx4.diagnostics",state_loaded);
+    psx_mod_register_snapshot_loaded_observer("mmx4.coop",state_loaded);
     psx_mod_register_activation_plugin("mmx4.diagnostics",activate);
     psx_mod_register_function_filter_plugin("mmx4.diagnostics",0x80012328u,inputs);
     /* The executable's netplay profile installs only the co-op plugin.

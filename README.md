@@ -80,6 +80,15 @@ disc, BIOS and settings using `tools/replay_mmx4_diagnostics.py`. The helper
 uses isolated card copies and checks recorded player-state hashes. Netplay
 traces are available for inspection, but full netplay replay is not supported.
 
+The next build supports save states and rewind in offline co-op. Open the
+save-state menu with F7: Square saves, Cross loads, and Circle goes back,
+using the corresponding configured controller or keyboard bindings. F8 opens
+rewind when Rewind is enabled. Restoring either feature starts a new diagnostic
+session containing `baseline.pst`; include that file when sending the session.
+The replay helper requires that exact baseline to load before verifying inputs.
+For Linux replay, extract the matching AppImage with `--appimage-extract` and
+use its native executable and `game.toml`, as described by the helper.
+
 The Windows ZIP and Linux x86_64 AppImage have limited stage coverage. The
 AppImage requires glibc 2.38 or newer. Split performance can fall
 below full speed; vehicle stages, chained scenes, and retry/menu transitions

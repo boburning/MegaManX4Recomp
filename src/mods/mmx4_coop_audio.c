@@ -19,10 +19,12 @@
 #define VOICE_DIRTY 0x8013E1D0u
 #define QUEUE 0x80175EF0u
 #define KEY_MASKS 0x8013BC08u
-typedef struct { Mmx4Asset header; uint32_t guest,offset,id; unsigned loaded; } AudioBank;
+typedef struct { Mmx4Asset header,samples; uint32_t guest,offset,id; unsigned loaded,initialized; } AudioBank;
 static AudioBank banks[2][2];
 static unsigned sound_call,voice_call,stop_call;
 static uint32_t audio_state;
+/* Derived residency belongs to one SPU boot, not to the saved simulation. */
+static uint32_t bound_epoch;
 static void read_bytes(uint32_t address,uint8_t *out,unsigned n) {
     for(unsigned i=0;i<n;++i)out[i]=psx_mod_read_byte(address+i);
 }
@@ -46,14 +48,40 @@ static void copy_header(AudioBank *bank) {
             (uint8_t)((bank->header.data[at]&0xC0u)|bank->id));
 }
 void mmx4_coop_audio_reset(void) {
-    memset(banks,0,sizeof banks);sound_call=voice_call=stop_call=0;audio_state=0;
+    memset(banks,0,sizeof banks);sound_call=voice_call=stop_call=0;audio_state=bound_epoch=0;
 }
-int mmx4_coop_audio_load(unsigned character,const uint8_t *file,uint32_t size) {
+static int bind_sample_banks(void) {
+    uint32_t epoch=psx_mod_spu_sample_bank_epoch();
+    if(!epoch)return 0;
+    if(epoch==bound_epoch)return 1;
+    for(unsigned character=0;character<2;++character)for(unsigned group=0;group<2;++group)
+        if(!banks[character][group].loaded)return 0;
+    for(unsigned character=0;character<2;++character)for(unsigned group=0;group<2;++group) {
+        const AudioBank *bank=&banks[character][group];
+        if(!psx_mod_spu_sample_bank(bank->id,bank->samples.data,(uint32_t)bank->samples.size))return 0;
+    }
+    bound_epoch=epoch;return 1;
+}
+int mmx4_coop_audio_activate(void) {
+    mmx4_coop_audio_reset();
+    for(unsigned character=0;character<2;++character)for(unsigned group=0;group<2;++group) {
+        AudioBank *bank=&banks[character][group];
+        bank->id=12u+character*2u+group;
+        bank->guest=psx_mod_alloc_guest_memory(0x2000,16);
+        if(!bank->guest)return 0;
+    }
+    audio_state=psx_mod_alloc_guest_memory(32,16);
+    if(!audio_state)return 0;
+    for(unsigned i=0;i<32;++i)psx_mod_write_byte(audio_state+i,0);
+    return 1;
+}
+int mmx4_coop_audio_prepare(unsigned character,const uint8_t *file,uint32_t size,int initialize_guest) {
     if(character>1)return 0;
     static const unsigned members[2]={10,12};
     static const uint32_t types[2]={0x20101u,0x20301u};
     for(unsigned group=0;group<2;++group) {
-        AudioBank *bank=&banks[character][group];if(bank->loaded)continue;
+        AudioBank *bank=&banks[character][group];
+        if(bank->loaded)continue;
         Mmx4Asset head,body;
         if(!mmx4_coop_arc_asset(file,size,members[group],&head) || head.type!=6 ||
            !mmx4_coop_arc_asset(file,size,members[group]+1,&body) || body.type!=types[group] ||
@@ -61,16 +89,36 @@ int mmx4_coop_audio_load(unsigned character,const uint8_t *file,uint32_t size) {
         uint32_t offset=le32(head.data)&0xFFFFFFu;
         if(offset<8 || offset%4 || offset>head.size-32 ||
            le32(head.data+4)!=body.size || memcmp(head.data+offset,"pBAV",4))return 0;
-        bank->id=12u+character*2u+group;
-        if(!psx_mod_spu_sample_bank(bank->id,body.data,(uint32_t)body.size))return 0;
-        bank->guest=psx_mod_alloc_guest_memory(0x2000,16);if(!bank->guest)return 0;
-        bank->header=head;bank->offset=offset;copy_header(bank);bank->loaded=1;
+        if(!bank->guest || bank->id!=12u+character*2u+group)return 0;
+        bank->header=head;bank->samples=body;bank->offset=offset;bank->loaded=1;
     }
-    if(!audio_state) {
-        audio_state=psx_mod_alloc_guest_memory(32,16);if(!audio_state)return 0;
-        for(unsigned i=0;i<32;++i)psx_mod_write_byte(audio_state+i,0);
+    /* Activation precedes spu_init(), which discards immutable sample banks.
+     * Cache first, then bind once after that boot boundary has happened. */
+    if(initialize_guest) {
+        if(!bind_sample_banks())return 0;
+        for(unsigned group=0;group<2;++group) {
+            AudioBank *bank=&banks[character][group];
+            if(!bank->initialized) {copy_header(bank);bank->initialized=1;}
+        }
     }
-    return 1;
+    return audio_state!=0;
+}
+int mmx4_coop_audio_load(unsigned character,const uint8_t *file,uint32_t size) {
+    return mmx4_coop_audio_prepare(character,file,size,1);
+}
+int mmx4_coop_audio_snapshot_ready(void) {
+    return !sound_call && !voice_call && !stop_call && bind_sample_banks();
+}
+int mmx4_coop_audio_snapshot(Mmx4SnapshotIO *s) {
+    mmx4_snapshot_fixed(s,audio_state);
+    for(unsigned character=0;character<2;++character)for(unsigned group=0;group<2;++group) {
+        AudioBank *bank=&banks[character][group];
+        if(!bank->loaded || !bank->guest)s->ok=0;
+        mmx4_snapshot_fixed(s,bank->guest);mmx4_snapshot_fixed(s,bank->id);
+        mmx4_snapshot_fixed(s,bank->offset);
+        MMX4_SNAPSHOT_BOOL(s,bank->initialized);
+    }
+    return s->ok;
 }
 static int open_bank(CPUState *cpu,AudioBank *bank) {
     if(psx_mod_read_byte(VAB_STATUS+bank->id)==1)return 1;
