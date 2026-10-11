@@ -17,18 +17,20 @@ def qualify_launch_options(args, output, offers):
     service or starting an Internet match. Valid cases stop at tick-0 admission.
     """
     results = []
-    for name, choice, corruption in (('host-unified', 'unified', None),
-            ('host-split', 'split', None), ('bad-fingerprint', 'split', 'fingerprint'),
-            ('undeclared-option', 'split', 'option')):
+    for name, choice, corruption, codes in (('host-unified', 'unified', None, False),
+            ('host-split', 'split', None, False), ('host-unified-codes', 'unified', None, True),
+            ('host-split-codes', 'split', None, True), ('bad-fingerprint', 'split', 'fingerprint', False),
+            ('undeclared-option', 'split', 'option', False)):
         case = output / name
         case.mkdir()
         args.cameras = 'split' if choice == 'unified' else 'unified'
+        args.ultimate_armor = args.black_zero = not codes
         ports, reservations = reserve_ports()
         peer = prepare_peer(args, case, 1, ports, False, 1296987000)
         state = peer.directory / 'mods/state.toml'
         previous = sha256_file(state)
         caps = copy.deepcopy(next(row['answer']['start']['match_caps'] for row in offers
-                                  if row['choice'] == choice))
+                                  if row['choice'] == choice and row['codes'] == codes))
         caps.update(relay='host', input_delay=2, session_bios='openbios', guest_memcard=False)
         if corruption == 'fingerprint':
             caps['mod_plan_fp'] = '0' * 64
@@ -109,11 +111,13 @@ def main():
     report = dict(status='running', executable_sha256=sha256_file(args.exe), offers=[],
                   scope='Actual native room-offer publisher; not room-start adoption or transport qualification')
     try:
-        for choice, layout in (('unified', 'stacked'), ('split', 'stacked'),
-                               ('unified', 'side_by_side'), ('split', 'side_by_side')):
+        for choice, layout, codes in (('unified', 'stacked',False), ('split', 'stacked',False),
+                               ('unified', 'side_by_side',False), ('split', 'side_by_side',False),
+                               ('unified','stacked',True),('split','stacked',True)):
             args.cameras = choice
             args.hud_layout = layout
-            case = output / f'{choice}-{layout}'
+            args.ultimate_armor=args.black_zero=codes
+            case = output / (f'{choice}-{layout}'+('-codes'if codes else''))
             case.mkdir()
             ports, reservations = reserve_ports()
             peer = prepare_peer(args, case, 0, ports, False, 0)
@@ -137,16 +141,17 @@ def main():
                     raise
             require(code == 0, f'Native room offer query failed for {choice}: {peer.log}')
             answer = json.loads(Path(str(request) + '.answer').read_text(encoding='utf-8'))
-            offer = dict(choice=choice, hud_layout=layout, answer=answer, argv=argv,
+            offer = dict(choice=choice, hud_layout=layout, codes=codes, answer=answer, argv=argv,
                          source_state_unchanged=sha256_file(state) == previous)
             report['offers'].append(offer)
             require(answer.get('disc_ok') is True and 'start' in answer,
                     f'Native publisher did not produce an eligible start offer: {answer}')
             caps = answer['start']['match_caps']
             package = next((item for item in caps.get('mods', []) if item['id'] == 'mmx4.coop'), None)
-            require(package is not None and package['feats'] == f'coop=cameras~{choice}+hud_layout~{layout}',
+            value=str(codes).lower()
+            require(package is not None and package['feats'] == f'coop=cameras~{choice}+hud_layout~{layout}+ultimate_armor_x~{value}+black_zero~{value}',
                     f'Native publisher omitted the declared camera selection: {caps}')
-            canonical = f"psx-trusted-settings-v1\nmmx4.coop\n{package['ver']}\ncoop\ncameras={choice}\nhud_layout={layout}\n"
+            canonical = f"psx-trusted-settings-v1\nmmx4.coop\n{package['ver']}\ncoop\nblack_zero={value}\ncameras={choice}\nhud_layout={layout}\nultimate_armor_x={value}\n"
             expected = hashlib.sha256(canonical.encode()).hexdigest()
             require(caps.get('mod_plan_fp') == expected,
                     f'Native publisher settings identity is missing or inconsistent: {caps}')
@@ -155,8 +160,8 @@ def main():
                 report['offers'][1]['answer']['start']['match_caps']['mod_plan_fp'],
                 'Unified and Split room offers did not identify different agreed settings')
         require(len({offer['answer']['start']['match_caps']['mod_plan_fp']
-                     for offer in report['offers']}) == 4,
-                'Camera/HUD combinations did not identify distinct agreed settings')
+                     for offer in report['offers']}) == 6,
+                'Camera/HUD/code combinations did not identify distinct agreed settings')
         if args.launch_checks:
             report['launch_checks'] = qualify_launch_options(args, output, report['offers'])
             report['scope'] = ('Actual native offer publisher and recorded-room launcher/profile commit; '

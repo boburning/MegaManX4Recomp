@@ -2,6 +2,7 @@
  * These prove projection/lifecycle bookkeeping, not original game behavior;
  * the original executable stage/menu/vehicle matrix remains required. */
 #include "mmx4_coop_internal.h"
+void mmx4_cheats_enforce_current(void) {} /* This fixture has no character codes. */
 #include "ws_view_anchor.h"
 #include <stdio.h>
 int gpu_ws_bg2d_get_view(unsigned layer, struct WsViewAnchor *view) {

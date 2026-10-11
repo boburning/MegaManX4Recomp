@@ -86,6 +86,7 @@ set(MMX4_COOP_CONTRACT_FILES
     src/mods/mmx4_coop_combat.c src/mods/mmx4_coop_assets.c src/mods/mmx4_coop_audio.c
     src/mods/mmx4_coop_internal.h src/mods/mmx4_coop_assets.h
     src/mods/mmx4_coop_snapshot.h
+    src/mods/mmx4_cheats.c src/mods/mmx4_cheats.h
     src/mods/mmx4_coop_views.c src/mods/mmx4_coop_views.h
     src/mods/mmx4_coop_split.c src/mods/mmx4_coop_web.c
     src/mods/mmx4_coop_debug_protocol.c src/mods/mmx4_coop_debug_protocol.h
@@ -138,6 +139,13 @@ add_custom_command(TARGET psx-runtime POST_BUILD
     VERBATIM)
 
 if(BUILD_TESTING)
+    add_executable(mmx4_cheats_test tests/test_mmx4_cheats.c src/mods/mmx4_cheats.c)
+    target_include_directories(mmx4_cheats_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
+    add_test(NAME mmx4_cheats_test COMMAND mmx4_cheats_test)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/mmx4/SLUS_005.61")
+        add_test(NAME mmx4_cheats_native_contract_test COMMAND mmx4_cheats_test
+            "${CMAKE_CURRENT_SOURCE_DIR}/mmx4/SLUS_005.61")
+    endif()
     add_executable(mmx4_coop_debug_protocol_test tests/test_mmx4_coop_debug_protocol.c
         src/mods/mmx4_coop_debug_protocol.c)
     target_include_directories(mmx4_coop_debug_protocol_test PRIVATE src/mods)

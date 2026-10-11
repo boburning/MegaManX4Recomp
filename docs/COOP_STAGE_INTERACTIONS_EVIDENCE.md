@@ -367,3 +367,43 @@ five large identical allocation layouts,20 packet/bank reuses, active-pass
 refusal, journal retirement and preservation of ordinary RAM/scratchpad. A
 complete UI-driven rematch remains additional coverage rather than a claimed
 native result.
+# Independent character codes and complete room plans (October11)
+
+The next build adds separate default-off Ultimate Armor X code and Black Zero
+packages, plus corresponding host-agreed co-op options. The original X code
+selects PL02 resources and makes a capsule grant the armor; it does not grant
+armor at stage start. Black Zero retains original stats and palette13. P1
+continues to own the campaign and saved code byte; P2 uses its selected code
+only within its projected context. Both X archives are prepared before cold
+restore, share verified-identical UI/audio, and occupy the existing fixed
+reservation. Sprite descriptors record the archive variant; the co-op host
+snapshot schema is now2.
+
+Private QA46 (X/P1) and QA47 (Zero/P1), both codes enabled, pass native mapped
+save/load, repeated loads, P2 death restore, P2 pause ownership, rewind
+accept/cancel and fresh-process load followed by attacks. Inspected restored
+images show X's purple code helmet and black Zero. QA49 replays QA47's exact
+cold baseline and verifies158 hashes. QA51 separately boots each solo campaign
+with both standalone packages enabled, observes the selected original code
+body and attacks, and confirms neither campaign receives armor at stage start.
+The original-EXE fixture executes resource selection, palette copy, selector
+clearing, capsule eligibility/grant and Nova gating/energy instructions; it
+passes on Windows and Linux. It also rejects duplicate hooks and tests P2 actor
+scopes that retain P1's campaign selector.
+
+Native QA54 publishes all six camera/HUD/code combinations with distinct
+settings fingerprints. Its real launcher adopts Unified/Split host choices
+with codes enabled and disabled despite opposite local preferences, rejects
+wrong fingerprints and undeclared choices, and leaves persisted preferences
+unchanged. The initial QA48 query failed because the shared START encoder
+silently truncated its640-byte nested field. Shared commit5a2332b6a replaces
+fixed scratch limits throughout encoding, queueing and inbound framing with
+the declared12-package capacities, and rejects truncation before publication.
+Focused actual-metadata and maximum-plan tests pass on Windows with and
+without ICE and on Linux with ICE. QA53 boots two real hidden LAN peers with
+both options enabled: each seat moves/attacks and100 core/mod digests agree
+through tick3250. This does not qualify Discord authorization or WAN/NAT.
+
+All21 Windows title checks pass. No game window was shown, and every native
+run used explicit private memory cards. Full Linux gameplay remains additional
+coverage. These changes are not in the published Playtest6.

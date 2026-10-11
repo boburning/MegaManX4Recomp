@@ -3,6 +3,7 @@
  * P1 owns the one native campaign/save record, including all upgrades.
  * Only P2's transient health/ammo/weapon and menu/pickup ownership live here. */
 #include "mmx4_coop_internal.h"
+#include "mmx4_cheats.h"
 #include "mod_netplay.h"
 #include "gpu.h"
 #include "ws_view_anchor.h"
@@ -1063,7 +1064,7 @@ static int x_capsule_canonical(CPUState *cpu,uint32_t address) {
     if(!mmx4_coop_alive(x_seat) &&
        !(address==0x800C62DCu && psx_mod_read_byte(actor+4)==0))
         return mmx4_coop_finish(cpu,0);
-    if(!x_seat)return 0;
+    if(!x_seat) {mmx4_cheats_enforce_current();return 0;}
     mmx4_coop_enter_second();capsule_guard=1;
     uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     capsule_guard=0;mmx4_coop_leave_second();

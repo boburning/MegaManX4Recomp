@@ -15,3 +15,9 @@ native implementations are compiled into MegaManX4Recomp.
 Generic host pacing and CD Speed are excluded. The old title-named Fast Loading
 wrapper is parked under `mods/development`; it was not a game-specific loader.
 A verified title loading implementation remains campaign work.
+
+Ultimate Armor X Code and Black Zero are separate optional mods, disabled by
+default. Both may be enabled together for local play. The X code retains the
+original capsule requirement; Black Zero uses the original black palette.
+For online co-op, the host chooses the corresponding two options under
+X + Zero Co-op so both peers use the same character settings.

@@ -1,0 +1,23 @@
+format_version = 5
+id = "mmx4.cheat.black-zero"
+version = "1.0.0"
+name = "Black Zero"
+author = "mstan"
+description = "Automatically uses Zero's original black palette. Independent of the Ultimate Armor X code."
+resolver = "declarative"
+save_compatibility = "shared"
+
+[[target]]
+game_id = "SLUS-00561"
+disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
+
+[[feature]]
+id = "black-zero"
+name = "Black Zero"
+description = "Enable Zero's original black palette without a button code. For netplay, use the host's X + Zero Co-op option."
+group = "Cheats"
+default_enabled = false
+
+[[plugin]]
+feature = "black-zero"
+id = "mmx4.black_zero"

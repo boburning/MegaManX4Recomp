@@ -49,3 +49,19 @@ label = "Side by side"
 [[plugin]]
 feature = "coop"
 id = "mmx4.coop"
+
+[[option]]
+feature = "coop"
+id = "ultimate_armor_x"
+label = "Ultimate Armor X code"
+description = "Automatically enable X's native Ultimate Armor code for either player. A capsule still grants the armor. The host chooses for both peers. Works together with Black Zero."
+type = "boolean"
+default = false
+
+[[option]]
+feature = "coop"
+id = "black_zero"
+label = "Black Zero"
+description = "Automatically use Zero's native black palette for either player. The host chooses for both peers. Works together with Ultimate Armor X."
+type = "boolean"
+default = false

@@ -10,6 +10,7 @@
 #include "mmx4_diagnostics.h"
 #include "mmx4_coop_debug_protocol.h"
 #include "mmx4_coop_views.h"
+#include "mmx4_cheats.h"
 #include "mod_netplay.h"
 #include "psx_netplay.h"
 #include "mod_snapshot.h"
@@ -37,10 +38,17 @@ typedef struct {
     uint16_t *ui_pixels;
     uint8_t *file; uint32_t size; Mmx4Asset compressed; unsigned loaded,initialized;
 } CharacterAssets;
-typedef struct { uint32_t source; uint16_t id,tile,tiles; uint8_t colors[32]; } SpriteBank;
+typedef struct {
+    uint8_t *file;uint32_t size;
+    Mmx4Asset compressed,assembly,colors;
+    unsigned loaded;
+} XArchive;
+typedef struct { uint32_t source; uint16_t id,tile,tiles; uint8_t variant,colors[32]; } SpriteBank;
 typedef struct {uint16_t page,clut,uv,id,colors[16];unsigned character;} UiBank;
 static PlayerContext second,first;
 static CharacterAssets assets[2];
+static XArchive ultimate_archive;
+static unsigned x_variant,ultimate_armor_x,black_zero;
 static SpriteBank banks[4096];
 static UiBank ui_banks[4096];
 static SpriteBank view_banks[4096];
@@ -55,6 +63,7 @@ static uint32_t arena,diagnostic,frames;
 static uint32_t saved_resources[9];
 static const unsigned resource_offsets[9]={0x14,0x1C,0x24,0x28,0x34,0x38,0x3C,0x44,0x48};
 static uint8_t saved_dirty;
+static uint8_t saved_cheat;
 static uint16_t previous_input;
 static unsigned counterpart;
 static unsigned projected;
@@ -153,6 +162,40 @@ static int retain_ui(CharacterAssets *a,const Mmx4Asset *v) {
     }
     return 1;
 }
+static int prepare_ultimate_archive(void) {
+    XArchive *u=&ultimate_archive;
+    if(u->loaded)return 1;
+    if(!assets[0].loaded)return 0;
+    if(!u->file) {
+        if(!psx_mod_read_disc_file("ARC/PL02_U.ARC",NULL,0,&u->size) || !(u->file=malloc(u->size)))return 0;
+        if(!psx_mod_read_disc_file("ARC/PL02_U.ARC",u->file,u->size,&u->size)) {
+            free(u->file);u->file=NULL;u->size=0;return 0;
+        }
+    }
+    if(!mmx4_coop_arc_asset(u->file,u->size,2,&u->compressed) || u->compressed.type!=2 ||
+       !mmx4_coop_arc_asset(u->file,u->size,9,&u->assembly) || u->assembly.type!=3 ||
+       !mmx4_coop_arc_asset(u->file,u->size,0,&u->colors) || u->colors.type!=9 ||
+       u->compressed.size>0x34000 || u->assembly.size>0xC000 || u->colors.size>0x1000)return 0;
+    /* Original PL02 changes only body/assembly/colors. Keep one fixed guest
+     * allocation and the shared normal-X UI/VAB cache; verify that contract
+     * directly from the user's archives rather than assuming equal audio. */
+    static const unsigned shared[]={1,3,4,5,6,7,8,10,11,12,13,14,15};
+    for(unsigned i=0;i<sizeof shared/sizeof shared[0];++i) {
+        Mmx4Asset normal,ultimate;
+        if(!mmx4_coop_arc_asset(assets[0].file,assets[0].size,shared[i],&normal) ||
+           !mmx4_coop_arc_asset(u->file,u->size,shared[i],&ultimate) ||
+           normal.type!=ultimate.type || normal.size!=ultimate.size ||
+           memcmp(normal.data,ultimate.data,normal.size))return 0;
+    }
+    u->loaded=1;return 1;
+}
+static const Mmx4Asset *character_compressed(unsigned character) {
+    return character==0 && x_variant?&ultimate_archive.compressed:&assets[character].compressed;
+}
+static void select_x_variant(unsigned ultimate) {
+    ultimate=ultimate!=0;
+    if(x_variant!=ultimate) {x_variant=ultimate;assets[0].initialized=0;}
+}
 static int prepare_character(unsigned character,int initialize_guest) {
     if(character>1 || !prepare_ui_layout())return 0;
     CharacterAssets *a=&assets[character];
@@ -171,6 +214,10 @@ static int prepare_character(unsigned character,int initialize_guest) {
     a->compressed=body;
     if(body.size>0x34000 || assembly.size>0xC000 || colors.size>0x1000)return 0;
     if(initialize_guest) {
+        if(character==0 && x_variant) {
+            if(!prepare_ultimate_archive())return 0;
+            body=ultimate_archive.compressed;assembly=ultimate_archive.assembly;colors=ultimate_archive.colors;
+        }
         project(a->sprites,body.data,body.size);project(a->assembly,assembly.data,assembly.size);
         project(a->colors,colors.data,colors.size);
     }
@@ -198,7 +245,8 @@ static int prepare_character(unsigned character,int initialize_guest) {
 }
 static int load_character(unsigned character) {
     /* Both immutable audio banks must exist before the first residency bind. */
-    return character<2 && prepare_character(character^1u,0) && prepare_character(character,1);
+    return character<2 && prepare_character(0,0) && prepare_character(1,0) &&
+        prepare_ultimate_archive() && prepare_character(character,1);
 }
 static void enter_second(void) {
     projected=1;
@@ -207,6 +255,10 @@ static void enter_second(void) {
     mmx4_coop_lifecycle_follow_progress(second.body,counterpart);
     capture_player(&first);project_player(&second);
     mmx4_coop_lifecycle_project();
+    /* PLAY+37 is the one native campaign code flag. Only P1 owns its saved
+     * value; P2's character code comes solely from agreed active options. */
+    saved_cheat=psx_mod_read_byte(PLAY+0x37);
+    psx_mod_write_byte(PLAY+0x37,(uint8_t)mmx4_cheats_character_enabled(counterpart));
     CharacterAssets *a=&assets[counterpart];
     uint32_t values[9]={a->sprites,a->assembly,a->colors,a->palette,a->menu[0],a->menu[1],a->menu[2],a->menu[3],a->menu[4]};
     for(unsigned i=0;i<9;++i) {saved_resources[i]=psx_mod_read_word(SCRATCH+resource_offsets[i]);psx_mod_write_word(SCRATCH+resource_offsets[i],values[i]);}
@@ -218,6 +270,7 @@ static void leave_second(void) {
     mmx4_coop_combat_project_end(diagnostic+0x200);
     project_player(&first);
     mmx4_coop_lifecycle_restore();
+    psx_mod_write_byte(PLAY+0x37,saved_cheat);saved_cheat=0;
     for(unsigned i=0;i<9;++i)psx_mod_write_word(SCRATCH+resource_offsets[i],saved_resources[i]);
     psx_mod_write_byte(0x80166BB0,saved_dirty);
     projected=0;
@@ -355,7 +408,11 @@ static void diagnostics(void) {
     }
 }
 static void reset_player(CPUState *cpu,uint32_t address) {
-    (void)cpu;(void)address;if(inside)return;
+    (void)cpu;(void)address;
+    /* This owned initializer hook also refreshes P1's selected native code.
+     * The helper leaves P2's already-installed projection flag untouched. */
+    mmx4_cheats_enforce_current();
+    if(inside)return;
     mmx4_coop_lifecycle_reset();
     mmx4_coop_combat_reset();
     mmx4_coop_split_reset();
@@ -378,6 +435,11 @@ static int load_stage_palette(unsigned character) {
 static int enroll(CPUState *cpu) {
     if(!psx_mod_texture_banks_supported())return 0;
     counterpart=psx_mod_read_byte(PLAYER+2)^1;
+    /* A manually entered native X code belongs to P1's campaign only.
+     * X/P2 uses its own selected option, never Zero/P1's black-code byte. */
+    if(counterpart<=1)select_x_variant(counterpart==1?
+        (psx_mod_read_byte(PLAY+0x37)!=0 || mmx4_cheats_character_enabled(0)):
+        mmx4_cheats_character_enabled(0));
     if(counterpart>1 || !load_character(counterpart^1u) || !load_character(counterpart))return 0;
     uint8_t play[0x64];
     if(!load_stage_palette(counterpart))return 0;
@@ -684,16 +746,16 @@ static uint32_t character_palette(unsigned character) {
     return character==counterpart?assets[character].palette:psx_mod_read_word(SCRATCH+0x28);
 }
 static int decode_bank(const SpriteBank *bank,uint8_t decoded[32768]) {
-    if(!bank->tiles || bank->tiles>256)return 0;
-    for(unsigned character=0;character<2;++character) {
-        const CharacterAssets *a=&assets[character];
-        if(!a->loaded || bank->source<a->sprites || bank->source-a->sprites>=a->compressed.size)continue;
-        size_t written=0;
-        return mmx4_coop_decode_sprite(a->compressed.data+bank->source-a->sprites,
-            a->compressed.size-(bank->source-a->sprites),decoded,32768,&written) &&
-            written==(size_t)bank->tiles*128u;
-    }
-    return 0;
+    if(!bank->tiles || bank->tiles>256 || bank->variant>2)return 0;
+    unsigned character=bank->variant==2;
+    const CharacterAssets *a=&assets[character];
+    const Mmx4Asset *body=bank->variant==1?&ultimate_archive.compressed:&a->compressed;
+    if(!a->loaded || (bank->variant==1 && !ultimate_archive.loaded) ||
+       bank->source<a->sprites || bank->source-a->sprites>=body->size)return 0;
+    size_t written=0;
+    return mmx4_coop_decode_sprite(body->data+bank->source-a->sprites,
+        body->size-(bank->source-a->sprites),decoded,32768,&written) &&
+        written==(size_t)bank->tiles*128u;
 }
 static int define_sprite_bank(const SpriteBank *bank) {
     uint8_t decoded[32768];uint16_t pixels[256*256];
@@ -719,17 +781,20 @@ static uint16_t sprite_bank(unsigned character,uint32_t table,unsigned frame,uin
     unsigned *count=psx_mod_local_view_scope()?&view_bank_count:&bank_count;
     SpriteBank *cache=psx_mod_local_view_scope()?view_banks:banks;
     CharacterAssets *a=&assets[character];uint8_t colors[32];
-    if(table<a->sprites || table-a->sprites>=a->compressed.size || clut<0x7800)return 0;
+    unsigned variant=character?2u:x_variant;
+    const Mmx4Asset *body=character_compressed(character);
+    if(table<a->sprites || table-a->sprites>=body->size || clut<0x7800)return 0;
     size_t offset=table-a->sprites;
-    if(frame*4+4>a->compressed.size-offset)return 0;
-    uint32_t packed=le32(a->compressed.data+offset+frame*4),source=table+(packed&0xFFFFF);
+    if(frame*4+4>body->size-offset)return 0;
+    uint32_t packed=le32(body->data+offset+frame*4),source=table+(packed&0xFFFFF);
     unsigned tiles=packed>>20;size_t pal=(size_t)(clut-0x7800)*32;
-    if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=a->compressed.size || pal+32>0x1000)return 0;
+    if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=body->size || pal+32>0x1000)return 0;
     capture(character_palette(character)+(uint32_t)pal,colors,sizeof colors);
-    for(unsigned i=0;i<*count;++i)if(cache[i].source==source && cache[i].tile==tile && !memcmp(cache[i].colors,colors,32))return cache[i].id;
+    for(unsigned i=0;i<*count;++i)if(cache[i].variant==variant && cache[i].source==source &&
+        cache[i].tile==tile && !memcmp(cache[i].colors,colors,32))return cache[i].id;
     if(*count==4096)return 0;
     uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xA000u:0x6000u)+*count);
-    SpriteBank bank={source,id,tile,(uint16_t)tiles,{0}};memcpy(bank.colors,colors,32);
+    SpriteBank bank={source,id,tile,(uint16_t)tiles,(uint8_t)variant,{0}};memcpy(bank.colors,colors,32);
     if(!define_sprite_bank(&bank))return 0;
     cache[(*count)++]=bank;return id;
 }
@@ -856,10 +921,11 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
     if(!table && psx_mod_read_word(actor+0x3C)==parent_assembly)
         table=primary || projected?psx_mod_read_word(PLAYER+0x38):le32(second.body+0x38);
     CharacterAssets *a=&assets[character];
+    const Mmx4Asset *body=character_compressed(character);
     uint32_t native_sprites=psx_mod_read_word(SCRATCH+0x14);
-    if(primary && table>=native_sprites && table-native_sprites<a->compressed.size)
+    if(primary && table>=native_sprites && table-native_sprites<body->size)
         table=a->sprites+(table-native_sprites);
-    int compressed=table>=a->sprites && table-a->sprites<a->compressed.size;
+    int compressed=table>=a->sprites && table-a->sprites<body->size;
     uint32_t assembly=psx_mod_read_word(actor+0x3C);
     uint32_t assembly_base=primary?psx_mod_read_word(SCRATCH+0x1C):a->assembly;
     if(!compressed && (assembly<assembly_base || assembly-assembly_base>=0xC000))return;
@@ -963,6 +1029,9 @@ static uint32_t hash_player(uint32_t hash,const PlayerContext *p) {
 static uint32_t state_digest(void) {
     uint32_t hash=2166136261u;
     hash=hash_word(hash,split_views);
+    hash=hash_word(hash,ultimate_armor_x);hash=hash_word(hash,black_zero);
+    hash=hash_word(hash,mmx4_cheats_character_enabled(0));hash=hash_word(hash,mmx4_cheats_character_enabled(1));
+    hash=hash_word(hash,x_variant);
     hash=hash_word(hash,enrolled);hash=hash_word(hash,failed);hash=hash_word(hash,projected);
     hash=hash_word(hash,counterpart);hash=hash_word(hash,previous_input);hash=hash_word(hash,frames);
 #ifdef MMX4_COOP_NETPLAY_DEBUG
@@ -976,6 +1045,7 @@ static uint32_t state_digest(void) {
     hash=hash_player(hash,&second);
     if(projected) {
         hash=hash_player(hash,&first);hash=hash_word(hash,saved_dirty);
+        hash=hash_word(hash,saved_cheat);
         for(unsigned i=0;i<9;++i)hash=hash_word(hash,saved_resources[i]);
     }
     return mmx4_coop_split_digest(mmx4_coop_combat_digest(mmx4_coop_lifecycle_digest(hash)));
@@ -984,7 +1054,7 @@ typedef struct {
     PlayerContext first,second;
     uint32_t resources[9],world_packet_used;
     unsigned projected,rendering,hud_call,upload_guard,failed;
-    uint8_t dirty;
+    uint8_t dirty,cheat;
 } LocalViewContext;
 static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     (void)alpha;
@@ -1021,14 +1091,14 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
         psx_mod_read_half(buffer+0x14u),psx_mod_read_half(buffer+0x16u),
         psx_mod_read_half(buffer+0x18u),psx_mod_read_half(buffer+0x1Au)};
     LocalViewContext context={first,second,{0},world_packet_used,
-        projected,rendering,hud_call,upload_guard,failed,saved_dirty};
+        projected,rendering,hud_call,upload_guard,failed,saved_dirty,saved_cheat};
     memcpy(context.resources,saved_resources,sizeof saved_resources);
     mmx4_coop_lifecycle_view_save();mmx4_widescreen_view_save();
     uint32_t before=state_digest();
     int committed=psx_mod_render_local_view(cpu,&rectangle,draw_local_view,&buffer);
     first=context.first;second=context.second;
     memcpy(saved_resources,context.resources,sizeof saved_resources);
-    world_packet_used=context.world_packet_used;saved_dirty=context.dirty;
+    world_packet_used=context.world_packet_used;saved_dirty=context.dirty;saved_cheat=context.cheat;
     projected=context.projected;rendering=context.rendering;hud_call=context.hud_call;
     upload_guard=context.upload_guard;failed=context.failed;
     mmx4_coop_lifecycle_view_restore();mmx4_widescreen_view_restore();
@@ -1040,13 +1110,13 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int snapshot_ready(void) {
-    return assets[0].loaded && assets[1].loaded && diagnostic && arena && hud_arena &&
+    return assets[0].loaded && assets[1].loaded && ultimate_archive.loaded && diagnostic && arena && hud_arena &&
         !(inside || rendering || projected || camera_call || camera_update_call || hud_call ||
-          upload_guard || local_view_call || psx_mod_local_view_scope()) &&
+          upload_guard || local_view_call || saved_cheat || psx_mod_local_view_scope()) &&
         mmx4_coop_lifecycle_snapshot_ready() && mmx4_coop_combat_snapshot_ready() &&
         mmx4_coop_web_snapshot_ready() && mmx4_coop_audio_snapshot_ready() &&
         mmx4_coop_split_snapshot_ready() && mmx4_widescreen_snapshot_ready() &&
-        mmx4_diagnostics_snapshot_ready();
+        mmx4_diagnostics_snapshot_ready() && mmx4_cheats_snapshot_ready();
 }
 static void snapshot_player(Mmx4SnapshotIO *s,PlayerContext *player) {
     if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok && s->pos<=s->len &&
@@ -1067,6 +1137,7 @@ static void snapshot_sprite_banks(Mmx4SnapshotIO *s,SpriteBank *cache,unsigned *
         bank.id=(uint16_t)mmx4_snapshot_integer(s,bank.id,2,UINT16_MAX);
         bank.tile=(uint16_t)mmx4_snapshot_integer(s,bank.tile,2,UINT16_MAX);
         bank.tiles=(uint16_t)mmx4_snapshot_integer(s,bank.tiles,2,256);
+        bank.variant=(uint8_t)mmx4_snapshot_integer(s,bank.variant,1,2);
         mmx4_snapshot_bytes(s,bank.colors,sizeof bank.colors);
         if(bank.id!=base+i || !bank.tiles)s->ok=0;
         if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok) {
@@ -1094,8 +1165,14 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x31503458u); /* X4P1, format version 1 */
+    mmx4_snapshot_fixed(s,0x32503458u); /* X4P2, format version 2 */
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
+    mmx4_snapshot_fixed(s,ultimate_armor_x);mmx4_snapshot_fixed(s,black_zero);
+    mmx4_snapshot_fixed(s,mmx4_cheats_character_enabled(0));
+    mmx4_snapshot_fixed(s,mmx4_cheats_character_enabled(1));
+    MMX4_SNAPSHOT_BOOL(s,x_variant);
+    if(!ultimate_archive.loaded)s->ok=0;
+    mmx4_snapshot_fixed(s,ultimate_archive.size);
     mmx4_snapshot_fixed(s,arena);mmx4_snapshot_fixed(s,hud_arena);mmx4_snapshot_fixed(s,diagnostic);
     for(unsigned character=0;character<2;++character) {
         CharacterAssets *a=&assets[character];
@@ -1168,14 +1245,19 @@ static void snapshot_resources_restored(void) {
 static void activate(void) {
     mmx4_diagnostics_reset();
     ui_layout_ready=0;memset(ui_layout,0,sizeof ui_layout);
-    char cameras[16],layout[24];
+    char cameras[16],layout[24],ultimate[8],black[8];
     if(!psx_mod_current_option_value("cameras",cameras,sizeof cameras))strcpy(cameras,"unified");
     hud_side_by_side=psx_mod_current_option_value("hud_layout",layout,sizeof layout) &&
         !strcmp(layout,"side_by_side");
+    ultimate_armor_x=psx_mod_current_option_value("ultimate_armor_x",ultimate,sizeof ultimate) &&
+        !strcmp(ultimate,"true");
+    black_zero=psx_mod_current_option_value("black_zero",black,sizeof black) && !strcmp(black,"true");
+    mmx4_cheats_configure_coop((int)ultimate_armor_x,(int)black_zero);
+    x_variant=mmx4_cheats_character_enabled(0)!=0;
     split_views=mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
     memset(&first,0,sizeof first);memset(&second,0,sizeof second);
     bank_count=ui_bank_count=inside=enrolled=failed=rendering=projected=camera_call=camera_update_call=hud_call=upload_guard=0;
-    world_packet_used=0;
+    world_packet_used=0;saved_cheat=0;
     view_bank_count=view_ui_bank_count=local_view_call=local_view_seat=0;
     if(!mmx4_coop_split_activate() || !mmx4_coop_web_activate())failed=1;
     mmx4_coop_lifecycle_activate();mmx4_coop_combat_reset();
@@ -1183,6 +1265,7 @@ static void activate(void) {
 #ifdef MMX4_COOP_NETPLAY_DEBUG
     memset(&development_decoder,0,sizeof development_decoder);
 #endif
+    free(ultimate_archive.file);memset(&ultimate_archive,0,sizeof ultimate_archive);
     for(unsigned i=0;i<2;++i) {
         free(assets[i].file);free(assets[i].ui_pixels);memset(&assets[i],0,sizeof assets[i]);
         uint32_t space=psx_mod_alloc_guest_memory(0x60000,16);
@@ -1199,7 +1282,7 @@ static void activate(void) {
     if(!mmx4_coop_audio_activate())failed=1;
     /* Host ARC/UI/SPU residency precedes a possible first-PC state load.
      * Guest character arrays are initialized only by normal native enrollment. */
-    if(!failed && (!prepare_character(0,0) || !prepare_character(1,0)))
+    if(!failed && (!prepare_character(0,0) || !prepare_character(1,0) || !prepare_ultimate_archive()))
         psx_mod_counter_add("mmx4.coop.snapshot-assets-not-ready",1);
     psx_mod_set_texture_bank_resolver(resolve_texture_bank);
     /* The provider captures both native contexts and persistent ownership.
@@ -1217,7 +1300,7 @@ static void activate(void) {
     }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
-    static const PSXModSnapshotProvider snapshot={1,snapshot_bytes,snapshot_write,
+    static const PSXModSnapshotProvider snapshot={2,snapshot_bytes,snapshot_write,
         snapshot_validate,snapshot_read,snapshot_ready};
     psx_mod_register_snapshot_provider(ID,&snapshot);
     psx_mod_register_savestate_plugin(ID,snapshot_resources_restored);

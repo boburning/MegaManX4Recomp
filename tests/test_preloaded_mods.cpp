@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <utility>
 #include <chrono>
 
 namespace fs = std::filesystem;
@@ -49,13 +50,14 @@ int main(int argc, char** argv) {
             return fail("manifest parse failed: " + error);
         }
     }
-    if (manifest_count != 5) return fail("expected five package manifests");
+    if (manifest_count != 7) return fail("expected seven package manifests");
 
     PSXRecompV4::mod_clear_plugins_for_tests();
     for (const char* id : {
              "mmx4.damage-multiplier",
              "mmx4.resident-loading",
-             "mmx4.widescreen", "mmx4.coop", "mmx4.diagnostics"}) {
+             "mmx4.widescreen", "mmx4.coop", "mmx4.diagnostics",
+             "mmx4.ultimate_armor", "mmx4.black_zero"}) {
         if (!PSXRecompV4::mod_register_activation_plugin(id, no_op_plugin)) {
             return fail(std::string("could not register test plugin ") + id);
         }
@@ -65,8 +67,8 @@ int main(int argc, char** argv) {
     std::string error;
     if (!manager.scan(&error)) return fail("catalog scan failed: " + error);
     if (!manager.load_state(&error)) return fail("default state failed: " + error);
-    if (manager.packages().size() != 5)
-        return fail("expected five package families");
+    if (manager.packages().size() != 7)
+        return fail("expected seven package families");
 
     const auto default_plan = manager.resolve(kGameId, "", kDiscSha256);
     if (!default_plan.ok || !default_plan.writes.empty() ||
@@ -76,6 +78,23 @@ int main(int argc, char** argv) {
     bool diagnostics_default=false;
     for(const auto& plugin:default_plan.plugins)diagnostics_default|=plugin.id=="mmx4.diagnostics";
     if(!diagnostics_default)return fail("input diagnostics was not enabled by default");
+    if(manager.feature_enabled("mmx4.cheat.ultimate-armor","ultimate-armor") ||
+       manager.feature_enabled("mmx4.cheat.black-zero","black-zero"))
+        return fail("elective character cheats must default off");
+    if(manager.feature_option_value("mmx4.coop","coop","ultimate_armor_x")!="false" ||
+       manager.feature_option_value("mmx4.coop","coop","black_zero")!="false")
+        return fail("netplay character options must default off");
+    for(const auto& feature:std::vector<std::pair<const char*,const char*>>{
+        {"mmx4.cheat.ultimate-armor","ultimate-armor"},{"mmx4.cheat.black-zero","black-zero"}}) {
+        if(!manager.set_feature_enabled(feature.first,feature.second,true,&error))return fail(error);
+    }
+    const auto both_cheats=manager.resolve(kGameId,"",kDiscSha256);
+    if(!both_cheats.ok || !both_cheats.writes.empty() || both_cheats.plugins.size()!=6)
+        return fail("both independent character cheat plugins must resolve together");
+    for(const auto& feature:std::vector<std::pair<const char*,const char*>>{
+        {"mmx4.cheat.ultimate-armor","ultimate-armor"},{"mmx4.cheat.black-zero","black-zero"}}) {
+        if(!manager.set_feature_enabled(feature.first,feature.second,false,&error))return fail(error);
+    }
 
     if (!manager.set_feature_option(
             "mmx4.cheat.damage-multiplier", "damage-multiplier",

@@ -124,7 +124,7 @@ class Runtime:
             time.sleep(.1)
         raise TimeoutError(f'Native stage did not become playable: {mode.hex()}')
 
-    def boot(self, timeout=90, campaign=0):
+    def boot(self, timeout=90, campaign=0, wait_for_coop=True):
         deadline = time.monotonic() + timeout
         previous = None
         iteration = 0
@@ -143,6 +143,8 @@ class Runtime:
                         self.input(0xfff7)
                         time.sleep(.15)
                         self.release()
+                    if not wait_for_coop:
+                        return
                     players = self.wait_playable()
                     if [p[2] for p in players] != [campaign, campaign ^ 1]:
                         raise AssertionError('Native character selection chose the wrong campaign')

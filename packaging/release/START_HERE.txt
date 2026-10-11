@@ -39,6 +39,11 @@ CO-OP PLAYTEST
   Split health pickups refill their collector without freezing the partner;
   Unified keeps the original shared refill pause.
 
+  Ultimate Armor X Code and Black Zero are optional, separate Mods toggles.
+  Both can be enabled together for local play. The X code makes a capsule
+  grant Ultimate Armor; it does not grant armor immediately. For online
+  co-op, the host selects these two options under X + Zero Co-op.
+
   Player 1 owns the campaign and permanent upgrades. Boss clears are shared;
   the lives counter shows team retries. Player 2 cannot quit the campaign.
 

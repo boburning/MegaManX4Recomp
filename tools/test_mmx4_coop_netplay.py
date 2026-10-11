@@ -255,7 +255,9 @@ def prepare_peer(args, case: Path, seat: int, ports: list[int], jitter: bool,
     (directory / "mods/state.toml").write_text(
         'format_version = 2\n\n[[feature]]\npackage_id = "mmx4.coop"\n'
         f'id = "coop"\nenabled = false\n[feature.values]\ncameras = "{args.cameras}"\n'
-        f'hud_layout = "{getattr(args, "hud_layout", "stacked")}"\n', encoding="utf-8")
+        f'hud_layout = "{getattr(args, "hud_layout", "stacked")}"\n'
+        f'ultimate_armor_x = {str(getattr(args,"ultimate_armor",False)).lower()}\n'
+        f'black_zero = {str(getattr(args,"black_zero",False)).lower()}\n', encoding="utf-8")
     saves = directory / "saves"
     saves.mkdir()
     card_seed = getattr(args, 'card_seed', None)
@@ -973,6 +975,8 @@ def main() -> int:
     parser.add_argument("--scenario", choices=("both", "delay", "jitter"), default="both")
     parser.add_argument("--frontend", choices=("headless-opengl", "hidden-window"), default="headless-opengl")
     parser.add_argument("--cameras", choices=("unified", "split"), default="unified")
+    parser.add_argument("--ultimate-armor", action="store_true")
+    parser.add_argument("--black-zero", action="store_true")
     parser.add_argument("--split-separation", action="store_true")
     parser.add_argument("--split-death-retry", action="store_true")
     parser.add_argument("--split-first-death", choices=('p1', 'p2'), default='p2')

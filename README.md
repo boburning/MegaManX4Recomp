@@ -55,6 +55,12 @@ uses Unified. Split health pickups refill only their collector without pausing
 the partner; Unified retains the native shared pause. Actual scene changes
 still teleport living partners together.
 
+The next build adds separate **Ultimate Armor X Code** and **Black Zero**
+mods, both off by default and usable together in local play. The X code makes
+Ultimate Armor available from a capsule; it does not grant the armor at stage
+start. For netplay, the host selects the two corresponding options under
+**X + Zero Co-op** so both peers agree on the character settings.
+
 Player 1 owns the campaign and permanent progress. Playtest Diagnostics
 defaults on, showing both accepted input streams and recording each run
 with its starting cards/mod choices under `saves/diagnostics`.

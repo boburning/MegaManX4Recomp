@@ -8,12 +8,15 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ('exe','game','bios','disc','output'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--campaign',type=int,choices=(0,1),default=0)
+    p.add_argument('--ultimate-armor',action='store_true')
+    p.add_argument('--black-zero',action='store_true')
     args=p.parse_args();qa=args.output.resolve();qa.mkdir(parents=True,exist_ok=False)
     original=args.exe.resolve(strict=True);exe=qa/original.name
     shutil.copy2(original,exe)
     for name in ('assets','mods'):shutil.copytree(original.parent/name,qa/name)
     for dll in original.parent.glob('*.dll'):shutil.copy2(dll,qa/dll.name)
-    (qa/'mods/state.toml').write_text('format_version = 2\n\n[[feature]]\npackage_id = "mmx4.coop"\nid = "coop"\nenabled = true\n[feature.values]\ncameras = "unified"\nhud_layout = "stacked"\n')
+    (qa/'mods/state.toml').write_text('format_version = 2\n\n[[feature]]\npackage_id = "mmx4.coop"\nid = "coop"\nenabled = true\n[feature.values]\ncameras = "unified"\nhud_layout = "stacked"\n'
+        f'ultimate_armor_x = {str(args.ultimate_armor).lower()}\nblack_zero = {str(args.black_zero).lower()}\n')
     (qa/'settings.toml').write_text('[video]\nrewind = true\nrewind_depth = 50\nrewind_interval = 15\n')
     cfg=args.game.resolve().read_text()
     for section,key,value in [('game','exe',str(Path(__file__).resolve().parents[1]/'mmx4/SLUS_005.61')),('video','internal_resolution','native'),('runtime','memcard_dir',str(qa/'private-cards')),('runtime','overlay_autocompile_cmd','')]:cfg=change_config(cfg,section,key,value)
@@ -46,6 +49,8 @@ def main():
             else:process.terminate();process.wait(timeout=15)
     def observe(r,label):
         bs=r.players();event=dict(label=label,players=[dict(character=b[2],active=b[0],hp=b[0x5c]&127,state=b[4],action=b[5],x=struct.unpack_from('<i',b,8)[0]/65536,y=struct.unpack_from('<i',b,12)[0]/65536)for b in bs],save=r.request('savestate_status'),rewind=r.request('rewind_status'))
+        event['canonical_code']=r.read(0x801721f7,1)[0]
+        event['armor']=[dict(parts=b[0xa7],kind=b[0xb8])for b in bs]
         events.append(event);(qa/'report.json').write_text(json.dumps(events,indent=2));print(json.dumps(event),flush=True);return event
     def host(r,buttons,duration=.15):
         r.request('set_input',layer='host',buttons=hex(buttons));time.sleep(duration)

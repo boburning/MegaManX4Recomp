@@ -1,0 +1,23 @@
+format_version = 5
+id = "mmx4.cheat.ultimate-armor"
+version = "1.0.0"
+name = "Ultimate Armor X Code"
+author = "mstan"
+description = "Automatically enables X's native Ultimate Armor code. Visit a capsule to receive the armor. Independent of Black Zero."
+resolver = "declarative"
+save_compatibility = "shared"
+
+[[target]]
+game_id = "SLUS-00561"
+disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
+
+[[feature]]
+id = "ultimate-armor"
+name = "Ultimate Armor X Code"
+description = "Enable the original code without entering button combinations. A capsule grants the actual armor. For netplay, use the host's X + Zero Co-op option."
+group = "Cheats"
+default_enabled = false
+
+[[plugin]]
+feature = "ultimate-armor"
+id = "mmx4.ultimate_armor"
