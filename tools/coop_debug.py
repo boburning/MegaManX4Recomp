@@ -110,7 +110,7 @@ class Runtime:
             if diagnostic[3]:
                 raise RuntimeError('Co-op plugin reported a failure')
             players = self.players()
-            if mode[0] == 6 and not mode[0x1c] and diagnostic[2] and all(
+            if mode[0] == 6 and mode[1] == 0 and not mode[0x1c] and diagnostic[2] and all(
                     p[0] and p[4] == 1 and p[5] >= 2 for p in players):
                 if advance_dialogue:
                     self.release()
@@ -136,6 +136,13 @@ class Runtime:
                     previous = state
                 if state[0] == 6:
                     self.release()
+                    if state[1] == 2:
+                        # A final Start pulse can enter the native pause menu
+                        # after the stage becomes active. Resume before waiting
+                        # for gameplay rather than treating that menu as ready.
+                        self.input(0xfff7)
+                        time.sleep(.15)
+                        self.release()
                     players = self.wait_playable()
                     if [p[2] for p in players] != [campaign, campaign ^ 1]:
                         raise AssertionError('Native character selection chose the wrong campaign')
