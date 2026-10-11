@@ -6,6 +6,15 @@
     fprintf(stderr,"line %d: %s\n",__LINE__,#value);exit(1); } } while(0)
 
 int main(void) {
+    /* Native Mushroom lift: limit moves to720 while camera is2047 and the
+     * riders are2200/2199. Destination alone wrongly kills both riders. */
+    CHECK(2200-8<mmx4_coop_view_death_bottom(2047,720));
+    CHECK(2199-8<mmx4_coop_view_death_bottom(2047,720));
+    /* Once the lift reaches its destination, falling below it is fatal. */
+    CHECK(984-8>=mmx4_coop_view_death_bottom(720,720));
+    /* Preserve the earlier Volcano drop: camera still trails above arena. */
+    CHECK(650-8<mmx4_coop_view_death_bottom(256,544));
+    CHECK(808-8>=mmx4_coop_view_death_bottom(256,544));
     CHECK(!mmx4_coop_views_requested(0,"split"));
     CHECK(!mmx4_coop_views_requested(1,"unified"));
     CHECK(!mmx4_coop_views_requested(1,NULL));

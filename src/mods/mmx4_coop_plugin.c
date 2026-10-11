@@ -444,10 +444,12 @@ static void constrain_team(CPUState *cpu,uint32_t address) {
             if((distance>0 && p<old_p) || (distance<0 && p>old_p))put32(second.body+8,(uint32_t)old_p);
         }
     }
-    /* A scrolling camera can trail a player falling into a boss arena.
-     * Its current viewport is not the room's death plane: use the authored
-     * maximum camera Y, so the native lower platform remains reachable. */
-    int bottom=(int16_t)psx_mod_read_half(0x801419D8u)+256;
+    /* Falling boss entries need the authored deeper floor. Scripted lifts
+     * replace that limit with their higher destination before the camera
+     * and riders get there; keep the current view's bottom during ascent. */
+    int bottom=mmx4_coop_view_death_bottom(
+        (int16_t)psx_mod_read_half(0x801419BEu),
+        (int16_t)psx_mod_read_half(0x801419D8u));
     for(unsigned seat=0;seat<2;++seat) {
         int y=seat?(int16_t)(le32(second.body+12)>>16):(int16_t)psx_mod_read_half(PLAYER+14);
         if(mmx4_coop_alive(seat) && y-8>=bottom) {
@@ -577,7 +579,7 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
            (stage==1 && section==1 && checkpoint<6) ||
            (stage==2 && section==0 && checkpoint<5) ||
            (stage==2 && section==1 && checkpoint<2) ||
-           (stage==3 && section<=1 && (checkpoint<2 || checkpoint==3)) ||
+           (stage==3 && section<=1 && checkpoint<4) ||
            (stage==4 && section==0 && checkpoint<2) ||
            (stage==4 && section==1 && checkpoint<4) ||
            (stage==8 && section==0 && checkpoint<3) ||

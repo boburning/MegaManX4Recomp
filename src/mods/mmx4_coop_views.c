@@ -10,6 +10,11 @@ int mmx4_coop_camera_world_ready(unsigned mode,unsigned phase,unsigned primary_s
 int mmx4_coop_views_requested(int online,const char *cameras) {
     return online && cameras && !strcmp(cameras,"split");
 }
+int mmx4_coop_view_death_bottom(int camera_y,int room_maximum_y) {
+    /* Scripted lifts move their destination limits before the camera and
+     * riders arrive. Falling boss entries instead need the deeper room floor. */
+    return (camera_y>room_maximum_y?camera_y:room_maximum_y)+256;
+}
 int mmx4_coop_camera_scope_requested(int split,int ready,int first_alive,int second_alive) {
     return ready && (second_alive || (split && first_alive));
 }
