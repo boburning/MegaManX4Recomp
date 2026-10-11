@@ -50,11 +50,15 @@ def main():
         retry=wait('native-lift-retry',lambda s:live(s) and s['lives']==start['lives']-1)
         r.fixture(5,3)
         wait('retry-destination-before-camera',lambda s:live(s) and s['camera_maximum_y']<1000 and s['camera_y']>1800,healthy=True)
-        top=wait('lift-complete',lambda s:live(s) and s['camera_y']==720 and
-                 all(b['y']<900 for b in s['players']),timeout=60,healthy=True)
-        assert top['lives']==retry['lives']
-        assert abs(top['players'][0]['x']-top['players'][1]['x'])<=24
-        print('PASS: native lift starts safely, team retry spends one life, both riders survive complete ascent',flush=True)
+        # The original lift requires players to destroy overhead panels.
+        # Owner reviewed QA34 and confirmed that idling into them should crush
+        # the riders. Qualify the scroll regression before those obstacles.
+        rising=wait('retry-continued-ascent',lambda s:live(s) and s['camera_y']<1750 and
+                    all(b['y']<1950 for b in s['players']),timeout=30,healthy=True)
+        assert rising['lives']==retry['lives']
+        assert rising['camera_maximum_y']==720
+        assert abs(rising['players'][0]['x']-rising['players'][1]['x'])<=24
+        print('PASS: both riders survive destination-limit change and continued ascent; team retry spends one life',flush=True)
     finally:r.release()
 
 if __name__=='__main__':main()

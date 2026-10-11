@@ -285,3 +285,38 @@ CRC samples through3166 while each seat moves/attacks. These are local LAN
 captures, not qualification of full internet replay. All18 Windows checks
 pass. Linux g++ also builds/runs the recorder, replay, error and real native
 executable/AppImage path tests; full Linux gameplay qualification is separate.
+
+## Split Mushroom lift and staircase review, October 11
+
+Commit11da504 fixes an immediate co-op fatality at the circular lift's native
+section1/checkpoint2: it sets destination camera maximum720 while the actual
+camera remains2047 and riders are nearY2200. The death plane now uses the
+deeper of the current camera and authored room maximum. QA35 passes the
+native limit change, team retry spending exactly one shared life, and continued
+ascent in both rosters. X/P1 reaches camera1746 with bothHP32 atY1900/1899;
+Zero/P1 reaches camera1748 with bothHP32 atY1901/1902. Reports are under
+build-pr23/qa-mushroom-parity-35/{x,zero}-custom/lift/report.json.
+
+QA34's11.75-second recording separately shows centered idle riders meeting an
+overhead panel atY1233. The owner watched it and confirms authentic behavior:
+players need to destroy those panels. This is no longer treated as a bug.
+The reusable elevator check stops before the obstacles instead of requiring
+idle riders to survive the entire ascent. No crush policy was weakened.
+
+IMG0755's foot/tread offset is visible in the tester's footage. The blue spiral
+is stage3/section1/checkpoint0 beforeX2400. Native slope positions obey
+X:Y=714-floor(worldX/4) and Zero:Y=713-floor(worldX/4). Foreground mode2 uses
+cameraY=offset512-trunc(cameraX/4). QA35 compares both rosters at five positions
+fromX400 through1200, switching stationary bodies between4:3 and16:9.
+The configured renderer's ring/map validation reports1113 checked tiles and0
+differences at each boundary. Custom-renderer-disabled native4:3 reference
+captures also align visually; its unconfigured generic comparator output is
+not an X4 map-validation result. QA36 uses1080p, separates the players161px,
+and pauses/resumes with each owner. Native heights and visible feet remain
+correct. The floating pickup and tester offset are not reproduced, so
+item36 remains open.
+
+The exact section2 staircase-arrival footage for item34 is unavailable in the
+specified clip range. Frame-by-frame review of IMG0757's later lift retry
+at5.77–6.47seconds shows ordinary beams, overlapping circular arrival
+sprites, then both normal bodies. This does not qualify the missing report.
