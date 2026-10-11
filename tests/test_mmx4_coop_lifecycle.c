@@ -2,7 +2,11 @@
  * These prove projection/lifecycle bookkeeping, not original game behavior;
  * the original executable stage/menu/vehicle matrix remains required. */
 #include "mmx4_coop_internal.h"
+#include "ws_view_anchor.h"
 #include <stdio.h>
+int gpu_ws_bg2d_get_view(unsigned layer, struct WsViewAnchor *view) {
+    (void)layer;*view=(WsViewAnchor){0};return 0;
+}
 static unsigned local_view;
 int psx_mod_local_view_scope(void) {return (int)local_view;}
 #include <stdlib.h>

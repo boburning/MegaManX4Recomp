@@ -572,6 +572,7 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
            (stage==1 && section==1 && checkpoint<6) ||
            (stage==2 && section==0 && checkpoint<5) ||
            (stage==2 && section==1 && checkpoint<2) ||
+           (stage==3 && section<=1 && (checkpoint<2 || checkpoint==3)) ||
            (stage==4 && section==0 && checkpoint<2) ||
            (stage==4 && section==1 && checkpoint<4) ||
            (stage==8 && section==0 && checkpoint<3) ||

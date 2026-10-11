@@ -3,6 +3,8 @@
  * P1 owns the one native campaign/save record, including all upgrades.
  * Only P2's transient health/ammo/weapon and menu/pickup ownership live here. */
 #include "mmx4_coop_internal.h"
+#include "gpu.h"
+#include "ws_view_anchor.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -1032,6 +1034,42 @@ static int stage_scripts(CPUState *cpu,uint32_t address) {
     uint32_t result=call_story_as_second(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     script_pool_guard=0;return mmx4_coop_finish(cpu,result);
 }
+static int fan_latch(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[4];
+    if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12)!=3 ||
+       actor<0x80165A30u || actor>=0x80165A30u+32u*0x8Cu ||
+       (actor-0x80165A30u)%0x8Cu || psx_mod_read_byte(actor+1)!=13 ||
+       psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5) ||
+       !mmx4_coop_alive(0) || !mmx4_coop_alive(1) ||
+       mmx4_coop_lifecycle_hidden(0) || mmx4_coop_lifecycle_hidden(1))return 0;
+    const uint8_t *body=mmx4_coop_second_body();
+    Mmx4CoopViewActor players[2]={
+        {(int16_t)psx_mod_read_half(PLAYER+10),(int16_t)psx_mod_read_half(PLAYER+14),1},
+        {(int16_t)(body_word(body,8)>>16),(int16_t)(body_word(body,12)>>16),1}};
+    int camera_x=(int16_t)psx_mod_read_half(0x801419BAu);
+    int camera_y=(int16_t)psx_mod_read_half(0x801419BEu);
+    WsViewAnchor view={0};gpu_ws_bg2d_get_view(0,&view);
+    /* Wait only for the partner visible in this shared view. A dead,
+     * withdrawn, warping or distant player must not hold the stage open. */
+    for(unsigned seat=0;seat<2;++seat) {
+        int x=players[seat].world_x-camera_x,y=players[seat].world_y-camera_y;
+        if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
+    }
+    uint32_t player_box=body_word(body,0x68),platform_box=psx_mod_read_word(actor+0x68);
+    if(!player_box || !platform_box)return 0;
+    /* Original800C36E8 closes only when PLAYER's collision bottom clears
+     * the platform's top. Apply that same test to the second body before
+     * the native routine freezes input and begins the closing animation. */
+    int distance=(int16_t)((uint16_t)psx_mod_read_half(actor+14)-
+        (uint16_t)players[1].world_y);
+    int clearance=(int8_t)psx_mod_read_byte(player_box+1)+psx_mod_read_byte(player_box+3)+
+        psx_mod_read_byte(platform_box+3)-(int8_t)psx_mod_read_byte(platform_box+1);
+    if(distance>=0 && distance>=clearance)return 0;
+    psx_mod_counter_add("mmx4.coop.latch-waits",1);
+    return mmx4_coop_finish(cpu,0);
+}
 static int shared_ride_ready(CPUState *cpu,uint32_t address) {
     (void)address;
     if(!mmx4_coop_projected() || cpu->gpr[31]!=0x8003B64Cu)return 0;
@@ -1317,6 +1355,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x80035A6Cu,death_animation);
     psx_mod_register_function_filter_plugin(ID,0x80033BC8u,death_detection);
     psx_mod_register_function_filter_plugin(ID,0x8002166Cu,stage_scripts);
+    psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);
     psx_mod_register_function_filter_plugin(ID,0x8002AD7Cu,shared_ride_ready);
     psx_mod_register_function_filter_plugin(ID,0x80021D20u,script_text);
     psx_mod_register_function_filter_plugin(ID,0x8002217Cu,shared_text_init);

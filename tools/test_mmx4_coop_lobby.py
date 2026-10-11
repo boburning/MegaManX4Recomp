@@ -46,6 +46,8 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=Path("game.toml"))
     parser.add_argument("--disc", type=Path, default=Path("mmx4/Mega Man X4.cue"))
     parser.add_argument("--cameras", choices=("unified", "split"), default="unified")
+    parser.add_argument("--connection", choices=("lan", "online"), default="lan")
+    parser.add_argument("--server-url", help="Private test lobby URL for online handoff checks")
     parser.add_argument("--boot-game", action="store_true",
                         help="Enter native co-op gameplay and compare peer state digests")
     args = parser.parse_args()
@@ -101,6 +103,10 @@ def main() -> None:
             peer.environment.update(LNG_TCP_PORT="0", LNG_TEST_HIDDEN="1",
                 PSX_NET_LOBBY_TRACE="1",
                 LNG_TCP_PORT_FILE=str(peer.directory / "launcher-port.txt"))
+            if args.connection == "online":
+                peer.environment.pop("PSX_NET_TRANSPORT", None)
+            if args.server_url:
+                peer.environment["PSX_NET_LOBBY_URL"] = args.server_url
             peer.argv = [str(peer.directory / args.exe.name), "--launcher",
                          "--hidden-window", "--game", str(config),
                          "--bios", str(args.bios), "--disc", str(args.disc),
