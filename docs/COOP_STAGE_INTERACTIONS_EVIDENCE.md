@@ -449,3 +449,32 @@ behavior is included and superseded by ancestor e2952be: defaultX0/Y104,
 optional Side by sideX56/Y0, and unshifted own-player Split HUD. Master also
 includes the later native anchoring and pause drawing fixes. No runtime change
 or new release is needed for this review. Central review issue: `beads-enkq`.
+
+## Renewed online startup report, October 11
+
+The owner reports a netplay-fix PR from TechnicallyComputers, with one peer
+remaining white and the other staying in the lobby. The tested PR/build has
+not been identified. GitHub currently has no open X4 PR from that author;
+X4 PR23 is already merged. Shared runtime commit c47f7391e has no associated
+PR and repeats the full title-version, START relay-path, suspended lobby-agent
+and adopted-ICE transport fixes already present in Playtest7's 5a2332b6a pin.
+Its additional transport logging is absent from that pin. Do not infer that
+the latest user failure is fixed merely from this overlap.
+
+Fresh private `qa-online-start-56` uses current Playtest7-source debug controls,
+the original disc, owned cards and two hidden launchers. The real upstream
+WebSocket server runs privately with account authorization disabled. Current
+co-op metadata includes all four options; Create, Join, Ready and Play adopt
+the waiting-room ICE agents on both peers and boot native gameplay. There
+are92 identical core/mod CRC samples through tick3020. No desktop input or
+personal saves are used. The private server and both owned peers are stopped
+after the run. This qualifies the current local ICE handoff, not Discord
+authorization, WAN connectivity or the reporter's unidentified candidate.
+
+The suspected completed-agent race is not established: the server requires
+the guest's completed-connection path report before starting a two-seat room.
+Next evidence should identify the exact PR/build and capture both peers'
+startup stderr, including any launch refusal and the host's admission stall.
+The title input recorder starts after native input execution, so its absence
+during a pre-boot white screen is expected. Keep checklist32 and central
+`beads-eio.9.42` open.
