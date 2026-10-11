@@ -1,4 +1,38 @@
-# Co-op playtest 6
+# Co-op playtest 7
+
+Version: `v0.1.1-coop-playtest.7`, Windows ZIP and Linux x86_64 AppImage.
+Includes the qualified ICE startup, complete lobby settings, Mushroom
+latch/elevator and room-initialization fixes, offline co-op save/load/rewind,
+executable-relative diagnostics with exact restored-state replay baselines,
+session resource reset, and independent native X/Zero character-code mods.
+Unified and Stacked remain defaults; Split remains experimental. Preserve
+authentic ceiling crush: destroy the elevator's overhead panels.
+
+Production builds pass21 Windows and20 Linux title checks. Linux's separate
+original-EXE code fixture also passes; the private disc is excluded from its
+staged source/test tree. Packaged hidden launchers expose the two-player
+Netplay button, and both complete code-option room offers match across OSes.
+Native execution identity and co-op profile match. Windows imports only
+system DLLs; AppImage layout/seeding passes and requires glibc2.38 or newer.
+Both private development-control options are disabled.
+
+Compiled source: `9f4f288` (runtime `3753aa2`), framework `5a2332b6a`,
+UI `06fd73e7`, nested network `e5305930`. Later documentation changes do
+not alter the compiled runtime. Production profile:
+`mmx4-coop-delay-v3:6f3b92df91ca26ba48674f2d9f430cbc27af96a7`.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `09bf8c4a3f369a7751e59ff5afcbd96f770083170192689427e33c2a78522637` |
+| Linux x86_64 AppImage | `e27153279506b5b680bbcf3a16de79c9c5f5f9ad9a418a71628d6371add168f3` |
+
+Public assets/checksums are staged under `dist/playtest7-public`. Private
+source, cards and QA remain excluded. Native gameplay/state qualification
+is Windows; Linux gameplay and WAN/NAT remain additional coverage. Exact
+staircase-floating and teleporter reports remain unqualified; intermittent
+co-op disappearance stays on the backlog. See the stable feedback checklist.
+
+## Previous co-op playtest 6
 
 Version: `v0.1.1-coop-playtest.6`. Windows ZIP and Linux x86_64 AppImage
 include PR23's updated framework together with the existing co-op support and
