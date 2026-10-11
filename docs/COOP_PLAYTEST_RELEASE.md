@@ -1,4 +1,39 @@
-# Co-op playtest 5
+# Co-op playtest 6
+
+Version: `v0.1.1-coop-playtest.6`. Windows ZIP and Linux x86_64 AppImage
+include PR23's updated framework together with the existing co-op support and
+controller UI. The shared account client's first-request socket initialization
+fix is merged in recomp-net PR42. Public builds disable private debug controls.
+
+Both production builds pass all18 title CTests. Four focused native SPU/PGXP
+fixtures pass on Windows; fresh-process account startup passes on both platforms.
+Linux also passes the updated direct room-latency, lobby-client and outbound
+WebSocket-buffer tests. The actual Windows ZIP and Linux AppImage pass hidden
+launcher/controller checks and advertise identical native room offers,
+execution identity and co-op compatibility profile. Windows imports only system
+DLLs. AppImage layout/seeding passes; it requires glibc2.38 or newer.
+
+Runtime source: `27a4ea0`, framework `68425a4a`, UI `7ca30e31`, nested
+network `e5305930`. Later documentation commits do not alter the compiled
+runtime. Production profile:
+`mmx4-coop-delay-v3:756a3475b9adb03dc53ee7a6ffee79a2a896dc06`.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `105b93b4d5077d1a23804bb0554a5f77b89e309544ba80d7cad07e765141f4bb` |
+| Linux x86_64 AppImage | `06413ac0450d05ddb414916fc3aaaa24b80918fb716d5213551b210e6f260c77` |
+
+Public assets and combined checksums are staged under `dist/playtest6-public`.
+Private source archives, cards, credentials and diagnostics are excluded.
+
+Full Discord authorization and WAN gameplay remain pending owner/playtester
+confirmation. The original 28 feedback entries retain their historical
+qualification; the later Split Mushroom elevator report remains open item29.
+Item30's transport cause and fresh-process fix are qualified, with end-to-end
+Discord authorization still pending. Unified and Stacked remain defaults;
+online Split remains experimental.
+
+## Previous co-op playtest 5
 
 Version: `v0.1.1-coop-playtest.5`. Windows ZIP and Linux x86_64 AppImage
 are built from the same approved source and pinned framework/UI/network
