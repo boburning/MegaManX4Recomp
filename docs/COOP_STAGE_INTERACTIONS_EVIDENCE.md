@@ -256,3 +256,32 @@ team retry spending exactly one life (2 to1). All18 title checks pass.
 These are native loader/controller qualifications. The owner's exact Web
 Spider enemy-shot/HUD disappearance and staircase teleporter clip remain
 unqualified; this checkpoint result does not close those reports.
+
+## Executable-relative playtest diagnostics, October 11
+
+Actual packaged Playtest6 creates default-on recordings, but its recording
+directory follows the configured memory-card root. A development launcher
+probe showed that root resolving outside the presumed package saves folder.
+The next title recorder therefore uses the actual application directory,
+independent of cwd and card configuration. Windows uses the running module
+path; native Linux uses `/proc/self/exe`; AppImage uses the portable image
+path preserved by AppRun in `RECOMP_APPIMAGE_PATH`, outside the mounted image.
+`diagnostics-location.txt` beside the application names the exact session or
+a recording error. The input display shows ERROR on write failure.
+
+Every session retains accepted inputs, starting cards or absence markers,
+mod choices, available settings and network/build/execution metadata. The
+offline replay helper uses isolated cards/settings and rejects marked network
+traces before launching anything; network logs remain inspectable.
+
+Native Windows nextQA30 presses the real hidden launcher Play button, boots
+X/P1 and Zero/P2, drives movement/attacks and each native pause owner, and
+exits normally. It produces2896 input records; offline playback verifies2895
+input-state hashes. QA31 boots the opposite roster, produces2551 records and
+verifies2550 on playback. Both deliberately store memory cards separately
+under private-cards while recordings stay beside their executables.
+Real two-peer LAN QA32 produces2521 records per seat and95 matching core/mod
+CRC samples through3166 while each seat moves/attacks. These are local LAN
+captures, not qualification of full internet replay. All18 Windows checks
+pass. Linux g++ also builds/runs the recorder, replay, error and real native
+executable/AppImage path tests; full Linux gameplay qualification is separate.

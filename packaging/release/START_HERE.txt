@@ -46,6 +46,12 @@ CO-OP PLAYTEST
   and records each run under saves/diagnostics, including starting memory
   cards and mod choices. Keep the session folder for reproducing a report;
   offline input replay needs the matching build and settings.
+  Recordings always live in saves/diagnostics beside the executable, or beside
+  the .AppImage file. Memory-card directory changes do not move recordings.
+  diagnostics-location.txt in that same application folder gives the exact path.
+  Quit normally, then zip the entire named session folder with your bug report.
+  Recordings include starting game saves. Netplay traces are for inspection;
+  full netplay replay is not supported.
 
   This release has limited stage coverage. Split may still run below full
   speed, and retries, vehicle stages, and chained scenes need more playtesting.

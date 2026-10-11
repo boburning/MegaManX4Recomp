@@ -23,6 +23,7 @@ static std::array<uint8_t,0xE4> partner;
 static std::array<uint16_t,2> pads{0xFFFF,0xFFFF};
 static std::map<std::string,unsigned> counters;
 static std::string save_root,shown[2];
+static std::string application_root;
 static bool online;
 static bool projected_context;
 static std::array<uint8_t,0xE4> canonical_first;
@@ -62,6 +63,8 @@ uint32_t mmx4_coop_call(CPUState*,uint32_t,uint32_t,uint32_t) {
     psx_mod_write_half(0x80166C0Cu,(uint16_t)(held&~old));return 77;
 }
 uint16_t mmx4_coop_input(unsigned seat);
+namespace {std::filesystem::path application_directory() {return std::filesystem::u8path(application_root);}}
+#define MMX4_DIAGNOSTIC_TEST
 #include "../src/mods/mmx4_diagnostics.cpp"
 uint16_t mmx4_coop_input(unsigned seat) {
     uint16_t buttons=pads.at(seat);mmx4_diagnostics_resolve_input(seat,&buttons);
@@ -76,8 +79,19 @@ static void env(const char *v) {
 #endif
 }
 int main(int argc,char **argv) {
+    CHECK(mmx4_diagnostic_application_directory()==
+          std::filesystem::canonical(std::filesystem::u8path(argv[0])).parent_path());
+#ifndef _WIN32
+    setenv("RECOMP_APPIMAGE_PATH","/tmp/mmx4-path-test/MegaManX4Recomp.AppImage",1);
+    CHECK(mmx4_diagnostic_application_directory()==std::filesystem::path("/tmp/mmx4-path-test"));
+    unsetenv("RECOMP_APPIMAGE_PATH");
+    setenv("APPIMAGE","/tmp/mmx4-fallback/Game.AppImage",1);
+    CHECK(mmx4_diagnostic_application_directory()==std::filesystem::path("/tmp/mmx4-fallback"));
+    unsetenv("APPIMAGE");
+#endif
     save_root=argc>1?argv[1]:"diagnostic-test-output";
     save_root+="/"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    application_root=save_root;
     std::filesystem::create_directories(save_root);CPUState cpu{};env("");activate();
     CHECK(!sources[0] && !sources[1]);
     std::filesystem::create_directories(PSXRecompV4::mod_runtime_root());
@@ -91,12 +105,16 @@ int main(int argc,char **argv) {
     raw=0xFFF7;mmx4_diagnostics_resolve_input(1,&raw);
     recording.flush();auto final=std::make_unique<decltype(memory)>(memory);recording.close();
     std::filesystem::path file;
-    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(save_root)/"diagnostics"))
+    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(application_root)/"saves/diagnostics"))
         if(std::filesystem::exists(entry.path()/"inputs.csv"))file=entry.path()/"inputs.csv";
     CHECK(!file.empty() && std::filesystem::file_size(file)>100);
     CHECK(std::filesystem::file_size(file.parent_path()/"card1.mcd")==MEMCARD_SIZE);
     CHECK(std::filesystem::exists(file.parent_path()/"card2.absent"));
     CHECK(std::filesystem::exists(file.parent_path()/"mods-state.toml"));
+    CHECK(std::filesystem::exists(file.parent_path()/"session.json"));
+    {std::ifstream location(std::filesystem::path(save_root)/"diagnostics-location.txt");
+     std::string text((std::istreambuf_iterator<char>(location)),{});
+     CHECK(text.find(std::filesystem::absolute(file.parent_path()).make_preferred().u8string())!=std::string::npos);}
     memory=*initial;env(file.string().c_str());activate();pads={0xFFFF,0xFFFF};
     CHECK(sources[0] && sources[1]);
     CHECK(inputs(&cpu,0x80012328u) && replaying && !replay_failed);
@@ -119,7 +137,7 @@ int main(int argc,char **argv) {
     std::filesystem::remove(PSXRecompV4::mod_runtime_root()/"state.toml");
     begin();recording.close();
     unsigned captures=0;
-    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(save_root)/"diagnostics")) {
+    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(application_root)/"saves/diagnostics")) {
         if(std::filesystem::exists(entry.path()/"inputs.csv")) {
             CHECK(std::filesystem::exists(entry.path()/"mods-state.toml"));
             ++captures;
@@ -135,5 +153,25 @@ int main(int argc,char **argv) {
     auto projected_row=sample();
     CHECK(projected_row[9]==0 && projected_row[11]==17 && projected_row[13]==123 && projected_row[14]==77);
     projected_context=false;
+    // Netplay traces must identify their mode, rather than masquerading as
+    // independently playable offline recordings.
+    online=true;activate();inputs(&cpu,0x80012328u);recording.flush();
+    bool network_metadata=false;
+    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(application_root)/"saves/diagnostics")) {
+        std::ifstream meta(entry.path()/"session.json");
+        std::string text((std::istreambuf_iterator<char>(meta)),{});
+        if(text.find("\"netplay\": true")!=std::string::npos)network_metadata=true;
+    }
+    CHECK(network_metadata);
+    // A directory/write failure is visible both on the input display and in
+    // the location pointer. It must never show REC with an unusable recording.
+    online=false;activate();
+    application_root+="/blocked-app";std::filesystem::create_directories(application_root);
+    {std::ofstream blocked(std::filesystem::path(application_root)/"saves");blocked<<"file, not a directory";}
+    inputs(&cpu,0x80012328u);
+    CHECK(recording_failed && !recording.is_open());
+    CHECK(shown[0].find("ERROR")!=std::string::npos && shown[0].find("REC")==std::string::npos);
+    {std::ifstream location(std::filesystem::path(application_root)/"diagnostics-location.txt");
+     std::string text((std::istreambuf_iterator<char>(location)),{});CHECK(text.find("FAILED")!=std::string::npos);}
     printf("diagnostic recording/replay boundary checks passed\n");return 0;
 }

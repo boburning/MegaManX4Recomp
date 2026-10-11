@@ -22,6 +22,9 @@ def prepare(args):
     recording = args.recording.resolve()
     if recording.is_dir():
         recording /= 'inputs.csv'
+    metadata=recording.parent/'session.json'
+    if metadata.exists() and json.loads(metadata.read_text(encoding='utf-8')).get('netplay'):
+        raise ValueError('Netplay recording: useful for inspection, but offline replay is not supported')
     with recording.open('rb') as source:
         if source.readline().rstrip(b'\r\n') != b'# mmx4-input-v2':
             raise ValueError('Expected a version 2 diagnostic recording')
@@ -79,7 +82,8 @@ def prepare(args):
     (output / 'mods').mkdir(exist_ok=True)
     shutil.copy2(state, output / 'mods/state.toml')
     (output / 'game.toml').write_text(config, encoding='utf-8')
-    settings_path = args.settings or executable.parent / 'settings.toml'
+    settings_path = args.settings or (recording.parent / 'settings.toml'
+        if (recording.parent / 'settings.toml').exists() else executable.parent / 'settings.toml')
     settings = settings_path.read_text(encoding='utf-8') if settings_path.exists() else ''
     settings = re.sub(r'^\[memcard\]\s*$.*?(?=^\[|\Z)', '', settings, flags=re.M | re.S)
     settings += '\n[memcard]\n' + ''.join(f'enable{i+1} = {str(card is not None).lower()}\n' for i, card in enumerate(cards))
@@ -114,7 +118,8 @@ def main():
     args = parser.parse_args()
     bios, disc = args.bios.resolve(strict=True), args.disc.resolve(strict=True)
     output, target, trace = prepare(args)
-    env = {key: value for key, value in os.environ.items() if not key.startswith(('PSX_', 'RNET_', 'LNG_', 'MMX4_DIAGNOSTIC_'))}
+    env = {key: value for key, value in os.environ.items() if not key.startswith(('PSX_', 'RNET_', 'LNG_', 'MMX4_DIAGNOSTIC_'))
+           and key not in ('APPIMAGE','APPDIR','RECOMP_APPIMAGE_PATH')}
     env['MMX4_DIAGNOSTIC_REPLAY'] = str(trace)
     argv = [str(target), '--headless-opengl', '--no-launcher', '--game', str(output / 'game.toml'),
             '--bios', str(bios), '--disc', str(disc), '--memcard-dir', str(output / 'saves')]

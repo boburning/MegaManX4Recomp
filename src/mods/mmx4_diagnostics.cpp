@@ -13,6 +13,7 @@ extern "C" {
 #include "mmx4_coop_internal.h"
 }
 #include "mmx4_diagnostics.h"
+#include "mmx4_diagnostic_paths.h"
 #include <array>
 #include <chrono>
 #include <cstdio>
@@ -35,7 +36,24 @@ std::array<uint16_t,2> replay_buttons{0xFFFFu,0xFFFFu};
 uint32_t sequence;
 bool started,inside,replaying,replay_failed;
 bool owns_sources;
+bool recording_failed;
 std::string replay_path;
+
+#ifndef MMX4_DIAGNOSTIC_TEST
+std::filesystem::path application_directory() {
+    return mmx4_diagnostic_application_directory();
+}
+#endif
+
+void recording_location(const std::string& message) {
+    /* Independent of configured memory-card paths, mods paths and cwd. */
+    try {
+        auto root=application_directory();
+        if(root.empty())return;
+        std::ofstream out(root/"diagnostics-location.txt",std::ios::trunc);
+        out<<message<<"\n";
+    }catch(...) { /* Recording must not depend on this convenience pointer. */ }
+}
 
 std::string plan_identity() {
     auto portable=PSXRecompV4::mod_runtime_plan_fingerprint_portable();
@@ -126,16 +144,23 @@ void begin() {
         return;
     }
     try {
-        const char *root=savestate_root_dir();
-        if(!root || !root[0])throw std::runtime_error("save root unavailable");
         auto stamp=std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
-        auto folder=std::filesystem::u8path(root)/"diagnostics"/("session-"+std::to_string(stamp));
+        auto folder=application_directory()/"saves"/"diagnostics"/("session-"+std::to_string(stamp));
         if(!std::filesystem::create_directories(folder))throw std::runtime_error("session directory unavailable");
         recording.open(folder/"inputs.csv",std::ios::out|std::ios::trunc);
         if(!recording)throw std::runtime_error("cannot create input recording");
         recording<<"# mmx4-input-v2\n# execution "<<PSX_EXECUTION_ID
             <<"\n# plan "<<plan_identity()<<"\n# build " MMX4_DIAGNOSTIC_BUILD_ID "\n";
+        std::ofstream metadata(folder/"session.json");
+        metadata<<"{\n  \"format_version\": 1,\n  \"input_format\": \"mmx4-input-v2\",\n"
+            <<"  \"netplay\": "<<(psx_mod_netplay_is_active()?"true":"false")
+            <<",\n  \"execution\": \""<<PSX_EXECUTION_ID
+            <<"\",\n  \"build\": \"" MMX4_DIAGNOSTIC_BUILD_ID "\"\n}\n";
+        metadata.close();
+        if(!metadata)throw std::runtime_error("cannot capture session metadata");
+        const auto settings=PSXRecompV4::mod_runtime_root().parent_path()/"settings.toml";
+        if(std::filesystem::exists(settings))std::filesystem::copy_file(settings,folder/"settings.toml");
         const auto state=PSXRecompV4::mod_runtime_root()/"state.toml";
         if(std::filesystem::exists(state))
             std::filesystem::copy_file(state,folder/"mods-state.toml");
@@ -161,10 +186,16 @@ void begin() {
             }
         }
         recording.flush();
+        if(!recording)throw std::runtime_error("cannot write recording header");
+        recording_location("Recording: "+std::filesystem::absolute(folder).make_preferred().u8string()+
+            "\nAfter reproducing the bug, quit normally and zip this entire session folder."
+            "\nIt includes starting game saves; do not include the game disc or BIOS.");
         fprintf(stderr,"mmx4.diagnostics: recording %s\n",folder.u8string().c_str());
         fflush(stderr);
     }catch(const std::exception& error) {
         recording.close();
+        recording_failed=true;
+        recording_location(std::string("Recording FAILED: ")+error.what());
         fprintf(stderr,"mmx4.diagnostics: recording unavailable: %s\n",error.what());
         psx_mod_counter_add("mmx4.diagnostics.recording-failed",1);
     }
@@ -178,7 +209,7 @@ std::string input_line(unsigned seat,uint16_t buttons) {
     }
     if(!held)text+=" -";
     text+="  F"+std::to_string(sequence);
-    if(replay_failed)text+=" ERROR";
+    if(replay_failed || recording_failed)text+=" ERROR";
     else if(replaying)text+=" PLAY";
     else if(recording.is_open())text+=" REC";
     return text;
@@ -218,6 +249,7 @@ int inputs(CPUState *cpu,uint32_t address) {
         if(!(sequence%60))recording.flush();
         if(!recording) {
             recording.close();psx_mod_counter_add("mmx4.diagnostics.recording-failed",1);
+            recording_failed=true;recording_location("Recording FAILED: input recording write failed");
             fprintf(stderr,"mmx4.diagnostics: recording write failed\n");
         }
     }
@@ -229,10 +261,12 @@ int inputs(CPUState *cpu,uint32_t address) {
 void activate() {
     release_sources();
     recording.close();replay.close();recording.clear();replay.clear();
-    started=inside=replaying=replay_failed=false;sequence=0;
+    started=inside=replaying=replay_failed=recording_failed=false;sequence=0;
     replay_buttons={0xFFFFu,0xFFFFu};
     const char *path=getenv("MMX4_DIAGNOSTIC_REPLAY");
     replay_path=path?path:"";
+    recording_location(replay_path.empty()?"Waiting for game inputs. Playtest Diagnostics must be enabled."
+        :"Offline diagnostic replay active; no new recording is created.");
     /* Present digital pads during startup and between decoded game inputs;
      * playback also works in a hidden run without physical controllers. */
     if(!replay_path.empty() && !psx_mod_netplay_is_active()) {
