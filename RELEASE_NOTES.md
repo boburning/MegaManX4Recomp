@@ -1,4 +1,37 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.6
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.7
+
+Windows ZIP and Linux x86_64 AppImage. Unified cameras and Stacked lifebars
+remain defaults; online Split cameras remain experimental.
+
+- Fixes the Online/Discord START-to-game ICE handoff that left the host on a
+  white screen and the guest waiting. Complete mod settings now survive
+  lobby messages; invalid or truncated plans are rejected before starting.
+- Fixes Split Mushroom's premature elevator death plane and delays its latch
+  while both visible players are passing through. The original overhead-panel
+  crush remains: destroy those panels while ascending.
+- Preserves the partner while new room bounds initialize. Both players retain
+  their native simultaneous arrival animations and safe placement.
+- Offline co-op supports mapped F7 save/load and F8 rewind with both players'
+  contexts and resources. State jumps remain unavailable during netplay.
+- Playtest Diagnostics records beside the executable or AppImage under
+  `saves/diagnostics`. `diagnostics-location.txt` identifies the latest session
+  or error. Offline recordings that begin after a load or rewind include the
+  exact state baseline needed for replay. Send the complete session folder.
+- Adds separate default-off Ultimate Armor X code and Black Zero mods, usable
+  together. X still receives the armor from a capsule. Co-op hosts choose the
+  corresponding shared options for both seats; P1 owns campaign progress.
+- Resets private texture registrations and enhancement allocations between
+  sessions so lobby rematches reuse their resources.
+
+Native hidden Windows checks qualify both rosters, solo character codes,
+offline warm/cold states and rewind, diagnostic baseline replay and two-peer
+LAN controls with matching state digests. Original character-code instruction
+contracts and complete lobby-plan tests also pass on Linux. Full Discord
+authorization and real WAN/NAT play remain additional human qualification.
+The exact rotating-staircase floating and brief teleporter reports remain
+unreproduced; intermittent co-op disappearance remains on the backlog.
+
+## Previous v0.1.1-coop-playtest.6
 
 Windows ZIP and Linux x86_64 AppImage with the first online sign-in fix and
 the dependency updates from PR #23. Unified cameras and Stacked lifebars
