@@ -407,3 +407,45 @@ through tick3250. This does not qualify Discord authorization or WAN/NAT.
 All21 Windows title checks pass. No game window was shown, and every native
 run used explicit private memory cards. Full Linux gameplay remains additional
 coverage. These changes are not in the published Playtest6.
+# GitHub25 intro warning review (October11)
+
+The reporter's14.42-second Playtest6 clip shows X's empty HUD, Zero present,
+and repeated WARNING without an Eregion sprite or boss meter. The precise
+death location and timing, prior stage history and complete settings are not
+in the report. The issue remains open; these checks do not prove its old
+failure fixed or identify its cause.
+
+A fresh hidden debug build from Playtest7 source8207f27, using the original
+disc, OpenGL/OpenBIOS and private cards, passes all four checkpoint2
+campaign/dead-seat combinations. An original fatal-HP request runs the native
+death; the survivor then crosses the authored gate through controller input.
+The original Eregion actor8 initializes withHP48 and renders; the corpse stays
+dead and shared lives stay unchanged. Checkpoint setup alone does not qualify
+the complete first-approach warning, so additional runs retain checkpoint0,
+use the observed3936/443 pre-boss floor, and let the original camera settle
+before death and controller-only traversal. No boss HP, script phase, gate,
+completion flag or warning timer is written.
+
+Private `qa-github25/settled-x-p1-dead` shows the actual WARNING in inspected
+approach08, its disappearance in approach14 and the Eregion/body meter in
+approach19. General24 progresses phases0,1,3,4 and retires. X remains atHP0,
+state3; Zero enters normal action2 withHP32 atX4452.5/Y442 and lives2. A
+near-gate fatality and a fatality during the real WARNING also finish. The
+reusable `tools/test_mmx4_coop_intro_survivor.py` repeats the latter, requires
+the warning actor to retire before success and proves the survivor moves
+after the boss appears. Final output is `qa-github25/reusable-warning-test`.
+
+The existing generic sampler's field named `warning` reads80141BDC, which is
+the shared fade/busy state initialized by original800129F0. It cannot prove
+the rendered WARNING occurred. The new tool records the actual General24
+state and captures the screen; this distinction limits older field-only
+claims. Development fixtures require this tool for reproduction rather than
+input-only diagnostic replay. Current code passes the reported setup, but a
+matching Playtest6 baseline failure and full original route were not reproduced.
+
+PR17 was also reviewed and closed as obsolete, without merging its prototype
+branch. Its original commit e7b7079 is not an ancestor, but its complete HUD
+behavior is included and superseded by ancestor e2952be: defaultX0/Y104,
+optional Side by sideX56/Y0, and unshifted own-player Split HUD. Master also
+includes the later native anchoring and pause drawing fixes. No runtime change
+or new release is needed for this review. Central review issue: `beads-enkq`.
