@@ -11,6 +11,14 @@ int main(void) {
     CHECK(!mmx4_coop_views_requested(1,NULL));
     CHECK(!mmx4_coop_views_requested(1,"invalid"));
     CHECK(mmx4_coop_views_requested(1,"split"));
+    CHECK(mmx4_coop_camera_world_ready(6,0,1));
+    CHECK(mmx4_coop_camera_world_ready(6,0,2)); /* Partner can survive a P1 death. */
+    CHECK(mmx4_coop_camera_world_ready(6,0,3));
+    CHECK(!mmx4_coop_camera_world_ready(5,0,1)); /* Checkpoint loader, old bodies. */
+    CHECK(!mmx4_coop_camera_world_ready(4,0,1)); /* Full-stage loader. */
+    CHECK(!mmx4_coop_camera_world_ready(6,0,0)); /* Mode committed before PLAYER init. */
+    CHECK(!mmx4_coop_camera_world_ready(6,1,3)); /* Termination. */
+    CHECK(!mmx4_coop_camera_world_ready(6,2,1)); /* Native pause. */
     CHECK(!mmx4_coop_camera_scope_requested(0,1,1,0));
     CHECK(mmx4_coop_camera_scope_requested(1,1,1,0));
     CHECK(mmx4_coop_camera_scope_requested(0,1,0,1));

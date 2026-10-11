@@ -228,3 +228,31 @@ Native Zero wall-jump qualifications QA76/77 also pass in both player
 arrangements. A real X Lightning Web is fired with native controller input;
 Zero enters action10 and moves upward and away from the contacted anchor.
 Those cases qualify the enhancement, beyond model-only contact fields.
+
+## Checkpoint loading and retained-player cameras (2026-10-11)
+
+Hidden original-disc QA15/16/17 reproduces a healthy P2 becoming a carried
+corpse after a native Bio Lab section0 checkpoint1 load. P2 has HP32 at
+8001FC20, then is marked dead by the next 80035240 initializer. This happens
+without a native P2 damage/death update. The co-op camera constraint checks
+the outgoing P2's Y against incoming room limits during loading; its direct
+HP128 write is subsequently retained as a real death.
+
+Camera target, owner scope and team constraints now require mode6/minor0
+and an initialized canonical PLAYER dispatcher. A dying/dead primary
+(states2/3) still permits the survivor's camera. Loading mode4/5 and the
+temporary mode6/state0 boundary use the native camera. Partner drawing also
+excludes that uninitialized boundary, avoiding old-body rendering in the
+new room. Carried-death counters distinguish this bookkeeping from a plugin
+failure. There is no opt-in setting for the correction.
+
+QA18 replays the formerly failing checkpoint with both HP32, concurrent
+arrivals, clear controls and unchanged shared lives. The reusable
+tools/test_mmx4_coop_checkpoint.py then passes both pause owners, voluntary
+withdrawal across a checkpoint and Select rejoin, section1/checkpoint1
+arrival, P1 death with a living P2 executing its native jump, and a full
+team retry spending exactly one life (2 to1). All18 title checks pass.
+
+These are native loader/controller qualifications. The owner's exact Web
+Spider enemy-shot/HUD disappearance and staircase teleporter clip remain
+unqualified; this checkpoint result does not close those reports.

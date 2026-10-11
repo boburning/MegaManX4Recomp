@@ -1,6 +1,12 @@
 #include "mmx4_coop_views.h"
 #include <string.h>
 
+int mmx4_coop_camera_world_ready(unsigned mode,unsigned phase,unsigned primary_state) {
+    /* Native room setup replaces camera limits before initializing PLAYER.
+     * A retained partner still belongs to the outgoing world at that point. */
+    return mode==6 && phase==0 && primary_state!=0;
+}
+
 int mmx4_coop_views_requested(int online,const char *cameras) {
     return online && cameras && !strcmp(cameras,"split");
 }

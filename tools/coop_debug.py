@@ -111,7 +111,7 @@ class Runtime:
                 raise RuntimeError('Co-op plugin reported a failure')
             players = self.players()
             if mode[0] == 6 and mode[1] == 0 and not mode[0x1c] and diagnostic[2] and all(
-                    p[0] and p[4] == 1 and p[5] >= 2 for p in players):
+                    p[0] and p[4] == 1 and p[5] >= 2 and p[0x5c] & 127 for p in players):
                 if advance_dialogue:
                     self.release()
                 return players

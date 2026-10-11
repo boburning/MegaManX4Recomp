@@ -216,6 +216,8 @@ void mmx4_coop_lifecycle_reset(void) {
         (spawn_policy==0 || spawn_policy==254);
     first_before_clear_valid=0;
     carry_departure=carry_resources && departed;
+    if(carry_dead)psx_mod_counter_add("mmx4.coop.carried-p2-deaths",1);
+    if(carry_first_dead)psx_mod_counter_add("mmx4.coop.carried-p1-deaths",1);
     if(carry_resources && inventory_initialized) {
         second_inventory.hp=(uint8_t)(body[0x5C]&0x7Fu);
         memcpy(second_inventory.ammo,body+0xA8,16);

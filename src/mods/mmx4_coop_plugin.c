@@ -405,7 +405,12 @@ static void second_tick(CPUState *cpu,uint32_t address) {
     diagnostics();inside=0;
 }
 
+static int camera_world_ready(void) {
+    return mmx4_coop_camera_world_ready(psx_mod_read_byte(PLAY),
+        psx_mod_read_byte(PLAY+1),psx_mod_read_byte(PLAYER+4));
+}
 static int camera_target(CPUState *cpu,uint32_t address) {
+    if(!camera_world_ready())return 0;
     int owner=mmx4_coop_lifecycle_script_owner();
     if(split_views && owner<0 && mmx4_coop_alive(0))return 0;
     if(camera_call || projected || !mmx4_coop_ready() || !mmx4_coop_alive(1) ||
@@ -425,7 +430,7 @@ static int camera_target(CPUState *cpu,uint32_t address) {
 }
 static void constrain_team(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
-    if(split_views || projected || !mmx4_coop_ready() || mmx4_coop_lifecycle_script_owner()>=0 ||
+    if(!camera_world_ready() || split_views || projected || !mmx4_coop_ready() || mmx4_coop_lifecycle_script_owner()>=0 ||
        psx_mod_read_byte(PLAY+0x10) || psx_mod_read_byte(PLAY+0x1C))return;
     if(!split_views && mmx4_coop_alive(0) && mmx4_coop_alive(1) && !second.body[0xC5] &&
        !psx_mod_read_byte(PLAYER+0xC5)) {
@@ -451,7 +456,7 @@ static void constrain_team(CPUState *cpu,uint32_t address) {
     }
 }
 static int camera_update(CPUState *cpu,uint32_t address) {
-    if(camera_update_call || projected)return 0;
+    if(camera_update_call || projected || !camera_world_ready())return 0;
     constrain_team(cpu,address);
     if(!mmx4_coop_camera_scope_requested((int)split_views,mmx4_coop_ready(),
         mmx4_coop_alive(0),mmx4_coop_alive(1)))return 0;
@@ -704,7 +709,9 @@ static uint16_t ui_tile(unsigned character,uint16_t page,uint16_t clut,uint16_t 
     *b=(UiBank){page,clut,uv,id,{0},character};memcpy(b->colors,colors,32);return id;
 }
 static int world_draw_visible(void) {
-    if(psx_mod_read_byte(PLAY)!=6)return 0;
+    /* Room setup commits mode6 before initializing the primary body. The
+     * still-retained partner belongs to the old world until that boundary. */
+    if(psx_mod_read_byte(PLAY)!=6 || !psx_mod_read_byte(PLAYER+4))return 0;
     unsigned phase=psx_mod_read_byte(PLAY+1);
     /* Native pause fades draw the world while gameplay remains in minor2.
      * Keep both seats in those world passes; Quit Game has its own backdrop. */
