@@ -46,6 +46,7 @@ static unsigned menu_active, menu_owner, menu_projecting;
 static unsigned normal_guard, menu_guard, world_guard, pickup_guard;
 static unsigned collect_guard, save_guard, reward_guard, death_guard, death_check_guard, capsule_guard;
 static unsigned scene_guard, script_pool_guard, command_guard, control_guard,text_guard,text_init_guard;
+static uint32_t projected_portal_solid;
 static unsigned flip_guard;
 static unsigned script_active, script_owner, script_serial;
 static unsigned warp_pending,warp_phase,warp_owner,warp_guard,warp_unlocked_ticks;
@@ -207,6 +208,7 @@ void mmx4_coop_lifecycle_activate(void) {
     normal_guard=menu_guard=world_guard=pickup_guard=0;
     collect_guard=save_guard=reward_guard=death_guard=death_check_guard=capsule_guard=0;
     scene_guard=script_pool_guard=command_guard=control_guard=text_guard=text_init_guard=0;
+    projected_portal_solid=0;
     memset(&view_second_inventory,0,sizeof view_second_inventory);
     memset(&view_saved_inventory,0,sizeof view_saved_inventory);
     view_inventory_initialized=view_inventory_projected=0;
@@ -362,6 +364,14 @@ static int direct_pair_candidate(void) {
         !carry_dead && !carry_first_dead && !carry_departure;
 }
 int mmx4_coop_lifecycle_can_enroll(void) {
+    /* Mushroom's negative portal return installs an idle body before the
+     * first native world-solid pass lands it on the entrance platform.
+     * Wait for the controller's completed ground contact instead of copying
+     * that intermediate terrain Y to the partner. Initial descending beams
+     * retain their existing concurrent enrollment path. */
+    if(psx_mod_read_byte(PLAY+0x0C)==3 && psx_mod_read_byte(PLAY+0x1D)==1 &&
+       psx_mod_read_byte(PLAY+0x1E)==255 && !psx_mod_read_byte(PLAY+0x1C) &&
+       !(psx_mod_read_byte(PLAYER+0x89)&8u))return 0;
     return psx_mod_read_byte(PLAYER+4)==1 &&
         (!psx_mod_read_byte(PLAY+0x1C) || native_initial_arrival());
 }
@@ -410,9 +420,13 @@ void mmx4_coop_lifecycle_enrolled(CPUState *cpu) {
          * +70 is this fresh terrain result; +89 can still be a stale previous
          * controller contact. A missing floor/ceiling contact cannot qualify
          * an additional P1 beam at an unsafe partner placement. */
-        mmx4_coop_enter_second();
-        mmx4_coop_call(cpu,0x800358A4u,PLAYER,0);
-        mmx4_coop_leave_second();
+        unsigned portal_floor=psx_mod_read_byte(PLAY+0x0C)==3 && psx_mod_read_byte(PLAY+0x1D)==1 &&
+            !(psx_mod_read_byte(PLAYER+0x70)&8u) && (psx_mod_read_byte(PLAYER+0x89)&8u);
+        if(!portal_floor) {
+            mmx4_coop_enter_second();
+            mmx4_coop_call(cpu,0x800358A4u,PLAYER,0);
+            mmx4_coop_leave_second();
+        }
         mmx4_coop_lifecycle_camera_bounds(cpu,0);
         mmx4_coop_enter_second();
         mmx4_coop_call(cpu,0x8002C614u,PLAYER,0);
@@ -468,6 +482,9 @@ int mmx4_coop_lifecycle_script_owner(void) {
 }
 int mmx4_coop_lifecycle_hidden(unsigned seat) {
     return (warp_pending || warp_phase) && seat==(warp_owner^1u);
+}
+int mmx4_coop_lifecycle_arriving(unsigned seat) {
+    return warp_phase==2 && seat==(warp_owner^1u);
 }
 void mmx4_coop_lifecycle_camera_bounds(CPUState *cpu,unsigned owner) {
     unsigned seat=owner^1u;
@@ -547,12 +564,21 @@ static void warp_begin(CPUState *cpu) {
     psx_mod_counter_add("mmx4.coop.script-departures",1);
 }
 static void position_return(CPUState *cpu,unsigned seat,uint32_t x,uint32_t y,
-                            uint8_t active,uint8_t visible,uint8_t va,uint8_t vv) {
+                            uint8_t active,uint8_t visible,uint8_t va,uint8_t vv,uint32_t surface_box) {
     if(seat)mmx4_coop_enter_second();
     uint32_t vehicle_dx=psx_mod_read_word(MMX4_VEHICLE+8)-psx_mod_read_word(PLAYER+8);
     uint32_t vehicle_dy=psx_mod_read_word(MMX4_VEHICLE+12)-psx_mod_read_word(PLAYER+12);
     psx_mod_write_byte(PLAYER,active);psx_mod_write_byte(PLAYER+3,visible);
     psx_mod_write_byte(PLAYER+4,1);
+    if(surface_box && !psx_mod_read_byte(PLAYER+0xC5)) {
+        mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+        uint32_t box=psx_mod_read_word(PLAYER+0x68);
+        if(box) {
+            int owner_bottom=(int8_t)psx_mod_read_byte(surface_box+1)+psx_mod_read_byte(surface_box+3);
+            int partner_bottom=(int8_t)psx_mod_read_byte(box+1)+psx_mod_read_byte(box+3);
+            y+=(uint32_t)((owner_bottom-partner_bottom)*65536);
+        }
+    }
     psx_mod_write_word(PLAYER+8,x);psx_mod_write_word(PLAYER+12,y);
     psx_mod_write_word(PLAYER+0x18,x);psx_mod_write_word(PLAYER+0x1C,y);
     for(unsigned at=0x20;at<0x30;at+=4)psx_mod_write_word(PLAYER+at,0);
@@ -595,7 +621,7 @@ static void warp_tick(CPUState *cpu) {
          * without treating the winner's departure as a death to rescue. */
         if(!departed && !mmx4_coop_alive(warp_owner) && !psx_mod_read_byte(PLAY+0x0F)) {
             position_return(cpu,seat,warp_origin_x,warp_origin_y,
-                warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible);
+                warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
             if(seat)mmx4_coop_enter_second();
             mmx4_coop_call(cpu,0x800343A4u,PLAYER,0);
             if(seat)mmx4_coop_leave_second();
@@ -615,7 +641,7 @@ static void warp_tick(CPUState *cpu) {
         /* The incoming player is alive even if their partner dies before
          * the return pose finishes; release control before team-wipe checks. */
         position_return(cpu,seat,warp_origin_x,warp_origin_y,
-            warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible);
+            warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
         if(seat)mmx4_coop_enter_second();
         mmx4_coop_call(cpu,0x800343A4u,PLAYER,0);warp_phase=0;
         if(seat)mmx4_coop_leave_second();
@@ -624,7 +650,7 @@ static void warp_tick(CPUState *cpu) {
     if(warp_phase==1) {
         if(!mmx4_coop_alive(warp_owner)) {
             position_return(cpu,seat,warp_origin_x,warp_origin_y,
-                warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible);
+                warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
             warp_phase=0;return;
         }
         /* Native walking/dashing has a different action from idle. A living
@@ -632,11 +658,13 @@ static void warp_tick(CPUState *cpu) {
          * idle restarted the wait whenever that player kept moving. */
         if(locked || state!=1 || action<2 || action>=0x10 || !(grounded&8u)) {warp_unlocked_ticks=0;return;}
         if(++warp_unlocked_ticks<3)return;
+        uint32_t surface_box=warp_owner?body_word(second,0x68):psx_mod_read_word(PLAYER+0x68);
         position_return(cpu,seat,x,y,warp_active,warp_visible,
-            warp_vehicle_active,warp_vehicle_visible);
+            warp_vehicle_active,warp_vehicle_visible,surface_box);
         /* Once the new grounded arrival is committed, a leader's death
          * must not send the survivor back outside the previous room. */
-        warp_origin_x=x;warp_origin_y=y;
+        warp_origin_x=seat?body_word(second,8):psx_mod_read_word(PLAYER+8);
+        warp_origin_y=seat?body_word(second,12):psx_mod_read_word(PLAYER+12);
         if(seat)mmx4_coop_enter_second();
         if(psx_mod_read_byte(PLAYER+0xC5))warp_phase=0;
         else {
@@ -704,7 +732,7 @@ static void rescue_dead_scene_owner(CPUState *cpu) {
         unsigned active=survivor?body[0]:psx_mod_read_byte(PLAYER);
         unsigned visible=survivor?body[3]:psx_mod_read_byte(PLAYER+3);
         position_return(cpu,survivor,scene_x,scene_y,(uint8_t)active,(uint8_t)visible,
-            vehicle[0],vehicle[3]);
+            vehicle[0],vehicle[3],0);
     }
     if(survivor)mmx4_coop_enter_second();
     if(command)mmx4_coop_call(cpu,0x80036AE4u,action,argument);
@@ -778,14 +806,15 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
            !psx_mod_read_byte(PLAYER+0x79) && !psx_mod_read_byte(PLAYER+0xC5)) {
             uint32_t x=psx_mod_read_word(PLAYER+8),y=psx_mod_read_word(PLAYER+12);
             position_return(cpu,1,x,y,departure_active,departure_visible,
-                departure_vehicle_active,departure_vehicle_visible);
+                departure_vehicle_active,departure_vehicle_visible,psx_mod_read_word(PLAYER+0x68));
             mmx4_coop_enter_second();
             if(!body[0xC5] || !departure_vehicle_active) {
                 warp_owner=0;warp_phase=2;
                 warp_active=departure_active;warp_visible=departure_visible;
                 warp_vehicle_active=departure_vehicle_active;
                 warp_vehicle_visible=departure_vehicle_visible;
-                warp_origin_x=x;warp_origin_y=y;warp_unlocked_ticks=0;
+                warp_origin_x=psx_mod_read_word(PLAYER+8);
+                warp_origin_y=psx_mod_read_word(PLAYER+12);warp_unlocked_ticks=0;
                 mmx4_coop_leave_second();start_arrival(cpu,1);mmx4_coop_enter_second();
             }
             mmx4_coop_leave_second();
@@ -1235,10 +1264,19 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
         if(address==0x800C2BE0u) {
             for(unsigned i=0;i<4;++i)contact[i]=psx_mod_read_byte(actor+at[i]);
             psx_mod_write_byte(actor+0x72,mmx4_coop_solid_contact_bits(actor,1));
+            projected_portal_solid=actor;
         }
         result=call_story_as_second(cpu,address,actor,cpu->gpr[5]);
-        if(address==0x800C2BE0u)
+        if(address==0x800C2BE0u) {
+            projected_portal_solid=0;
             for(unsigned i=0;i<4;++i)psx_mod_write_byte(actor+at[i],contact[i]);
+            /* Retail C2C20 performs one solid pass after the portal state
+             * update. Running it inside P2's story projection bypasses the
+             * combat wrapper, leaving P1 without platform collision whenever
+             * P2 stands on it. Restore the canonical histories first, then
+             * let that one native pass resolve contact for both seats. */
+            mmx4_coop_call(cpu,0x8002E184u,actor,0);
+        }
     }else result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     scene_guard=0;
     unsigned new_door=address==0x800C1994u?(owner?
@@ -1263,6 +1301,9 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(own_camera)mmx4_coop_split_scene_camera_end(owner,canonical_camera,
         script_active && script_owner==owner && (new_door || serial!=script_serial));
     return mmx4_coop_finish(cpu,result);
+}
+int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {
+    return scene_guard && projected_portal_solid && projected_portal_solid==actor;
 }
 static int scene_actor(CPUState *cpu,uint32_t address) {
     return mmx4_coop_combat_canonical_call(cpu,address,scene_actor_canonical);

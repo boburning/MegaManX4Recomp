@@ -24,6 +24,7 @@ static unsigned reward_calls,save_calls,observed_menu_select;
 static uint8_t saved_palette_dirty;
 static int split_views;
 static unsigned stage_script_calls,scene_calls,observed_controls;
+static unsigned canonical_portal_solids;
 static unsigned boundary_calls[2];
 static unsigned dialogue_calls,dialogue_edge;
 static unsigned dialogue_init_calls,dialogue_init_character,stage_script_projected;
@@ -293,6 +294,12 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             mmx4_coop_call(cpu,0x80036AE4u,0x14,0x40);
             psx_mod_write_byte(a0+5,1);
         }
+        if(!mmx4_coop_lifecycle_defer_portal_solid(a0))
+            mmx4_coop_call(cpu,0x8002E184u,a0,0);
+        break;
+    case 0x8002E184:
+        if(projected) {fprintf(stderr,"portal solid ran inside P2 scene\n");exit(1);}
+        ++canonical_portal_solids;
         break;
     case 0x800BD654:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
@@ -358,7 +365,7 @@ static void reset(void) {
     memset(p2_vehicle,0,sizeof p2_vehicle);
     fresh_game(&cpu,0);projected=local_view=0;inputs[0]=inputs[1]=0;
     world_calls=observed_campaign=pause_commit=pause_exit=world_draws=0;
-    stage_script_calls=scene_calls=observed_controls=p2_solid_bits=0;
+    stage_script_calls=scene_calls=observed_controls=p2_solid_bits=canonical_portal_solids=0;
     memset(boundary_calls,0,sizeof boundary_calls);
     dialogue_calls=dialogue_edge=dialogue_init_calls=dialogue_init_character=stage_script_projected=0;
     initial_arrival_model=0;
@@ -418,6 +425,12 @@ int main(void) {
     /* The ordinary unlocked enrollment policy is retained. READY has not
      * begun the native beam yet, and genuine scene locks remain ineligible. */
     CHECK(mmx4_coop_lifecycle_can_enroll());
+    psx_mod_write_byte(PLAY+0x0C,3);psx_mod_write_byte(PLAY+0x1D,1);
+    psx_mod_write_byte(PLAY+0x1E,255);psx_mod_write_byte(PLAYER+0x89,0);
+    CHECK(!mmx4_coop_lifecycle_can_enroll());
+    psx_mod_write_byte(PLAYER+0x70,8);CHECK(!mmx4_coop_lifecycle_can_enroll());
+    psx_mod_write_byte(PLAYER+0x89,8);CHECK(mmx4_coop_lifecycle_can_enroll());
+    reset();
     psx_mod_write_byte(PLAY+0x1C,1);CHECK(!mmx4_coop_lifecycle_can_enroll());
     for(unsigned gate=0;gate<22;++gate) {
         prepare_initial_arrival();CHECK(mmx4_coop_lifecycle_can_enroll());
@@ -1074,11 +1087,24 @@ int main(void) {
      * height, facing right. Preserve its camera index and P1's facing. */
     reset();p2[0x14]=2;p2[0x15]=p2_vehicle[0x15]=0;
     psx_mod_write_byte(PLAYER+0x15,0);
-    position_return(&cpu,1,320u<<16,144u<<16,1,1,1,1);
+    position_return(&cpu,1,320u<<16,144u<<16,1,1,1,1,0);
     start_arrival(&cpu,1);
     CHECK(body_word(p2,12)==144u<<16 && body_word(p2,0x1C)==144u<<16);
     CHECK(p2[0x14]==2 && p2[0x15]==0x40 && p2_vehicle[0x15]==0x40);
     CHECK(!psx_mod_read_byte(PLAYER+0x15) && !projected);
+    /* Opposite characters share the surface, not an identical body origin.
+     * The native box centres differ by one pixel in either roster. */
+    for(unsigned character=0;character<2;++character) {
+        reset();p2[2]=(uint8_t)(character^1u);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)character);
+        psx_mod_write_byte(0x800F8BC4u+1,2);psx_mod_write_byte(0x800F8BC4u+3,19);
+        psx_mod_write_byte(0x800F8BC8u+1,3);psx_mod_write_byte(0x800F8BC8u+3,19);
+        uint32_t box=character?0x800F8BC8u:0x800F8BC4u;
+        position_return(&cpu,1,320u<<16,(171u-character)<<16,1,1,0,0,box);
+        CHECK(body_word(p2,12)==(170u+character)<<16);
+        CHECK(body_word(p2,0x1C)==body_word(p2,12));
+        CHECK(psx_mod_read_byte(PLAYER+2)==character && !projected);
+    }
 
     /* A winner's state3 is a completed departure, not a dead owner to rescue.
      * Finish either passenger's outgoing beam during completion, so native
@@ -1241,6 +1267,7 @@ int main(void) {
     reset();psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
     psx_mod_write_word(actor+8,0x02000000u);psx_mod_write_word(actor+12,0x03000000u);
     p2_solid_bits=8;mmx4_coop_call(&cpu,0x800C2BE0u,actor,0);
+    CHECK(canonical_portal_solids==1 && !projected && !projected_portal_solid);
     CHECK(scene_calls==1 && observed_campaign==0 && script_owner==1 && script_active);
     CHECK(!psx_mod_read_byte(actor+0x72) && p2[0xC0]==1);
     CHECK(!psx_mod_read_byte(PLAYER+0xC0) && p2[0x5C]==12);

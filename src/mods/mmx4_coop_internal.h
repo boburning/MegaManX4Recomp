@@ -84,6 +84,9 @@ int mmx4_coop_lifecycle_can_tick(void);
 /* -1 during ordinary play; otherwise the native shared script's seat. */
 int mmx4_coop_lifecycle_script_owner(void);
 int mmx4_coop_lifecycle_hidden(unsigned seat);
+int mmx4_coop_lifecycle_arriving(unsigned seat);
+/* A projected portal dispatch defers its shared collision until restoration. */
+int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor);
 void mmx4_coop_lifecycle_room_entry(unsigned owner);
 void mmx4_coop_lifecycle_camera_bounds(CPUState *cpu,unsigned owner);
 void mmx4_coop_clear_current_attacks(void);

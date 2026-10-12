@@ -46,6 +46,10 @@ static uint8_t second_vehicle[0xB0], first_vehicle[0xB0];
 static uint8_t second_double[0xE4], first_double[0xE4];
 static unsigned projected, ready, alive[2],split;
 static int script_owner=-1;
+static uint32_t deferred_portal;
+static unsigned arriving;
+int mmx4_coop_lifecycle_arriving(unsigned seat) {return seat==1 && arriving;}
+int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {return actor==deferred_portal;}
 static unsigned target_camera_mode=1;
 static PSXModFunctionEntryCallback redirects[2],actor_dispatch;
 static unsigned pool_updates,actor_updates[2],bounds_updates,ai_contact,ai_solid;
@@ -361,7 +365,7 @@ static void setup(void) {
     memset(second,0,sizeof second);
     memset(second_vehicle,0,sizeof second_vehicle);
     memset(second_double,0,sizeof second_double);
-    projected=split=0;ready=1;alive[0]=alive[1]=1;script_owner=-1;
+    projected=split=0;ready=1;alive[0]=alive[1]=1;script_owner=-1;deferred_portal=arriving=0;
     pool_updates=bounds_updates=ai_contact=ai_solid=ai_direct_write=ai_canonical=0;
     memset(actor_updates,0,sizeof actor_updates);
     hit_result[0]=hit_result[1]=0;
@@ -445,6 +449,18 @@ static void accepted_events(void) {
     }
 }
 static void independent_solids(void) {
+    setup();alive[1]=0;arriving=1;second[0]=second[3]=1;
+    second[0x68]=0;second[0x69]=0x80;second[0x6A]=0x0F;second[0x6B]=0x80;
+    invoke(SOLID);CHECK(native_calls[0]==1 && native_calls[1]==1);
+    clear_calls();second[0x5C]=0;invoke(SOLID);CHECK(!native_calls[1]);
+    clear_calls();second[0x5C]=32;arriving=0;invoke(SOLID);CHECK(!native_calls[1]);
+    setup();deferred_portal=ACTOR;
+    mmx4_coop_enter_second();
+    CHECK(invoke(SOLID)==0 && !native_calls[0] && !native_calls[1]);
+    CHECK(projected);
+    mmx4_coop_leave_second();deferred_portal=0;
+    invoke(SOLID);
+    CHECK(native_calls[0]==1 && native_calls[1]==1);
     setup();
     uint32_t empty=mmx4_coop_combat_digest(2166136261u);
     psx_mod_write_byte(ACTOR+0x72,3);psx_mod_write_byte(ACTOR+0x76,4);

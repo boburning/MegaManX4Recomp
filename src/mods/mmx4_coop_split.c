@@ -13,11 +13,12 @@
 
 static uint32_t state;
 static unsigned scanning,bounds_call,supplemental,spatial_call,background_call;
+static unsigned mushroom_camera_call;
 static uint32_t background_actor,background_dx;
 static unsigned background_parallax;
 
 int mmx4_coop_split_snapshot_ready(void) {
-    return !(scanning || bounds_call || supplemental || spatial_call || background_call ||
+    return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || background_call ||
         background_actor || background_dx || background_parallax);
 }
 int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
@@ -45,7 +46,7 @@ static int available(void) {
 void mmx4_coop_split_reset(void) {
     if(!state || mmx4_coop_projected() || psx_mod_local_view_scope())return;
     for(unsigned offset=0;offset<STATE_BYTES;offset+=4)psx_mod_write_word(state+offset,0);
-    scanning=bounds_call=supplemental=spatial_call=background_call=0;
+    scanning=bounds_call=supplemental=spatial_call=mushroom_camera_call=background_call=0;
     background_actor=background_dx=background_parallax=0;
 }
 int mmx4_coop_split_activate(void) {
@@ -313,6 +314,37 @@ static int spatial_stage_actor(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add(target?"mmx4.coop.p2-spatial-stage":"mmx4.coop.p1-spatial-stage",1);
     return mmx4_coop_finish(cpu,result);
 }
+static int mushroom_stage_camera(CPUState *cpu,uint32_t address) {
+    if(mushroom_camera_call || !mmx4_coop_ready() || mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6 ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=3 || mmx4_coop_lifecycle_script_owner()>=0 ||
+       !mmx4_coop_alive(1))return 0;
+    uint32_t actor=cpu->gpr[4];
+    if(actor<0x80142F98u || actor>=0x80143598u || (actor-0x80142F98u)%0x30u ||
+       psx_mod_read_byte(actor+1)!=8)return 0;
+    Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+    unsigned returning=psx_mod_read_byte(MMX4_PLAY+0x1D)>=2;
+    if(actors[0].active && (returning?actors[0].world_x<=actors[1].world_x:
+                                    actors[0].world_x>=actors[1].world_x))return 0;
+    /* Retail B7528 selects the spiral/room phase from player X/Y. B7394
+     * advances to the lift checkpoint at X3536; B7440/B74EC advance the
+     * leftward return at its top. These routines read player position but
+     * write only shared camera/script fields. Supply the progressing seat
+     * for one native update; no player controller or world loop is repeated. */
+    uint32_t x=psx_mod_read_word(MMX4_PLAYER+8),y=psx_mod_read_word(MMX4_PLAYER+12);
+    const uint8_t *body=mmx4_coop_second_body();
+    uint32_t second_x=(uint32_t)body[8]|(uint32_t)body[9]<<8|
+        (uint32_t)body[10]<<16|(uint32_t)body[11]<<24;
+    uint32_t second_y=(uint32_t)body[12]|(uint32_t)body[13]<<8|
+        (uint32_t)body[14]<<16|(uint32_t)body[15]<<24;
+    psx_mod_write_word(MMX4_PLAYER+8,second_x);psx_mod_write_word(MMX4_PLAYER+12,second_y);
+    mushroom_camera_call=1;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    mushroom_camera_call=0;
+    psx_mod_write_word(MMX4_PLAYER+8,x);psx_mod_write_word(MMX4_PLAYER+12,y);
+    psx_mod_counter_add("mmx4.coop.p2-mushroom-stage",1);
+    return mmx4_coop_finish(cpu,result);
+}
 static unsigned eligible_regions(PSXPlacementRect regions[2]) {
     Mmx4CoopView views[2];Mmx4CoopViewActor actors[2];
     initialize_cameras();mmx4_coop_split_actors(actors);
@@ -438,6 +470,7 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800B7078u,mushroom_stage_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8648u,train_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D9218u,train_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D964Cu,train_foreground);

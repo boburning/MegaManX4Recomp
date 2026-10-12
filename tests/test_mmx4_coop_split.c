@@ -54,6 +54,8 @@ uint8_t *mmx4_coop_second_body(void) {return second;}
 uint8_t *mmx4_coop_first_body(void) {return backup;}
 static unsigned actor_context;
 static unsigned area_calls,checkpoint_calls,shared_area_writes;
+static unsigned mushroom_calls;
+static int mushroom_x,mushroom_y;
 static unsigned train_calls,train_foreground_calls;
 int mmx4_coop_combat_actor_context(void) {return (int)actor_context;}
 int mmx4_coop_lifecycle_script_owner(void) {return script_owner;}
@@ -181,6 +183,13 @@ static uint32_t invoke(CPUState *cpu,uint32_t address) {
         ++checkpoint_calls;
         if((int16_t)psx_mod_read_half(MMX4_PLAYER+14)>=(int16_t)psx_mod_read_half(actor+14))
             psx_mod_write_byte(MMX4_PLAY+0x1D,2);
+        return 0;
+    }
+    if(address==0x800B7078u) {
+        ++mushroom_calls;
+        mushroom_x=(int16_t)psx_mod_read_half(MMX4_PLAYER+10);
+        mushroom_y=(int16_t)psx_mod_read_half(MMX4_PLAYER+14);
+        if(mushroom_x>=3536)psx_mod_write_byte(MMX4_PLAY+0x1D,2);
         return 0;
     }
     if(address==0x8002B1E8u || address==0x8002B318u) {
@@ -597,5 +606,14 @@ int main(void) {
     invoke(&cpu,0x800B6A0Cu);
     CHECK(checkpoint_calls==1 && psx_mod_read_byte(MMX4_PLAY+0x1D)==2);
     CHECK(!mmx4_coop_split_camera_copy(1,view));
+    psx_mod_write_byte(MMX4_PLAY+12,3);psx_mod_write_byte(MMX4_PLAY+0x1D,1);
+    psx_mod_write_byte(stage_actor+1,8);actor_position(MMX4_PLAYER,3380,203);second_position(3540,138);
+    mushroom_calls=0;invoke(&cpu,0x800B7078u);
+    CHECK(mushroom_calls==1 && mushroom_x==3540 && mushroom_y==138);
+    CHECK(psx_mod_read_byte(MMX4_PLAY+0x1D)==2);
+    CHECK(psx_mod_read_half(MMX4_PLAYER+10)==3380 && psx_mod_read_half(MMX4_PLAYER+14)==203);
+    actor_position(MMX4_PLAYER,6048,2304);second_position(5890,139);
+    invoke(&cpu,0x800B7078u);CHECK(mushroom_calls==2 && mushroom_x==5890);
+    CHECK(psx_mod_read_half(MMX4_PLAYER+10)==6048 && psx_mod_read_half(MMX4_PLAYER+14)==2304);
     puts("mmx4_coop_split_test: PASS");return 0;
 }

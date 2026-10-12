@@ -445,6 +445,7 @@ static int enroll(CPUState *cpu) {
     if(!load_stage_palette(counterpart))return 0;
     capture(PLAY,play,sizeof play);
     uint32_t x=psx_mod_read_word(PLAYER+8),y=psx_mod_read_word(PLAYER+12);
+    uint32_t first_box=psx_mod_read_word(PLAYER+0x68);
     unsigned on_chaser=psx_mod_read_byte(PLAYER+0xC5)==0xFF;
     unsigned incoming=psx_mod_read_byte(PLAY+0x1C)==1;
     /* Native player initialization disables the shared camera at 8003558C.
@@ -458,7 +459,19 @@ static int enroll(CPUState *cpu) {
     psx_mod_write_word(PLAYER+8,spawn_x);psx_mod_write_word(PLAYER+12,y);
     psx_mod_write_byte(PLAYER+3,1);psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+5,2);
     guest(cpu,0x800350A4,PLAYER,0);
-    if(!incoming)guest(cpu,0x80035EA4,PLAYER,0);
+    if(!incoming) {
+        guest(cpu,0x80035EA4,PLAYER,0);
+        uint32_t second_box=psx_mod_read_word(PLAYER+0x68);
+        if(!on_chaser && first_box && second_box) {
+            /* Share the landing surface, accounting for each character's
+             * native box centre/height. X's copied Y places Zero's feet one
+             * pixel below a portal top, so its first sweep misses the floor. */
+            int first_bottom=(int8_t)psx_mod_read_byte(first_box+1)+psx_mod_read_byte(first_box+3);
+            int second_bottom=(int8_t)psx_mod_read_byte(second_box+1)+psx_mod_read_byte(second_box+3);
+            y+=(uint32_t)((first_bottom-second_bottom)*65536);
+            psx_mod_write_word(PLAYER+12,y);
+        }
+    }
     psx_mod_write_word(PLAYER+0x18,spawn_x);psx_mod_write_word(PLAYER+0x1C,y);
     mmx4_coop_spawn_facing_right();
     if(on_chaser) {

@@ -479,7 +479,13 @@ static int solid_player_contact_canonical(CPUState *cpu, uint32_t address) {
     if ((actor&3u) || actor<0x80010000u || actor>0x801FFF80u) return 0;
     solid_call=1;
     uint32_t result=mmx4_coop_call(cpu,address,actor,arg);
-    if (mmx4_coop_alive(1) && mmx4_coop_second_body()[4]==1 &&
+    const uint8_t *second=mmx4_coop_second_body();
+    /* Incoming beams remain excluded from combat, but need world-solid
+     * floors to land. Terrain alone cannot see a portal or moving platform.
+     * Outgoing, withdrawn, dead and uninitialized bodies remain excluded. */
+    unsigned incoming=mmx4_coop_lifecycle_arriving(1) && second[0] && second[3] &&
+        (second[0x5C]&127u) && body_word(second,0x68);
+    if ((mmx4_coop_alive(1) || incoming) && second[4]==1 &&
         psx_mod_read_word(actor+0x68)) {
         SolidContact *record=solid_record(actor,1);
         if (record) {
@@ -515,6 +521,8 @@ static int solid_player_contact_canonical(CPUState *cpu, uint32_t address) {
 }
 
 static int solid_player_contact(CPUState *cpu,uint32_t address) {
+    if(mmx4_coop_projected() && mmx4_coop_lifecycle_defer_portal_solid(cpu->gpr[4]))
+        return mmx4_coop_finish(cpu,0);
     if(mmx4_coop_web_busy())return 0;
     if(mmx4_coop_web_contact(cpu,address))return 1;
     return mmx4_coop_combat_canonical_call(cpu,address,solid_player_contact_canonical);

@@ -525,3 +525,82 @@ contacts. Section0's final sample still has P1 in incoming action0 while P2
 is in action2; this is insufficient to qualify completed retry collision.
 No new Mushroom runtime patch or fix claim follows from that probe.
 Checklist44/45/46 and `beads-kmsf` remain open.
+
+## October 11 Mushroom collision and P2 exit fixes
+
+Extended hidden native QA61 reproduces checkpoint1's platform defect after
+complete arrival: X/P1 is atY187 with terrain ground, while Zero/P2 is atY170
+on the portal. P1's jump returns toY187 and native team retry repeats it.
+Retail800C2BE0 dispatches the portal state, then calls8002E184 atC2C20.
+When P2 owns the portal, that solid pass executes inside the story projection,
+where the combat wrapper declines and only P2 receives collision. Defer this
+specific nested pass, restore the canonical actor's four contact fields, then
+run the native solid wrapper once for both players. The portal's story still
+updates once using its owner and independent previous contact history.
+
+QA64 now keeps X/P1 atY171 on the same platform, including jump/landing and
+team retry. Opposite-roster QA73 keeps Zero/P1 atY170 and X/P2 atY171.
+The reusable `tools/test_mmx4_coop_mushroom.py` derives the platform top and
+each player's foot from their actual native collision boxes, rather than
+assuming a shared character height. It checks landing, jump/landing and a
+native fatal team retry with exactly one life spent. Enemy invulnerability
+and health are set after checkpoint initialization; QA72's earlier failure
+was a legitimate setup enemy hit (X/P2 HP29), not a platform failure.
+
+QA65 reproduces the horizontal P2-first exit failure with P1 atX3380/Y203:
+P2 walks fromX3480/Y138 toX3619/Y267 and dies, leaving checkpoint1 active.
+Mushroom's native General8 camera controller800B7078 selects its phase from
+PLAYER X/Y inB7528. B7394 advances to checkpoint2 atX3536; B7440/B74EC
+handle the leftward return at the lift's top. These routines write shared
+camera/script fields without writing the player. Run that single native
+update with the progressing seat's coordinates, then restore P1 immediately.
+Choose the rightward leader before the lift and the leftward leader afterward;
+keep existing story ownership, dead-seat, projection and local-render guards.
+The hook is in both game configurations and locally regenerated codegen.
+
+QA67 and opposite-roster QA73 now take that real P2-controlled exit to the
+authored lift checkpoint, both HP32 with no transition life spent. QA73 also
+passes the existing second-lift arrival, destination-before-camera, native
+retry and continued-ascent checks. All21 Windows title checks and Linux
+combat/lifecycle/split ownership checks pass. Checklist44/45 are complete
+in source; this does not publish a new build or close the staircase/lift report.
+
+QA71 uses the supplied armor choices and1080p/4x settings, a development
+skip across the native preceding section exit, and original native background
+rendering. The deliberately skipped exit touches solid geometry, so this is
+not boss-completion qualification. After section1 initialization, X/Zero's
+grounded heights follow714-floor(X/4) and713-floor(X/4) atX400/800/1200.
+The inspected images have not reproduced the reported floating offset.
+Both riders remain healthy and carried throughY1776/1775 in the subsequent
+lift ascent. The custom-map checker is not a valid renderer comparison here
+because the supplied settings disable that renderer. Preserve the captures,
+leave item36 open, and qualify the later top/exit separately for item46.
+
+The stronger green-portal return case exposes another floor failure before
+the checkpoint retry: P2 remains below the entrance atY186/X2382, while P1
+stands atY171/X2344. QA82's native solid trace observes incoming P2 atY178,
+thenY186, with no partner solid pass: `mmx4_coop_alive(1)` excludes an incoming
+warp. That combat exclusion must not suppress the world-solid floor needed
+by the original arrival controller. Allow the solid wrapper to process a
+healthy, visible, initialized incoming body; outgoing/withdrawn/dead bodies
+and enemy interaction retain their existing exclusions. Negative Mushroom
+portal returns also wait for P1's completed ground contact and preserve that
+platform height instead of358A4's terrain landing height. Character-native
+box centre/half-height offsets align both feet at enrollment and shared-room
+returns. Cancellation origins retain the passenger's actual placed position.
+
+Final QA84 (X/P1, Zero/P2) and QA85 (Zero/P1, X/P2) use actual P2 green-portal
+entry with neutral controls during the return. Both bodies land on the native
+platform, then pass jump/landing, a one-life team retry and the actual P2-led
+horizontal exit. The reusable helper derives each contact surface from native
+boxes and enables this additional regression with `--portal-return`.
+Windows's21 checks and Linux combat/lifecycle/controller checks pass; native
+full-stage initial beams retain their original concurrent enrollment path.
+
+Full-ascent QA74/75/79 do not qualify the later elevator report: attempted
+attacks leave ceiling geometry intact and both riders reach native contact
+bits12 atY1233 (orY1313 when positioned farther left). This matches the earlier
+owner-confirmed authentic crush and is not evidence for changing crush policy.
+No new P2-specific elevator failure or staircase-offset cause is established;
+items36/46 remain open. All owned native probes are hidden and use private
+cards, without desktop input or changes to the user's running game.
