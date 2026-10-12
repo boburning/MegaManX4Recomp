@@ -949,9 +949,6 @@ static int coop_hud(CPUState *cpu,uint32_t address) {
 }
 static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned character) {
     uint32_t start=psx_mod_read_word(SCRATCH+0x100),mode=psx_mod_read_word(SCRATCH+0x104);
-    guest(cpu,0x80024334,actor,0);
-    uint32_t end=psx_mod_read_word(SCRATCH+0x100);
-    if(end<start || end-base>40000 || (end-start)%40) { failed=4;return; }
     /* Native800244D0/8002452C selects static artwork with flags40/20.
      * A reused shot can retain its previous weapon's +38: buster init
      * 80092328/80092840 installs flags21 without clearing that pointer.
@@ -969,6 +966,18 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
     if(!raw_graphics && primary && table>=native_sprites && table-native_sprites<body->size)
         table=a->sprites+(table-native_sprites);
     int compressed=!raw_graphics && table>=a->sprites && table-a->sprites<body->size;
+    /* Native 80024420/800244E8 adds the actor's VRAM allocation to each
+     * assembly tile. Private decoded banks start at tile zero instead.
+     * Weapons commonly occupy 0520/0530/0540 rather than the body's 0500;
+     * retaining that row offset samples blank or unrelated decoded tiles.
+     * Let the native emitter handle flips and page seams with a local origin,
+     * then restore the allocation before any simulation or upload can run. */
+    uint16_t tile_origin=psx_mod_read_half(actor+0x40);
+    if(compressed)psx_mod_write_half(actor+0x40,0);
+    guest(cpu,0x80024334,actor,0);
+    if(compressed)psx_mod_write_half(actor+0x40,tile_origin);
+    uint32_t end=psx_mod_read_word(SCRATCH+0x100);
+    if(end<start || end-base>40000 || (end-start)%40) { failed=4;return; }
     uint32_t assembly=psx_mod_read_word(actor+0x3C);
     uint32_t assembly_base=primary?psx_mod_read_word(SCRATCH+0x1C):a->assembly;
     if(!compressed && (assembly<assembly_base || assembly-assembly_base>=0xC000))return;

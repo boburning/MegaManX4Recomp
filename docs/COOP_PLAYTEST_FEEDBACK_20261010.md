@@ -55,6 +55,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 47 | [x] | Green Mushroom portal initially returns P2 below its entrance platform | Stronger native test reproduces P2 atY186 rather thanZero's platform Y170. Incoming warp excluded P2 from world-solid collision along with combat. Allow native floor collision for a healthy initialized incoming body; retain combat exclusion. Wait for completed P1 landing on negative portal returns and align character box bottoms when sharing a surface. QA84/85 pass actual P2 portal entry/return, jump/landing, team retry and subsequent P2 exit in both rosters. Native cases require the original disc and remain repeatable with the helper's `--portal-return` case. Included in Playtest8. `beads-kmsf` |
 | 48 | [x] | Startup/sign-in failures need logs before gameplay recording starts | Portable startup capture shipped in Playtest8, but October12 evidence exposed an ordinary Windows GUI launch regression missed by the earlier closed-descriptor/redirected-stderr fixtures: the unattached stderr FILE retained descriptor -2 and produced empty logs. **Corrected and production-qualified for Playtest9; published Playtest8 remains unchanged.** Reopen the actual FILE, attach raw/native stderr, check header/location writes and report capture failure. The actual public8 executable produces0-byte detached/unredirected logs; the final production candidate records655/658 unredirected bytes and659 redirected bytes including the real pre-boot rejection, preserves redirected output, and earlier live qualification captures a later launcher failure before normal exit. Nine focused Windows launch/error cases, all31 Windows and25 Linux title checks plus four focused Linux logging cases pass. `beads-eio.9.71`; original `beads-eio.9.68`, shared `beads-eio.3.336` |
 | 49 | [ ] | X's charge/release shows no travelling shot on the Mushroom staircase | **Bounded native attempt complete; exact report unreproduced and deferred.** IMG_0786.mov shows a charge effect ending around00:07.02 and a right-facing buster pose without a clear travelling shot; both bodies/HUD groups remain. QA113 visibly produces ordinary and three charged X/P1 shots on green and purple stairs. QA114 produces ordinary and three charged X/P2 shots on purple second-section stairs; its development-induced first-section hurt lock is excluded. No damage claim or exact-recording replay is possible from the empty ZIPs. Keep separate from floating stairs/elevator reports and leave unchecked. `beads-nbnc` |
+| 50 | [x] | Special weapons still have glitched graphics in Playtest 9 | **Fixed in source; not yet published.** `Boss weapons glitched.zip` reproduces invisible/malformed special-weapon sprites. Compressed private textures were sampled using the native VRAM allocation's row offset. Emitting those sprites with a temporary local tile origin fixes their appearance, preserving all 5,755 original input/state checks. The P2 native weapon-cycle regression passes18 attacks; all31 Windows title checks pass. Remaining charge-glow, Aiming Laser and charged wind/gravity shapes also occur with co-op disabled; do not classify them as this co-op regression. Item31's prior fix covered the reused buster failure. `beads-eio.9.72` |
+| 51 | [ ] | Zero stops moving near the top of Mushroom's second rotating staircase | **Gameplay lock not reproduced; input delivery remains open.** `Frozen Zero.zip` replays all 14,704 input/state checks on the published executable. The [video](https://youtu.be/y5omzTrBHLE) and trace agree: the final 1,135 boundaries contain 1,129 neutral P2 inputs and six Start inputs, with no movement buttons reaching the recorded controller state. In a separate development replay retaining every original hash check, Zero ends alive with31HP and immediately walks/jumps when P2 inputs are injected. This does not establish why the tester's controller stopped delivering movement. Separate from item36's reported stair-height issue. `beads-eio.9.73` |
+| 52 | [ ] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **Reviewed and deferred behind items50/51.** The three October12 clips and `metadata.zip` contain useful evidence:15 local recordings,12 save-state baselines and complete archive CRC checks; only the three startup logs are empty (the logging defect is fixed in9 under item48). Intro Eregion and the Jungle capsule sequence lose P2's body and HUD; the later waterfall clip loses visible bodies while both HUD groups remain. These are not proven duplicates of item31, so do not mark them fixed from the videos alone. Their replay qualification remains queued. `beads-eio.9.74` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -223,3 +226,45 @@ contain 655/658 bytes and the redirected case 659 bytes, including the real
 application error while preserving redirected stderr. [Playtest 9](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.9)
 is published with Windows ZIP and Linux AppImage; uploaded asset checksums are
 verified. This does not expand the parked WAN/Discord qualifications.
+
+October12 follow-up recordings (`Boss weapons glitched.zip`, `Frozen Zero.zip`)
+are complete Playtest9 local sessions, including initial cards/settings and
+nonempty startup logs. Their published-executable replays verify5,755 and14,704
+input/state boundaries respectively. Private development inspection changes
+only the copied recording's build label and retains all original state checks;
+it is additional visual/control inspection, not the production replay result.
+
+Item50 exposes a different defect from item31: the native sprite emitter adds
+an actor's VRAM tile allocation (for example0520/0530/0540), while its private
+decompressed texture starts at zero. The renderer now supplies a local tile
+origin during packet emission and restores the original allocation immediately
+afterward. This restores the missing web and ice sprites and malformed Ground
+Hunter artwork in the recording without changing any of its5,755 state checks.
+The native P2 R1 weapon-cycle regression passes18 attacks with both players
+retained, and all31 Windows title checks pass. A separate single-player run with
+the co-op package disabled cycles through all nine weapons: the large circular
+charge glow, Aiming Laser reticle/cone and charged wind/gravity shapes also
+appear there. Those appearances alone do not establish a co-op regression.
+The corrected co-op sprites are source-qualified, not yet in a public release.
+
+For item51, both original and development replay reach the recorded end with
+Zero alive at31HP. The last1,135 boundaries contain no P2 directional, jump or
+attack buttons; six contain Start and the remainder are neutral. In development
+inspection, resuming normally and injecting P2 Right moves Zero from
+X2096.8125/Y189 toX2162.3125/Y173; Jump then reachesY153.43. No collision or
+staircase workaround is warranted by this evidence. The cause of the missing
+controller input remains open.
+
+Item52's Playtest8 material is retained at lower priority as requested:
+
+| Clip | Observation | Assessment |
+| --- | --- | --- |
+| `2026-10-12 17-31-15.mp4` (43.37s) | X/P2 and its HUD disappear around23-24s during the intro Eregion fight; Zero/P1 remains through the post-fight dialogue. | Not proven covered by item31; queue replay qualification. |
+| `2026-10-12 17-34-40.mp4` (32.43s) | Jungle capsule sequence in Zero's campaign leaves only Zero/P1 and its HUD after the room restarts. | Keep distinct from temporary story hiding; final partner loss remains unqualified. |
+| `2026-10-12 17-39-37.mp4` (16.79s) | At the waterfall passage, neither body remains visible while both HUD groups persist; P1's health is empty. | Distinct from complete co-op/HUD removal; camera/lifecycle cause is not established. |
+
+`metadata.zip` passes all CRC checks and contains15 local sessions with cards,
+settings and input traces, including12 save-state baselines. Its three empty
+startup logs are the known Playtest8 logging defect corrected in9 (item48).
+The recordings are useful; gameplay reports are deferred to preserve the
+current special-weapon/input investigation, not discarded as unlogged.
