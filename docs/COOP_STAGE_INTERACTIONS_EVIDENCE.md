@@ -478,3 +478,50 @@ startup stderr, including any launch refusal and the host's admission stall.
 The title input recorder starts after native input execution, so its absence
 during a pre-boot white screen is expected. Keep checklist32 and central
 `beads-eio.9.42` open.
+
+## October 11 independent-view fix and new Mushroom footage
+
+IMG0782 shows Zero's independent display replaced temporarily by X's camera
+and both stacked HUDs. Framework catch-up policy deliberately refused the
+local-view pass at four frames behind for at least60 ticks. Remove that
+automatic refusal, retaining the real fast-forward/session/backend/sandbox
+guards. Framework runtime d23e13dce, docs b292bfdc6 and X4 master85c9edd
+contain the fix; shared draftPR634 is assigned TechnicallyComputers. Windows
+and Linux sandbox regressions fail before and pass after, including restored
+CPU/RAM/clock under forced shed pressure; all21 Windows title tests pass.
+Hidden native `qa-split-view-59` keeps correct separate X/P1 and Zero/P2
+cameras/HUDs under25ms receive latency with10ms jitter. There are84 matching
+intro core/mod samples and3 later samples through3068; both peers add over120
+local redraws with no additional gameplay refusals or state leaks. The earlier
+QA57 failed an invalid lifetime-zero-startup-refusals assertion; QA58 failed
+because the private driver generated different session IDs across a second
+boundary. Both failures remain retained. No performance improvement or new
+public release is claimed. Residual slowdown is separate `beads-802e`.
+
+The linked Mushroom video RZd3pBBAKfA was downloaded at720p and reviewed over
+its complete356.85s timeline, with denser2fps review of109-144s and1fps
+review of298-322s. Private originals, contact sheets and excerpts are under
+`qa-mushroom-0783`. It shows a green-portal entry around110s, P2 dropping
+out of the destination platform, a subsequent death/retry around138-144s,
+and P1's failed arrival while P2 remains on the platform. The later purple
+staircase remains the reported item36. The recording reaches the green lift
+near348s and cuts to black at the end; it does not show a later P2 lift death.
+Distinguish those visible symptoms from exact native causes and from the
+separately qualified earlier destination-plane correction/authentic panels.
+
+`Nuclear launch codes.zip` contains valid Playtest7 metadata, starting cards,
+settings and39013 native input records. Its metadata marks netplay, and its
+recorded gameplay stages are1/section0 then1/section1; there is no stage3.
+The owner says it was intended for this Mushroom session. Its saved mod state
+has the local input-diagnostic feature disabled. The recording is not yet
+matched to the footage: preserve it, check the recorder/session mismatch and
+do not claim an offline deterministic replay of a network recording.
+
+Private native `qa-mushroom-portal-60` probes authored stage3 checkpoint1 in
+both sections. Its short observation includes native initialization/arrival,
+not a complete P2-led portal-and-team-retry reproduction. Both bodies retain
+HP32; section1 finishes atX2912/2936,Y427/426 with collision boxes and ground
+contacts. Section0's final sample still has P1 in incoming action0 while P2
+is in action2; this is insufficient to qualify completed retry collision.
+No new Mushroom runtime patch or fix claim follows from that probe.
+Checklist44/45/46 and `beads-kmsf` remain open.
