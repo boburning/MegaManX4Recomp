@@ -55,7 +55,7 @@ uses Unified. Split health pickups refill only their collector without pausing
 the partner; Unified retains the native shared pause. Actual scene changes
 still teleport living partners together.
 
-The next build adds separate **Ultimate Armor X Code** and **Black Zero**
+The release includes separate **Ultimate Armor X Code** and **Black Zero**
 mods, both off by default and usable together in local play. The X code makes
 Ultimate Armor available from a capsule; it does not grant the armor at stage
 start. For netplay, the host selects the two corresponding options under
@@ -66,14 +66,14 @@ defaults on, showing both accepted input streams and recording each run
 with its starting cards/mod choices under `saves/diagnostics`.
 
 To send a useful bug recording, leave **Playtest Diagnostics** enabled in
-Mods, reproduce the problem, and quit normally. The next build writes to
+Mods, reproduce the problem, and quit normally. The release writes to
 `saves/diagnostics/session-...` beside the executable, regardless of the
 configured memory-card directory. For AppImage this is beside the `.AppImage`
 file, outside its temporary mount. `diagnostics-location.txt` in that same
 application folder identifies the exact session directory. Zip that entire folder and
 send the entire folder, including `inputs.csv`, `mods-state.toml`, and the
 starting card files or absence markers. Include the release version, your
-video and approximate time of the problem. The next build includes session
+video and approximate time of the problem. Recordings include session
 metadata and copies `settings.toml` when present. For netplay, collect a folder
 from each computer. The input display's **REC** label confirms recording.
 These folders include copies of your starting game saves. The input display
@@ -86,7 +86,12 @@ disc, BIOS and settings using `tools/replay_mmx4_diagnostics.py`. The helper
 uses isolated card copies and checks recorded player-state hashes. Netplay
 traces are available for inspection, but full netplay replay is not supported.
 
-The next build supports save states and rewind in offline co-op. Open the
+Startup failures are logged before gameplay begins under the same
+application-relative `saves/diagnostics` folder. If sign-in or startup fails,
+send both peers' newest `startup-*.log` files; `startup-log-location.txt`
+identifies the latest file. Playtest7 and older do not include these logs.
+
+The release supports save states and rewind in offline co-op. Open the
 save-state menu with F7: Square saves, Cross loads, and Circle goes back,
 using the corresponding configured controller or keyboard bindings. F8 opens
 rewind when Rewind is enabled. Restoring either feature starts a new diagnostic
