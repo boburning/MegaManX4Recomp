@@ -358,6 +358,66 @@ class Scenarios:
         assert after['lives']==lives,after
         return dict(before=before['players'],after=after['players'],maximum=maximum,lives=lives)
 
+    def weapon_cycle(self):
+        """Reuse projectile slots across every weapon, then charge the buster.
+
+        The old private renderer interpreted a static buster's retained sprite
+        pointer as compressed artwork and disabled the entire co-op session.
+        Only the initial unlock/setup uses a fixture; native R1 selects each
+        subsequent weapon and Square creates every actual projectile.
+        """
+        self.load(1,0)
+        seat=self.campaign  # X is P1 in X's campaign, P2 in Zero's.
+        self.r.fixture(7,seat,0,1)
+        checks=[]
+        def state(label):
+            raw=self.r.read(self.r.diagnostic(),0x3e4)
+            frame,enrolled,failed=struct.unpack_from('<3I',raw,4)
+            bodies=(raw[0x300:0x3e4],raw[0x100:0x1e4])
+            assert enrolled and not failed,('Co-op disabled',label,frame,failed)
+            assert all(b[0] and b[3] and b[0x5c]&127 for b in bodies),('Partner lost',label)
+            return frame,bodies
+        def advance(label,frames,charged=False):
+            start,_=state(label);deadline=time.monotonic()+20
+            observed=[]
+            while time.monotonic()<deadline:
+                frame,bodies=state(label)
+                if charged:
+                    # P2's completed projection mirror owns its shot headers.
+                    # Only X is firing, so a type18 in the native pool is P1's.
+                    stride=8 if seat else 0x9c
+                    address=self.r.diagnostic()+0x480 if seat else 0x801406f8
+                    raw=self.r.read(address,16*stride)
+                    for i in range(16):
+                        shot=raw[i*stride:(i+1)*stride]
+                        if shot[0]&0x60 and shot[1]==0x12 and shot[3]:
+                            observed.append(dict(frame=frame,slot=i,header=shot[:8].hex(),
+                                retained_table=hex(struct.unpack_from('<I',shot,0x38)[0]) if not seat else None))
+                            if len(observed)==1:self.r.screenshot(self.output/(label+'.png'))
+                if frame-start>=frames:
+                    if charged:
+                        assert observed,('No native full-charge projectile',label)
+                        return observed
+                    return bodies
+                time.sleep(.04)
+            raise TimeoutError(('Native attack did not advance',label))
+        try:
+            for cycle in range(2):
+                for weapon in range(9):
+                    label=f'weapon-cycle-{seat}-{cycle}-{weapon}'
+                    _,bodies=state(label)
+                    assert bodies[seat][0x93]==weapon,('Native R1 selection',label,bodies[seat][0x93])
+                    self.r.input(0x7fff,seat);advance(label+'-charge',140)
+                    self.r.release();shots=advance(label+'-release',45,charged=weapon==0)
+                    checks.append(dict(cycle=cycle,weapon=weapon,frame=state(label)[0],
+                        charged_buster=shots if weapon==0 else None))
+                    self.r.input(0xf7ff,seat);advance(label+'-next',4)
+                    self.r.release();advance(label+'-settle',4)
+                self.r.screenshot(self.output/f'weapon-cycle-{seat}-{cycle}.png')
+        finally:self.r.release()
+        (self.output/'weapon-cycle.json').write_text(json.dumps(checks,indent=2)+'\n')
+        return dict(x_seat=seat,native_weapon_selections=True,attacks=len(checks),partner_retained=True)
+
     def dash_effects(self):
         self.load(1,0)
         self.r.teleport_both(500,427);self.r.teleport(1,580,427)
@@ -1474,7 +1534,7 @@ def main():
     parser.add_argument('--hold-on-failure',type=int,default=0,
                         help='Keep only this owned hidden process alive for bounded TCP investigation')
     parser.add_argument('--cameras',choices=('unified','split'),default='unified')
-    parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','storm_warp', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
+    parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','storm_warp', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_visual','cyber_missiles','spider_hole','victory','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
@@ -1514,15 +1574,19 @@ def main():
                                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         report['pid'] = process.pid
         try:
-            for _ in range(80):
+            ready_deadline=time.monotonic()+100
+            while time.monotonic()<ready_deadline:
+                if process.poll() is not None:raise RuntimeError('Owned runtime exited before debug readiness')
                 try:
                     runtime.request('get_registers')
                     break
                 except OSError:
                     time.sleep(.1)
+            else:raise TimeoutError('Owned runtime debug server did not become ready')
             if args.card_seed:runtime.boot_continue(args.campaign,args.clears)
             else:runtime.boot(campaign=args.campaign)
-            folder=next((args.output/'saves/diagnostics').iterdir())
+            folder=next(path for path in (args.output/'saves/diagnostics').iterdir()
+                        if path.is_dir() and path.name.startswith('session-'))
             shutil.copytree(folder,args.output/'input-only-prefix')
             if not args.card_seed:runtime.fixture(5, 3)
             for name in args.cases:
@@ -1547,11 +1611,12 @@ def main():
             raise
         finally:
             if process.poll() is None:
-                process.terminate()
+                try:runtime.release();runtime.request('quit')
+                except (OSError,RuntimeError):pass
                 try:
-                    process.wait(timeout=5)
+                    process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
-                    process.kill()
+                    process.terminate()
                     process.wait(timeout=5)
             (args.output / 'report.json').write_text(json.dumps(report, indent=2))
             (args.output / 'events.json').write_text(json.dumps(scenarios.events, indent=2))

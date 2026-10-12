@@ -1,4 +1,32 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.8
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.9
+
+Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
+Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
+
+- Fixes co-op shutting down and P2's character/HUD disappearing after cycling
+  weapons and firing X's charged buster. Reused projectile slots can retain a
+  Gravity Well sprite pointer; the private renderer now follows the native
+  static-artwork flags instead of decoding that stale pointer.
+- Fixes empty startup logs on Windows launches without a console, including
+  normal Explorer launches. Capture now attaches the actual stderr stream,
+  verifies its first write, and reports failures to create the log or pointer.
+- Adds explicit co-op failure reasons and partner removal/return context to
+  the automatic startup log, even with gameplay input recording disabled.
+
+For a report, quit normally and zip `saves/diagnostics` beside the executable
+or AppImage. `startup-log-location.txt` points to the newest startup log;
+`diagnostics-location.txt` points to the gameplay session. Keep Playtest
+Diagnostics enabled and include the complete session folder, including its
+inputs, settings and starting cards, plus any video of the problem.
+
+The missing-shot report on Mushroom's staircase remains unconfirmed. Bounded
+checks show ordinary and charged shots travelling on both staircase sections
+with X/P1 and on the second section with X/P2. This release does not claim a
+separate fix for that report or every earlier disappearance report.
+Discord/WAN investigations and the other unresolved staircase/elevator reports
+remain parked. See the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.8
 
 Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
 Unified cameras and Stacked lifebars remain defaults; Split remains experimental.

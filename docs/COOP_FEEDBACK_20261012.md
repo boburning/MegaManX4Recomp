@@ -1,15 +1,15 @@
 # October 12 co-op feedback assessment
 
-The supplied material confirms empty startup logs, a visible P2/HUD removal in
-Jungle, and the reported staircase sequence in which an apparent X charge
-release has no clearly visible travelling shot. It does not establish a gameplay
-cause or a fix. Repairing automatic startup capture for Playtest9 is the first
-priority because both archives lack the state needed to distinguish withdrawal,
-death, co-op failure, and projectile allocation from drawing failure.
+Automatic startup capture is corrected and production-qualified for Playtest9.
+Independent native follow-up now reproduces the Jungle P2/HUD removal and
+identifies a reused weapon slot's stale graphics pointer as its rendering cause.
+The source fix is implemented; native validation after the fix is pending.
+The staircase missing-shot report remains unreproduced after bounded native
+attempts. The owner authorizes Playtest9 after the disappearance fix is validated.
 
 Assessment: `beads-eio.9.70`. Existing checklist numbers and qualifications in
 [the October 10 feedback](COOP_PLAYTEST_FEEDBACK_20261010.md) remain unchanged.
-That checklist has 48 stable items, 40 checked. New evidence below does not
+That checklist has 49 stable items, 40 checked. New evidence below does not
 revalidate earlier staircase, elevator, graphics, or netplay fixes.
 
 ## Sources and limits
@@ -68,16 +68,16 @@ private captures are not repository artifacts.
 | Order | Issue / status | Evidence and next useful action |
 | --- | --- | --- |
 | 1 | Empty automatic startup capture — existing item48 / `beads-eio.9.71`, fixed and qualified for Playtest9 | Confirmed by both archives and independently reproduced using the actual public8 executable. Under a detached/no-console Windows launch, the stderr FILE reports `_fileno=-2`; replacing fd2 leaves that FILE unattached, so stdio writes fail while begin reports success. Reopen the actual FILE and attach raw/native stderr, check header/location writes, and report capture failure. The production candidate captures startup and later application errors while preserving redirected stderr. Nine Windows logging cases, all31 title checks and four Linux cases pass. Published Playtest8 assets remain unchanged; Playtest9 is not yet published. This is a logging fix, not a gameplay fix. |
-| 2 | P2 plus HUD removal — existing item31 / `beads-eio.9.61`, deferred and unresolved | New footage narrows the scene to Jungle's opening waterfall after sustained weapon cycling, with the visible transition near 01:48.45. Retain this evidence with the existing disappearance family; common cause with the earlier boss-door, midboss and intro reports is unproved. Once capture works, reproduce the shown saved-game sequence with inputs and presence/disable reason logs before choosing a gameplay fix. |
-| 3 | Missing visible staircase shot — new item49 / `beads-nbnc`, open | New distinct symptom; keep separate from the floating-staircase and elevator reports. Use a matching recorded staircase route/settings to inspect ordinary and charged X shots with each seat, then projectile spawn/update/draw and damage against a valid target. The supplied footage qualifies only the visual symptom. |
+| 2 | P2 plus HUD removal — existing item31 / `beads-eio.9.61`, reproduced; fix validation pending | QA111/112 reproduce the removal at Jungle's opening waterfall with both players at HP32 and failure8 (`actor-texture`). Native R1-only cycling in QA115 confirms the same failure without the weapon-selection fixture. A reused buster slot retains Gravity Well's compressed pointer even though its native flags select static artwork; the private renderer incorrectly decodes that stale pointer. Rendering now follows the native flags. Keep item31 unchecked until native validation after the fix; the earlier boss-door, midboss and intro reports are not separately qualified by this occurrence. |
+| 3 | Missing visible staircase shot — new item49 / `beads-nbnc`, deferred and unresolved | QA113 shows ordinary and three charged travelling X/P1 shots on the green and purple stairs. QA114 shows ordinary and three charged X/P2 shots on the purple stairs. Its first-section hurt-lock setup is excluded. The supplied missing-shot state remains unreproduced; no projectile damage was measured. Keep separate from staircase-height and elevator reports. |
 | 4 | Green cone appearance — comparison only, no new bug issue | Compare the same weapon and armor state against native solo rendering if this appearance is reported as wrong. Do not classify an aiming effect as malformed geometry from its size alone. |
 | — | Existing items34/36/46 and online items30/32/42/43 | No new matching evidence establishes the previously reported teleporter corruption, floating pickup/feet, later elevator failure, WAN boot failure, independent-view switching, or performance cause. Their existing qualifications and unresolved limits remain intact. |
 
-Existing source triage identifies a co-op failure flag that can suppress P2's
-control/HUD, with malformed actor packets and texture-bank/cache exhaustion as
-possible paths. None of those paths is observed in the supplied material.
-Intentional withdrawal is another route to disappearance. A large weapon effect
-before removal does not prove that it caused a packet or cache failure.
+The original video alone cannot distinguish intentional withdrawal from co-op
+failure. The independent native reproduction below establishes the latter path
+for the matching Jungle weapon-cycle scene. Its failure occurs at 271–281 sprite
+banks, excluding the 4096-entry cache limit for this occurrence. The green aiming
+cone is not the diagnosed failure.
 
 ## Reproduction sequence supported by the video
 
@@ -96,8 +96,54 @@ before removal does not prove that it caused a packet or cache failure.
    then with the overlapping arrangement shown in the clip.
 
 This is a route recipe, not a deterministic replay: the exact starting cards,
-settings, mod configuration and input timing are missing. This assessment did
-not launch gameplay, change gameplay source, or qualify a gameplay fix.
+settings, mod configuration and input timing are missing. The initial media
+assessment did not launch gameplay; the native follow-up is recorded below.
+
+## Native follow-up and pending disappearance fix
+
+QA111 and QA112 load a generated native all-clear card through Continue, select
+Jungle, then cycle P1 weapons0–8 while charging/releasing at the opening ledge.
+Returning to the buster reproduces the video's visible P2/body-HUD removal.
+Both players retain HP32 and the co-op failure code is8 (`actor-texture`), with
+271–281 sprite banks rather than cache exhaustion. These runs initially use
+development fixture7 for weapon selection.
+
+QA115 removes that fixture: native R1 input alone cycles all nine weapons,
+followed by a charged buster release after returning to weapon0. The same
+failure occurs at frame2845. The rejected P1 shot is `801406F8`, frame38,
+CLUT`7803`, page`002A`. Its retained table is `9F02BEF4`; original table
+`801A47A4` minus native sprite base `801789A0` is offset`2BE04`, PL00's
+compressed family9 used by Gravity Well. Native and immutable frame entries
+agree (`0CA98711`), so this is not disagreement between the archive and live RAM.
+
+The original buster initializers at `80092328` and `80092840` set actor flags
+`21` without clearing a reused slot's `+38` pointer. Native drawing at
+`800244D0`/`8002452C` uses flags`40`/`20` to select static artwork and map its
+UV/page. The private renderer classified any pointer within the retained
+compressed range as compressed, then interpreted the stale Gravity Well entry
+as a buster frame. Texture rejection set failure8, disabling P2's control/HUD.
+
+The implemented fix follows those native flags: static actors ignore stale
+compressed pointers and use the existing immutable raw-artwork path, including
+its original UV/page and owning-character palette. Parent-table fallback and
+compressed remapping remain available for actors that use compressed artwork.
+The fix does not clear native actor RAM, suppress an error, or introduce an
+opt-in setting. Item31 remains unchecked until native validation after the fix.
+The retained `weapon_cycle` scenario uses native R1 input, two cycles of all nine
+weapons, and frame-based charge/release windows; it supports either X seat.
+
+The separate item49 attempt remains unqualified as a fix. QA113 visibly produces
+ordinary and three charged travelling X/P1 shots on both green and purple
+Mushroom stairs. QA114 produces ordinary and three charged X/P2 shots on the
+purple second-section stairs; inspected capture
+`stairs-1-400-1-True-2.png` shows the travelling shot. Its first-section setup
+entered a development-induced hurt lock and is excluded from qualification.
+Neither result proves the exact missing-shot state in IMG_0786.mov resolved,
+and no damage conclusion is drawn. Item49 stays unchecked and deferred.
+
+Private evidence: `build-pr23/qa-items31-111/`, `qa-items31-112/`,
+`qa-items31-115/`, `qa-items49-113/`, and QA114's corresponding captures/report.
+Other parked feedback items remain outside this focused reproduction work.
 
 ## Logging fix validation
 

@@ -952,17 +952,23 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
     guest(cpu,0x80024334,actor,0);
     uint32_t end=psx_mod_read_word(SCRATCH+0x100);
     if(end<start || end-base>40000 || (end-start)%40) { failed=4;return; }
-    uint32_t table=psx_mod_read_word(actor+0x38);unsigned frame=psx_mod_read_byte(actor+0x47);
+    /* Native800244D0/8002452C selects static artwork with flags40/20.
+     * A reused shot can retain its previous weapon's +38: buster init
+     * 80092328/80092840 installs flags21 without clearing that pointer.
+     * Preserve the original UV/page mapping through the immutable raw cache. */
+    unsigned raw_graphics=psx_mod_read_byte(actor)&0x60u;
+    uint32_t table=raw_graphics?0:psx_mod_read_word(actor+0x38);
+    unsigned frame=psx_mod_read_byte(actor+0x47);
     unsigned primary=character!=counterpart;
     uint32_t parent_assembly=primary || projected?psx_mod_read_word(PLAYER+0x3C):le32(second.body+0x3C);
-    if(!table && psx_mod_read_word(actor+0x3C)==parent_assembly)
+    if(!raw_graphics && !table && psx_mod_read_word(actor+0x3C)==parent_assembly)
         table=primary || projected?psx_mod_read_word(PLAYER+0x38):le32(second.body+0x38);
     CharacterAssets *a=&assets[character];
     const Mmx4Asset *body=character_compressed(character);
     uint32_t native_sprites=psx_mod_read_word(SCRATCH+0x14);
-    if(primary && table>=native_sprites && table-native_sprites<body->size)
+    if(!raw_graphics && primary && table>=native_sprites && table-native_sprites<body->size)
         table=a->sprites+(table-native_sprites);
-    int compressed=table>=a->sprites && table-a->sprites<body->size;
+    int compressed=!raw_graphics && table>=a->sprites && table-a->sprites<body->size;
     uint32_t assembly=psx_mod_read_word(actor+0x3C);
     uint32_t assembly_base=primary?psx_mod_read_word(SCRATCH+0x1C):a->assembly;
     if(!compressed && (assembly<assembly_base || assembly-assembly_base>=0xC000))return;
@@ -982,7 +988,17 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
         uint16_t page=tile==UINT16_MAX?(uint16_t)(q[5]>>16):(uint16_t)psx_mod_read_word(mode+4);
         uint16_t bank=compressed?sprite_bank(character,table,frame,(uint16_t)(q[3]>>16),tile):
             ui_tile(character,page,(uint16_t)(q[3]>>16),tile,1);
-        if(!bank) {failed=8;psx_mod_counter_add("mmx4.coop.invalid-sprite",1);return;}
+        if(!bank) {
+            failed=8;psx_mod_counter_add("mmx4.coop.invalid-sprite",1);
+            if(!psx_mod_local_view_scope())fprintf(stderr,
+                "mmx4.coop: invalid-sprite actor=%08X character=%u table=%08X assembly=%08X "
+                "frame=%u compressed=%u clut=%04X page=%04X tile=%04X banks=%u ui-banks=%u "
+                "raw-flags=%02X\n",
+                actor,character,table,assembly,frame,(unsigned)compressed,
+                (unsigned)(q[3]>>16),(unsigned)page,(unsigned)tile,bank_count,ui_bank_count,
+                raw_graphics);
+            return;
+        }
         triangle(expanded,expanded+40,q,0,1,2,bank);triangle(expanded+40,q[0],q,2,1,3,bank);
         psx_mod_tag_world_primitive(expanded,1);psx_mod_tag_world_primitive(expanded+40,1);
         psx_mod_write_word(at,expanded&0xFFFFFF);
