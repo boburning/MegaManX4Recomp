@@ -95,3 +95,19 @@ on the input display. After reproducing the second/purple staircase issue,
 quit normally and send the complete session folder identified by
 diagnostics-location.txt, plus the matching video and approximate problem time.
 Do not attempt offline replay of the older network trace as a Mushroom test.
+
+The remaining evidence audit leaves all eight unchecked reports open:
+
+| Items | Next action |
+| --- | --- |
+| 30/32 | Discord/WAN investigation parked at owner request; collect startup logs if it fails again. |
+| 31 | Co-op removal remains backlog at owner request. |
+| 34/36 | Future matching Mushroom recording; no further speculative staircase runs. |
+| 41 | Current diagnostic session if the intro-act2 WARNING failure recurs. Stored native results show warning retirement, Eregion and survivor controls, without establishing the older Playtest6 cause. |
+| 43 | Current slowdown scene, settings and hardware alongside diagnostics. The X5 optimization is shipped; controlled runs finish near60Hz, without proving every performance report resolved. |
+| 46 | Later elevator report parked pending a specific current failure; earlier elevator fix/ascent/exit qualified. |
+
+No gameplay tests are running. PR17 is closed as superseded and PR23 is merged.
+The requested X6 counterparts exist: stacked-HUD PR41 and voice issue42,
+with central voice tracker beads-blqg. These are separate X6 follow-up artifacts,
+not claims that X6 gameplay bugs were tested or fixed here.
