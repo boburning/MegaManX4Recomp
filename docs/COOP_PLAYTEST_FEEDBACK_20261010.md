@@ -35,7 +35,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 29 | [x] | Split Mushroom elevator immediately kills both characters, including after retry | Fixed future destination720 being used as the death plane while the camera remains2047 and ridersY2200. QA35 passes the limit change, one-life team retry and continued ascent in both rosters: both retainHP32 through camera1746/1748. Owner watched QA34 and confirms later ceiling crush is authentic: players must destroy the overhead panels. Preserve that behavior. Fix11da504; validation stops before those obstacles. `beads-eio.9.57` |
 | 30 | [ ] | Windows online Discord sign-in says the lobby server cannot be reached | **Parked at the owner's October11 scope check; collect future failures with startup logs instead of repeating sign-in investigations.** The first-HTTP socket fix is merged in SDK e5305930 and shipped in Playtest6. Fresh-process/native-request checks pass; full Discord authorization remains unconfirmed. Shared `beads-3qv.1.13`; logging item48. |
 
-| 31 | [ ] | Local co-op P2 and HUD disappear in Web Spider/Jungle; also reported before Split Mushroom's midboss | **Focused October12 reproduction established; source fix implemented, native validation after the fix pending.** QA111/112 reproduce removal at Jungle's opening waterfall after cycling weapons, with both HP32 and failure8 (`actor-texture`). QA115 repeats using native R1 input only: a reused buster slot retains Gravity Well's compressed pointer while native flags21 select static artwork. The private renderer decoded that stale pointer and disabled P2; rendering now follows the original flags20/40. Keep unchecked pending validation. Earlier Mushroom room-loading fix171d2ea is separate; the exact boss-door enemy-fire, midboss and intro reports are not independently qualified by this occurrence. `beads-eio.9.61` |
+| 31 | [x] | P2 and HUD disappear after X cycles special weapons and returns to the buster | **Reproduced weapon-reuse failure fixed and qualified for Playtest9.** QA111/112 reproduce removal at Jungle's opening waterfall with both HP32 and failure8; native R1-only QA115 excludes the selection fixture as its cause. The reused buster retains Gravity Well's compressed pointer while native flags21 select static artwork; rendering now follows original flags20/40. QA116 passes two P1 cycles. Strengthened QA117/X-P2 and QA118/X-P1 each pass18 attacks, including visible full charged busters, healthy bodies, enrollment and failure0 throughout. QA118 retains the stale pointer yet its projectile and both HUDs stay visible; all exit normally0. Fix1903e75 is on master. This check qualifies that reproduced case; earlier boss-door enemy-fire, Mushroom midboss and intro disappearance reports are not independently qualified. `beads-eio.9.61` |
 | 32 | [ ] | Online/Discord host enters white screen and guest remains in the lobby | **Parked at the owner's October11 scope check.** Earlier START/ICE fixes are included in Playtest7; private WS/ICE QA56 boots both peers with92 matching core/mod samples through3020. This does not qualify the reported WAN failure. Future reports should include both portable startup logs and their embedded build identities; input recordings start after title input. Logging is item48. `beads-eio.9.42` |
 | 33 | [x] | F7 Square-to-save does nothing; save/load/rewind mappings and behavior need qualification | Offline co-op now captures both native contexts, ownership and private resources. QA39 X/P1 and QA40 Zero/P1 pass mapped saves, repeated loads, restoring P2 after death, P2 pause ownership, rewind accept/cancel and fresh-process loading followed by attacks. QA44 repeats the final safe-context implementation with X/P1. Diagnostic QA41/42 require the exact loaded baseline and verify152/48 hashes after cold load/rewind. All19 Windows title checks and focused Linux serializer, arena, RAM-map and diagnostic tests pass. Network state jumps remain explicitly unavailable. Published in Playtest7. `beads-eio.9.62`, shared `beads-eio.3.332`, `beads-eio.3.333` |
 | 34 | [ ] | Split Mushroom section2 teleporter glitches briefly near second rotating staircase | Exact staircase-arrival footage is missing among available0740â€“0757 clips. IMG0757 lift retry at5.77â€“6.47s has separate blue/red beams, overlapping circular arrival effects, then both normal bodies; no clear palette corruption or stuck beam. Keep the exact report unqualified. Related room-initialization fix171d2ea does not prove it resolved this visual report. `beads-eio.9.63` |
@@ -53,7 +53,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 45 | [x] | After both players die and retry, P1 loses collision with the Mushroom teleporter platform | Reproduced QA61: P1 lands16px below the portal while P2 stands on it. The P2-owned portal dispatch bypassed dual-player solid collision. Restore canonical contact histories before its one shared solid pass. QA64 and permanent helper QA73 pass landing, jump/landing and native team retry in both rosters, with one life spent per retry. All21 Windows checks and Linux collision/lifecycle/controller checks pass. Included in Playtest8. `beads-kmsf` |
 | 46 | [ ] | Mushroom elevator still fails for P2 in the newer playtest | Earlier arrival/retry/destination checks pass both rosters. QA88/95 now complete ascent, native upper wall climb and checkpoint3 exit with both HP32/lives2. Explicit private cheat advances only the authored ceiling panels' native destruction states; player, lift and collision rules stay native. This qualifies the later exit after those obstacles, not natural panel combat. The supplied video ends near boarding; no P2-specific defect is reproduced. At the owner's October11 scope check, further speculative elevator tests stop pending specific current failure evidence. Second staircase remains item36. `beads-kmsf`, previous `beads-eio.9.57` |
 | 47 | [x] | Green Mushroom portal initially returns P2 below its entrance platform | Stronger native test reproduces P2 atY186 rather thanZero's platform Y170. Incoming warp excluded P2 from world-solid collision along with combat. Allow native floor collision for a healthy initialized incoming body; retain combat exclusion. Wait for completed P1 landing on negative portal returns and align character box bottoms when sharing a surface. QA84/85 pass actual P2 portal entry/return, jump/landing, team retry and subsequent P2 exit in both rosters. Native cases require the original disc and remain repeatable with the helper's `--portal-return` case. Included in Playtest8. `beads-kmsf` |
-| 48 | [x] | Startup/sign-in failures need logs before gameplay recording starts | Portable startup capture shipped in Playtest8, but October12 evidence exposed an ordinary Windows GUI launch regression missed by the earlier closed-descriptor/redirected-stderr fixtures: the unattached stderr FILE retained descriptor -2 and produced empty logs. **Corrected and production-qualified for Playtest9; published Playtest8 remains unchanged.** Reopen the actual FILE, attach raw/native stderr, check header/location writes and report capture failure. The actual public8 executable produces0-byte detached/unredirected logs; the repaired production candidate records669/670 bytes including the real pre-boot rejection, preserves redirected output, and captures a later live launcher failure before normal exit. Nine focused Windows launch/error cases, all31 title checks and four Linux cases pass. `beads-eio.9.71`; original `beads-eio.9.68`, shared `beads-eio.3.336` |
+| 48 | [x] | Startup/sign-in failures need logs before gameplay recording starts | Portable startup capture shipped in Playtest8, but October12 evidence exposed an ordinary Windows GUI launch regression missed by the earlier closed-descriptor/redirected-stderr fixtures: the unattached stderr FILE retained descriptor -2 and produced empty logs. **Corrected and production-qualified for Playtest9; published Playtest8 remains unchanged.** Reopen the actual FILE, attach raw/native stderr, check header/location writes and report capture failure. The actual public8 executable produces0-byte detached/unredirected logs; the final production candidate records655/658 unredirected bytes and659 redirected bytes including the real pre-boot rejection, preserves redirected output, and earlier live qualification captures a later launcher failure before normal exit. Nine focused Windows launch/error cases, all31 Windows and25 Linux title checks plus four focused Linux logging cases pass. `beads-eio.9.71`; original `beads-eio.9.68`, shared `beads-eio.3.336` |
 | 49 | [ ] | X's charge/release shows no travelling shot on the Mushroom staircase | **Bounded native attempt complete; exact report unreproduced and deferred.** IMG_0786.mov shows a charge effect ending around00:07.02 and a right-facing buster pose without a clear travelling shot; both bodies/HUD groups remain. QA113 visibly produces ordinary and three charged X/P1 shots on green and purple stairs. QA114 produces ordinary and three charged X/P2 shots on purple second-section stairs; its development-induced first-section hurt lock is excluded. No damage claim or exact-recording replay is possible from the empty ZIPs. Keep separate from floating stairs/elevator reports and leave unchecked. `beads-nbnc` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
@@ -102,7 +102,7 @@ The remaining evidence audit leaves all eight unchecked reports open:
 | Items | Next action |
 | --- | --- |
 | 30/32 | Discord/WAN investigation parked at owner request; collect startup logs if it fails again. |
-| 31 | October12 focused weapon-cycle reproduction now establishes a failure path; validate the implemented rendering fix before checking the item. Other reported disappearance locations remain unqualified. |
+| 49 | Missing staircase shots remain unreproduced after bounded native checks; retain for a matching recording. No damage qualification. |
 | 34/36 | Future matching Mushroom recording; no further speculative staircase runs. |
 | 41 | Current diagnostic session if the intro-act2 WARNING failure recurs. Stored native results show warning retirement, Eregion and survivor controls, without establishing the older Playtest6 cause. |
 | 43 | Current slowdown scene, settings and hardware alongside diagnostics. The X5 optimization is shipped; controlled runs finish near60Hz, without proving every performance report resolved. |
@@ -150,7 +150,8 @@ disappearance qualification awaits a matching occurrence.
 Full timestamped assessment and next actions:
 [COOP_FEEDBACK_20261012.md](COOP_FEEDBACK_20261012.md), `beads-eio.9.70`.
 Existing item numbers remain stable; new missing-shot item49 extends the
-checklist to49 rows. No unresolved gameplay report is marked fixed.
+checklist to49 rows, now41 checked after qualifying item31's reproduced
+weapon-reuse case. Other unresolved gameplay reports remain open.
 
 Both newly supplied ZIPs are CRC-valid and contain only zero-byte startup
 logs: 3 in `New Compressed (zipped) Folder.zip`, 15 in `Diagnostics.zip`, with
@@ -173,8 +174,8 @@ weapon cycling/firing precedes the removal of P2's body and lower HUD:
 present at 01:48.43, absent by 01:48.47 in sampled frames. P2's health bar
 looks full immediately before removal; P1 stays active in the same scene
 through the remaining visible gameplay. No immediate death or room change
-is apparent. Item31 / `beads-eio.9.61` remains unresolved: input-driven
-withdrawal and a co-op failure cannot be distinguished from this video.
+is apparent. Input-driven withdrawal and co-op failure cannot be distinguished
+from this video alone; the independent item31 reproduction and fix are below.
 The large green cone around 01:26–01:28 may be a native aiming effect and
 is not classified as a new graphics bug.
 
@@ -197,9 +198,17 @@ pointer (PL00 offset2BE04; native and immutable packed entries agree), while
 buster flags21 select static artwork in the original renderer. The private
 renderer incorrectly decoded that stale pointer. Its source fix now follows
 flags20/40 and uses the existing raw-artwork/owning-palette path. Cache
-exhaustion and the green aiming cone are not this diagnosed failure. Item31
-stays unchecked pending native validation after the fix; other original
-disappearance locations are not independently qualified by this reproduction.
+exhaustion and the green aiming cone are not this diagnosed failure.
+
+QA116 passes two P1 weapon cycles after the fix. Strengthened native R1-only
+QA117/X-P2 and QA118/X-P1 each pass18 attacks, including visible full charged
+buster type0x12 with native static-artwork flags; both bodies remain healthy
+and active, enrollment persists and failure0 is asserted throughout. QA118's
+second-cycle P1 buster retains stale table801A47A4 yet the projectile and both
+HUDs remain visible. All three runs exit normally0. Item31 is now checked for
+this reproduced weapon-reuse case. Fix1903e75 is on master and qualified for
+Playtest9; other original disappearance locations are not independently
+qualified by these runs.
 
 The item49 attempt stays unresolved and deferred. QA113 has visible ordinary
 and three charged travelling X/P1 shots on green and purple stairs; QA114 has
@@ -207,3 +216,10 @@ the same X/P2 shots on purple second-section stairs, including inspected
 `stairs-1-400-1-True-2.png`. QA114's first-section development-induced hurt lock
 is excluded. No projectile damage was qualified, and the exact supplied
 missing-shot state remains unreproduced. Other parked items remain parked.
+
+Both final production builds pass 31 Windows and 25 Linux title checks; hidden
+packaged launcher/room-offer checks pass. Final Windows unredirected logs
+contain 655/658 bytes and the redirected case 659 bytes, including the real
+application error while preserving redirected stderr. [Playtest 9](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.9)
+is published with Windows ZIP and Linux AppImage; uploaded asset checksums are
+verified. This does not expand the parked WAN/Discord qualifications.

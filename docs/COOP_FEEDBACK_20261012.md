@@ -3,13 +3,14 @@
 Automatic startup capture is corrected and production-qualified for Playtest9.
 Independent native follow-up now reproduces the Jungle P2/HUD removal and
 identifies a reused weapon slot's stale graphics pointer as its rendering cause.
-The source fix is implemented; native validation after the fix is pending.
+The fix is integrated on master and native validation passes with X in either
+seat. It is included in [Playtest 9](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.9), now published for Windows and Linux.
 The staircase missing-shot report remains unreproduced after bounded native
 attempts. The owner authorizes Playtest9 after the disappearance fix is validated.
 
 Assessment: `beads-eio.9.70`. Existing checklist numbers and qualifications in
 [the October 10 feedback](COOP_PLAYTEST_FEEDBACK_20261010.md) remain unchanged.
-That checklist has 49 stable items, 40 checked. New evidence below does not
+That checklist has 49 stable items, 41 checked. New evidence below does not
 revalidate earlier staircase, elevator, graphics, or netplay fixes.
 
 ## Sources and limits
@@ -67,8 +68,8 @@ private captures are not repository artifacts.
 
 | Order | Issue / status | Evidence and next useful action |
 | --- | --- | --- |
-| 1 | Empty automatic startup capture — existing item48 / `beads-eio.9.71`, fixed and qualified for Playtest9 | Confirmed by both archives and independently reproduced using the actual public8 executable. Under a detached/no-console Windows launch, the stderr FILE reports `_fileno=-2`; replacing fd2 leaves that FILE unattached, so stdio writes fail while begin reports success. Reopen the actual FILE and attach raw/native stderr, check header/location writes, and report capture failure. The production candidate captures startup and later application errors while preserving redirected stderr. Nine Windows logging cases, all31 title checks and four Linux cases pass. Published Playtest8 assets remain unchanged; Playtest9 is not yet published. This is a logging fix, not a gameplay fix. |
-| 2 | P2 plus HUD removal — existing item31 / `beads-eio.9.61`, reproduced; fix validation pending | QA111/112 reproduce the removal at Jungle's opening waterfall with both players at HP32 and failure8 (`actor-texture`). Native R1-only cycling in QA115 confirms the same failure without the weapon-selection fixture. A reused buster slot retains Gravity Well's compressed pointer even though its native flags select static artwork; the private renderer incorrectly decodes that stale pointer. Rendering now follows the native flags. Keep item31 unchecked until native validation after the fix; the earlier boss-door, midboss and intro reports are not separately qualified by this occurrence. |
+| 1 | Empty automatic startup capture — existing item48 / `beads-eio.9.71`, fixed and shipped in Playtest 9 | Confirmed by both archives and independently reproduced using the actual public8 executable. Under a detached/no-console Windows launch, the stderr FILE reports `_fileno=-2`; replacing fd2 leaves that FILE unattached, so stdio writes fail while begin reports success. Reopen the actual FILE and attach raw/native stderr, check header/location writes, and report capture failure. The production release captures startup and later application errors while preserving redirected stderr. Nine Windows logging cases, all 31 title checks and four Linux cases pass. Published Playtest 8 assets remain unchanged. This is a logging fix, not a gameplay fix. |
+| 2 | P2 plus HUD removal — existing item31 / `beads-eio.9.61`, fixed and qualified for Playtest9 | QA111/112 reproduce the removal at Jungle's opening waterfall with both players at HP32 and failure8 (`actor-texture`); native R1-only QA115 confirms the reused-slot cause. Rendering now follows the native static-artwork flags instead of decoding the stale Gravity Well pointer. QA116 passes two P1 cycles; strengthened QA117/X-P2 and QA118/X-P1 each pass18 attacks, including visible full charged busters, healthy bodies, enrollment and failure0 throughout. QA118 retains the original stale pointer while its shot and both HUDs remain visible. Commit1903e75 is on master. Item31 is checked for this reproduced weapon-reuse case; other disappearance locations are not independently qualified. |
 | 3 | Missing visible staircase shot — new item49 / `beads-nbnc`, deferred and unresolved | QA113 shows ordinary and three charged travelling X/P1 shots on the green and purple stairs. QA114 shows ordinary and three charged X/P2 shots on the purple stairs. Its first-section hurt-lock setup is excluded. The supplied missing-shot state remains unreproduced; no projectile damage was measured. Keep separate from staircase-height and elevator reports. |
 | 4 | Green cone appearance — comparison only, no new bug issue | Compare the same weapon and armor state against native solo rendering if this appearance is reported as wrong. Do not classify an aiming effect as malformed geometry from its size alone. |
 | — | Existing items34/36/46 and online items30/32/42/43 | No new matching evidence establishes the previously reported teleporter corruption, floating pickup/feet, later elevator failure, WAN boot failure, independent-view switching, or performance cause. Their existing qualifications and unresolved limits remain intact. |
@@ -99,7 +100,7 @@ This is a route recipe, not a deterministic replay: the exact starting cards,
 settings, mod configuration and input timing are missing. The initial media
 assessment did not launch gameplay; the native follow-up is recorded below.
 
-## Native follow-up and pending disappearance fix
+## Native follow-up and disappearance fix validation
 
 QA111 and QA112 load a generated native all-clear card through Continue, select
 Jungle, then cycle P1 weapons0–8 while charging/releasing at the opening ledge.
@@ -128,9 +129,19 @@ compressed pointers and use the existing immutable raw-artwork path, including
 its original UV/page and owning-character palette. Parent-table fallback and
 compressed remapping remain available for actors that use compressed artwork.
 The fix does not clear native actor RAM, suppress an error, or introduce an
-opt-in setting. Item31 remains unchecked until native validation after the fix.
+opt-in setting. Commit `1903e75` is on master and is qualified for Playtest9.
 The retained `weapon_cycle` scenario uses native R1 input, two cycles of all nine
 weapons, and frame-based charge/release windows; it supports either X seat.
+
+QA116 passes the first two P1 cycles after the fix. The strengthened retained
+helper then passes QA117 with X/P2 and QA118 with X/P1:18 attacks in each run,
+including required visible full charged buster type`0x12` with the native
+static-artwork flags. Both runs assert healthy active bodies, co-op enrollment
+and failure0 throughout. QA118's second-cycle P1 buster retains the original
+stale table `801A47A4`, yet its projectile and both HUD groups remain visible.
+All three runs exit normally0. Item31 is checked for this reproduced
+weapon-reuse failure; the earlier boss-door enemy-fire, Mushroom midboss and
+intro disappearance reports are not independently qualified by these runs.
 
 The separate item49 attempt remains unqualified as a fix. QA113 visibly produces
 ordinary and three charged travelling X/P1 shots on both green and purple
@@ -142,8 +153,17 @@ Neither result proves the exact missing-shot state in IMG_0786.mov resolved,
 and no damage conclusion is drawn. Item49 stays unchecked and deferred.
 
 Private evidence: `build-pr23/qa-items31-111/`, `qa-items31-112/`,
-`qa-items31-115/`, `qa-items49-113/`, and QA114's corresponding captures/report.
+`qa-items31-115/`, `qa-items49-113/`, and the corresponding QA114/116/117/118
+captures/reports.
 Other parked feedback items remain outside this focused reproduction work.
+
+Final production builds pass all31 Windows and25 Linux title checks, with
+development controls disabled. Hidden packaged launcher and room-offer checks
+pass. Final unredirected Windows logs contain655/658 bytes, and the redirected
+case659 bytes, including the real application error; redirected stderr remains
+preserved. Both gameplay and logging changes are qualified for Playtest9.
+The release is published; these checks do not qualify the parked WAN/Discord
+reports or item49's unreproduced missing-shot state.
 
 ## Logging fix validation
 
@@ -176,7 +196,7 @@ interactive console window. Private reports are
 `startup-log-investigation/retained-before-after.json` /
 `linux-focused-report.json`, beneath `build-pr23/`.
 
-This fix is compiled in `build-playtest9-logfix-production/`, with development
-controls off. The package version remains Playtest8 until a new release is
-prepared. Logger fix commit: `ea81d58`. No existing public release files were
-replaced.
+The initial logger-only qualification used `build-playtest9-logfix-production/`,
+with development controls off; the final production qualification above also
+includes the gameplay fix. Logger fix commit: `ea81d58`. Playtest 9 is published,
+its uploaded asset checksums are verified, and no older public release files were replaced.

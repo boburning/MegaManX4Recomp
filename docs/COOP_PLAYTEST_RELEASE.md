@@ -1,4 +1,40 @@
-# Co-op playtest 8
+# Co-op playtest 9
+
+Version: [`v0.1.1-coop-playtest.9`](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.9), published Windows ZIP and Linux x86_64 AppImage.
+Fixes P2/HUD removal caused by reused projectile sprite pointers and empty
+Windows startup logs when launched without a console. Includes default co-op
+failure and partner-presence logging. Unified and Stacked remain defaults;
+Split remains experimental. Both peers must upgrade together.
+
+Native R1 weapon cycling reproduces the old failure. QA117/118 qualify the
+fix with X in either seat: 18 attacks each, visible charged buster shots,
+both players retained, and normal exit. QA118 confirms the reused slot still
+contains the old Gravity Well pointer, but now renders correctly. Item49's
+missing staircase shot remains unreproduced; see the numbered checklist.
+
+Production checks: 31 Windows / 25 Linux title tests pass. Both packaged
+hidden launchers pass, complete room offers and execution/co-op identities
+match, and private development controls are disabled. The actual packaged
+Windows executable writes nonempty logs for detached, no-window and redirected
+launches, including a real pre-boot error. AppImage layout/seeding passes;
+glibc 2.38 or newer remains required.
+
+Compiled source: `1903e75`, framework `9bd4c20f9`, UI `06fd73e7`.
+Production profile: `mmx4-coop-delay-v3:9e120caff66d641eca7d1790cde0d3331755cf3d`.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `4e5a72319b7233dc000e206312d3ace9ffead232283ac07e60b1e06e5a93bf86` |
+| Linux x86_64 AppImage | `61b8de15f499e0a8c6346dce1b30114ae323d47dc24d6ab598a2da746e2eb1e4` |
+
+Assets/checksums: `dist/playtest9-public`; private validation receipt:
+`build-pr23/release9-qa/release-receipt-final.json`. No disc, private saves,
+settings, recordings or source archives are bundled. Send the complete
+`saves/diagnostics` folder beside the executable/AppImage when reporting a bug.
+The historical Playtest8 log checks below used redirected stderr and missed
+its ordinary Windows GUI-launch failure; Playtest9 explicitly covers that case.
+
+## Previous co-op playtest 8
 
 Version: `v0.1.1-coop-playtest.8`, Windows ZIP and Linux x86_64 AppImage.
 Adds the Mushroom P2 progression and portal collision/arrival fixes,
