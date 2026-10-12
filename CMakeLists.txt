@@ -133,6 +133,8 @@ set_property(SOURCE src/mods/mmx4_coop_plugin.c APPEND PROPERTY COMPILE_DEFINITI
     "MMX4_COOP_NETPLAY_COMPATIBILITY=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\"")
 set_property(SOURCE src/mods/mmx4_diagnostics.cpp APPEND PROPERTY COMPILE_DEFINITIONS
     "MMX4_DIAGNOSTIC_BUILD_ID=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\"")
+set_property(SOURCE src/mods/mmx4_startup_log.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+    "MMX4_STARTUP_BUILD_ID=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\"")
 add_custom_command(TARGET psx-runtime POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_CURRENT_SOURCE_DIR}/game.toml"
@@ -140,6 +142,12 @@ add_custom_command(TARGET psx-runtime POST_BUILD
     VERBATIM)
 
 if(BUILD_TESTING)
+    add_executable(mmx4_startup_log_test tests/test_mmx4_startup_log.cpp src/mods/mmx4_startup_log.cpp)
+    target_compile_definitions(mmx4_startup_log_test PRIVATE MMX4_STARTUP_LOG_TEST=1)
+    target_include_directories(mmx4_startup_log_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
+    target_link_libraries(mmx4_startup_log_test PRIVATE Threads::Threads)
+    add_test(NAME mmx4_startup_log_test COMMAND mmx4_startup_log_test "${CMAKE_CURRENT_BINARY_DIR}/startup-log-qa")
+    add_test(NAME mmx4_startup_log_no_console_test COMMAND mmx4_startup_log_test "${CMAKE_CURRENT_BINARY_DIR}/startup-log-no-console-qa" closed)
     add_executable(mmx4_coop_memory_test tests/test_mmx4_coop_memory.c src/mods/mmx4_coop_memory.c)
     target_include_directories(mmx4_coop_memory_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_coop_memory_test COMMAND mmx4_coop_memory_test)

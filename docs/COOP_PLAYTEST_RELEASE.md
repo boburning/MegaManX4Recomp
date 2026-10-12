@@ -1,5 +1,14 @@
 # Co-op playtest 7
 
+Next-build diagnostics also record startup failures before the launcher or
+game reaches gameplay. Send the newest `startup-*.log` files from
+`saves/diagnostics` beside each player's executable or AppImage.
+`startup-log-location.txt` beside the application identifies its latest file.
+These files exist even when sign-in fails or the game remains on a white
+screen and no input-recording session starts. Both peers' logs are useful.
+This addition is in source for the next build; the published Playtest7 ZIP
+does not include it.
+
 Version: `v0.1.1-coop-playtest.7`, Windows ZIP and Linux x86_64 AppImage.
 Includes the qualified ICE startup, complete lobby settings, Mushroom
 latch/elevator and room-initialization fixes, offline co-op save/load/rewind,
