@@ -111,3 +111,13 @@ No gameplay tests are running. PR17 is closed as superseded and PR23 is merged.
 The requested X6 counterparts exist: stacked-HUD PR41 and voice issue42,
 with central voice tracker beads-blqg. These are separate X6 follow-up artifacts,
 not claims that X6 gameplay bugs were tested or fixed here.
+
+New independent reporter feedback extends item31's local disappearance family:
+P2 vanishes at the intro dragon boss and Web Spider waterfall in Playtest7,
+and still does so in Playtest8, while playing local co-op with Parsec.
+Online behavior is unknown. The version, mode and repeated location hints
+make targeted reproduction actionable, but the exact waterfall, player
+characters, HUD visibility and whether P2 returns or dies are still unspecified.
+Request a matching video and complete Playtest8 diagnostic session with REC
+visible. Treat shared cause with the earlier reports as unproven; the backlog
+scope remains unchanged until active reproduction is requested.
