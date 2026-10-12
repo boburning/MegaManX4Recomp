@@ -137,3 +137,9 @@ transitions with scene/withdrawal/warp state, health and positions. These use
 the existing automatic portable startup log even when input diagnostics is off.
 The changes are for a subsequent build, not the published Playtest8 assets.
 The report remains unchecked; logging is not a disappearance fix.
+Commit c97a16e is on master. All24 Windows checks pass. QA109 performs native
+Select withdrawal/rejoin and records all four complete presence transitions
+in the portable log, preserving HP32/lives2/failure0 and exiting normally.
+The fatal-failure message is compiled but no renderer fault was forced in
+these bounded cases. All owned hidden processes are stopped. Further exact
+disappearance qualification awaits a matching occurrence.
