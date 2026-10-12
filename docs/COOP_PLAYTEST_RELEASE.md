@@ -17,10 +17,10 @@ nested network `e5305930`. Production profile:
 
 | Asset | SHA256 |
 | --- | --- |
-| Windows ZIP | `59ecf7236d69aa66133b7be410dfa547d8729418c4a0e9582dea0af6c0f8bec6` |
-| Linux x86_64 AppImage | `c27fe1dfbccf5771be40867353f93604d815a406a14468ab27bc42cc5a069b79` |
+| Windows ZIP | `ca24605184889aed82ae546fc710c2e69c9e5d4f380083ade67f33ced5233ab3` |
+| Linux x86_64 AppImage | `f98afb96a90ac13780ab9190966634f2d25ad940f9e51768abf4c89d2643d0bf` |
 
-Public assets/checksums are staged under `dist/playtest8-public`.
+Public assets/checksums are staged under `dist/playtest8-public-final`.
 Private source, cards, diagnostic logs and QA remain excluded.
 
 Diagnostics also record startup failures before the launcher or
