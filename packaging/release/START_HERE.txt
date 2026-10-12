@@ -65,6 +65,11 @@ CO-OP PLAYTEST
   Recordings include starting game saves. Netplay traces are for inspection;
   full netplay replay is not supported.
 
+  Startup failures are recorded automatically, even before gameplay starts.
+  If sign-in fails or a peer stays on a white screen/in the lobby, send the
+  newest startup-*.log from each peer's saves/diagnostics folder beside the
+  executable or AppImage. startup-log-location.txt gives the latest path.
+
   This release has limited stage coverage. Split may still run below full
   speed, and retries, vehicle stages, and chained scenes need more playtesting.
   Report the release version, stage/area, camera mode, and which player led.

@@ -1,13 +1,29 @@
-# Co-op playtest 7
+# Co-op playtest 8
 
-Next-build diagnostics also record startup failures before the launcher or
+Version: `v0.1.1-coop-playtest.8`, Windows ZIP and Linux x86_64 AppImage.
+Adds the Mushroom P2 progression and portal collision/arrival fixes,
+independent-view catch-up fix, and X5 aligned state-copy optimization.
+Unified and Stacked remain defaults; Split remains experimental.
+
+Diagnostics also record startup failures before the launcher or
 game reaches gameplay. Send the newest `startup-*.log` files from
 `saves/diagnostics` beside each player's executable or AppImage.
 `startup-log-location.txt` beside the application identifies its latest file.
 These files exist even when sign-in fails or the game remains on a white
 screen and no input-recording session starts. Both peers' logs are useful.
-This addition is in source for the next build; the published Playtest7 ZIP
-does not include it.
+Playtest7 does not include these startup logs. The new logs complement the
+existing complete gameplay diagnostic session folders.
+
+The current elevator ascent/exit is qualified in both rosters with the panels
+destroyed through their native states. The owner confirmed ceiling crush is
+authentic. Further speculative elevator testing is parked. The second/purple
+staircase was reached after the native Tentoroid defeat and section handoff,
+with development skips/invulnerability to expedite the preceding section;
+the floating and brief arrival-glitch reports remain unreproduced.
+Broader Split performance and GitHub25's old WARNING report remain open.
+Discord/WAN re-investigation and intermittent co-op removal are parked.
+
+## Previous co-op playtest 7
 
 Version: `v0.1.1-coop-playtest.7`, Windows ZIP and Linux x86_64 AppImage.
 Includes the qualified ICE startup, complete lobby settings, Mushroom

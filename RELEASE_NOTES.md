@@ -1,4 +1,33 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.7
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.8
+
+Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
+Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
+
+- Fixes P2-led Split Mushroom room progression and portal-platform collision
+  after a retry. Incoming players can land on the portal platform, and the
+  return waits for a safe partner landing.
+- Keeps each independent player view during catch-up instead of switching
+  P2 to P1's camera and the unified HUD under load.
+- Applies X5's aligned state-copy optimization to player and camera contexts.
+  A camera copy now uses63 rather than252 guest-memory accesses. This reduces
+  copy overhead; broader Split performance remains a playtest item.
+- Records startup and public account failure messages automatically under
+  `saves/diagnostics` beside the executable or AppImage, before gameplay starts.
+  `startup-log-location.txt` identifies the latest file. Send both peers'
+  newest `startup-*.log` files if sign-in or game startup fails.
+
+The second/purple staircase was checked after the native preceding-section
+handoff using development skips; the reported floating and brief arrival
+glitch remain unreproduced. The elevator ascent and exit pass with its overhead
+panels removed through their native destruction states. Destroy those panels
+when playing: ceiling crush is authentic.
+
+Discord authorization and real WAN startup have not been requalified in this
+release. Intermittent co-op removal remains on the backlog. The older
+intro-act2 WARNING report still needs a matching current diagnostic recording.
+See the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.7
 
 Windows ZIP and Linux x86_64 AppImage. Unified cameras and Stacked lifebars
 remain defaults; online Split cameras remain experimental.
