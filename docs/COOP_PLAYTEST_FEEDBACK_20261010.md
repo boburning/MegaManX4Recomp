@@ -53,7 +53,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 45 | [x] | After both players die and retry, P1 loses collision with the Mushroom teleporter platform | Reproduced QA61: P1 lands16px below the portal while P2 stands on it. The P2-owned portal dispatch bypassed dual-player solid collision. Restore canonical contact histories before its one shared solid pass. QA64 and permanent helper QA73 pass landing, jump/landing and native team retry in both rosters, with one life spent per retry. All21 Windows checks and Linux collision/lifecycle/controller checks pass. Included in Playtest8. `beads-kmsf` |
 | 46 | [ ] | Mushroom elevator still fails for P2 in the newer playtest | Earlier arrival/retry/destination checks pass both rosters. QA88/95 now complete ascent, native upper wall climb and checkpoint3 exit with both HP32/lives2. Explicit private cheat advances only the authored ceiling panels' native destruction states; player, lift and collision rules stay native. This qualifies the later exit after those obstacles, not natural panel combat. The supplied video ends near boarding; no P2-specific defect is reproduced. At the owner's October11 scope check, further speculative elevator tests stop pending specific current failure evidence. Second staircase remains item36. `beads-kmsf`, previous `beads-eio.9.57` |
 | 47 | [x] | Green Mushroom portal initially returns P2 below its entrance platform | Stronger native test reproduces P2 atY186 rather thanZero's platform Y170. Incoming warp excluded P2 from world-solid collision along with combat. Allow native floor collision for a healthy initialized incoming body; retain combat exclusion. Wait for completed P1 landing on negative portal returns and align character box bottoms when sharing a surface. QA84/85 pass actual P2 portal entry/return, jump/landing, team retry and subsequent P2 exit in both rosters. Native cases require the original disc and remain repeatable with the helper's `--portal-return` case. Included in Playtest8. `beads-kmsf` |
-| 48 | [x] | Startup/sign-in failures need logs before gameplay recording starts | Always capture stderr from before launcher/guest boot into executable/AppImage-relative saves/diagnostics/startup-*.log, with execution/co-op identity and a startup-log-location.txt pointer. Preserve existing console/redirected stderr; GUI launches without a console still record. Native callback logs account transitions and public failure text without changing sign-in behavior. Windows/Linux console/no-console fixtures pass; a real deliberate pre-boot renderer rejection is present in both original stderr and portable log. Included in Playtest8. `beads-eio.9.68`, shared `beads-eio.3.336` |
+| 48 | [x] | Startup/sign-in failures need logs before gameplay recording starts | Portable startup capture shipped in Playtest8, but October12 evidence exposed an ordinary Windows GUI launch regression missed by the earlier closed-descriptor/redirected-stderr fixtures: the unattached stderr FILE retained descriptor -2 and produced empty logs. **Corrected and production-qualified for Playtest9; published Playtest8 remains unchanged.** Reopen the actual FILE, attach raw/native stderr, check header/location writes and report capture failure. The actual public8 executable produces0-byte detached/unredirected logs; the repaired production candidate records669/670 bytes including the real pre-boot rejection, preserves redirected output, and captures a later live launcher failure before normal exit. Nine focused Windows launch/error cases, all31 title checks and four Linux cases pass. `beads-eio.9.71`; original `beads-eio.9.68`, shared `beads-eio.3.336` |
+| 49 | [ ] | X's charge/release shows no travelling shot on the Mushroom staircase | IMG_0786.mov has a growing charge effect around00:05-00:07.02 followed by a right-facing buster pose without a clear travelling projectile. Both bodies and HUD groups remain. Neither ZIP contains inputs/settings/cards, so actual button release, shot spawn/update/draw and damage remain unqualified. Keep separate from floating stairs and elevator reports; inspect ordinary/charged shots by both seats, separated and overlapping, with matching settings and a recorded route. `beads-nbnc` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -143,3 +144,44 @@ in the portable log, preserving HP32/lives2/failure0 and exiting normally.
 The fatal-failure message is compiled but no renderer fault was forced in
 these bounded cases. All owned hidden processes are stopped. Further exact
 disappearance qualification awaits a matching occurrence.
+
+## October 12 supplied-video and archive evidence
+
+Full timestamped assessment and next actions:
+[COOP_FEEDBACK_20261012.md](COOP_FEEDBACK_20261012.md), `beads-eio.9.70`.
+Existing item numbers remain stable; new missing-shot item49 extends the
+checklist to49 rows. No unresolved gameplay report is marked fixed.
+
+Both newly supplied ZIPs are CRC-valid and contain only zero-byte startup
+logs: 3 in `New Compressed (zipped) Folder.zip`, 15 in `Diagnostics.zip`, with
+the first three names shared. Neither contains inputs, session metadata,
+cards or mod/settings state. No REC indicator is visible in the reviewed
+gameplay, so the missing replay cannot establish whether input diagnostics
+was enabled. Automatic startup capture did fail to provide evidence. Its
+Windows no-console FILE/descriptor failure is independently reproduced and
+corrected for Playtest9 under `beads-eio.9.71`; the earlier item48 fixtures
+did not qualify these ordinary GUI launch conditions. Production no-console
+launches now capture both startup and subsequent application errors, including
+a live launcher error. All31 Windows title checks and four Linux logging
+cases pass. The separate adversarial review found no blocking issue and led
+to a retained assertion of the detached pointer-failure error text. Published
+Playtest8 binaries remain unchanged. This is not a gameplay fix.
+
+YouTube YTcB2JQEFdM shows a Playtest8 Windows package folder at 00:02, native
+Continue/slot1/Data1, then Jungle. At its opening waterfall, repeated P1
+weapon cycling/firing precedes the removal of P2's body and lower HUD:
+present at 01:48.43, absent by 01:48.47 in sampled frames. P2's health bar
+looks full immediately before removal; P1 stays active in the same scene
+through the remaining visible gameplay. No immediate death or room change
+is apparent. Item31 / `beads-eio.9.61` remains unresolved: input-driven
+withdrawal and a co-op failure cannot be distinguished from this video.
+The large green cone around 01:26–01:28 may be a native aiming effect and
+is not classified as a new graphics bug.
+
+IMG_0786.mov supports the owner's separate missing-shot stairwell report:
+an X-like charge effect ends around 00:07.02, followed by an apparent
+right-facing buster pose with no clear travelling shot in the visible area.
+Both bodies/HUD groups remain present. New `beads-nbnc` tracks the visual
+symptom; actual input release, shot allocation/rendering and damage remain
+unqualified. This does not qualify the older floating-staircase, teleporter
+or elevator reports. No new gameplay run was performed for this assessment.
