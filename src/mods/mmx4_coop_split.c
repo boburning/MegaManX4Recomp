@@ -1,4 +1,5 @@
 #include "mmx4_coop_internal.h"
+#include "mmx4_coop_memory.h"
 #include "mod_memory.h"
 #include <string.h>
 
@@ -27,15 +28,17 @@ int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
     return s->ok;
 }
 
-static void copy_bytes(uint32_t destination,uint32_t source,unsigned size) {
-    for(unsigned offset=0;offset<size;++offset)
-        psx_mod_write_byte(destination+offset,psx_mod_read_byte(source+offset));
+static void copy_camera(uint32_t destination,uint32_t source) {
+    /* All callers copy one complete camera between disjoint contexts. */
+    uint8_t bytes[CAMERA_BYTES];
+    mmx4_coop_capture(source,bytes,sizeof bytes);
+    mmx4_coop_project(destination,bytes,sizeof bytes);
 }
 static void read_bytes(uint32_t source,uint8_t *bytes,unsigned size) {
-    for(unsigned offset=0;offset<size;++offset)bytes[offset]=psx_mod_read_byte(source+offset);
+    mmx4_coop_capture(source,bytes,size);
 }
 static void write_bytes(uint32_t destination,const uint8_t *bytes,unsigned size) {
-    for(unsigned offset=0;offset<size;++offset)psx_mod_write_byte(destination+offset,bytes[offset]);
+    mmx4_coop_project(destination,bytes,size);
 }
 static int available(void) {
     return state && mmx4_coop_split_views() && mmx4_coop_ready() &&
@@ -86,8 +89,8 @@ int mmx4_coop_split_camera_copy(unsigned seat,uint8_t layers[0xFC]) {
 }
 static void initialize_cameras(void) {
     if(psx_mod_read_word(state))return;
-    copy_bytes(state+16u,CAMERA,CAMERA_BYTES);
-    copy_bytes(state+16u+CAMERA_BYTES,CAMERA,CAMERA_BYTES);
+    copy_camera(state+16u,CAMERA);
+    copy_camera(state+16u+CAMERA_BYTES,CAMERA);
     psx_mod_write_word(state,1);
 }
 static uint32_t byte_word(const uint8_t *bytes,unsigned offset) {
@@ -169,11 +172,11 @@ int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
     if(!available() || owner>1 || mmx4_coop_lifecycle_script_owner()>=0 ||
        psx_mod_read_byte(MMX4_PLAY+0x10) || psx_mod_read_byte(MMX4_PLAY+0x1C))return 0;
     initialize_cameras();read_bytes(CAMERA,canonical,CAMERA_BYTES);
-    copy_bytes(CAMERA,state+16u+owner*CAMERA_BYTES,CAMERA_BYTES);
+    copy_camera(CAMERA,state+16u+owner*CAMERA_BYTES);
     return 1;
 }
 void mmx4_coop_split_scene_camera_end(unsigned owner,const uint8_t canonical[0xFC],int committed) {
-    copy_bytes(state+16u+owner*CAMERA_BYTES,CAMERA,CAMERA_BYTES);
+    copy_camera(state+16u+owner*CAMERA_BYTES,CAMERA);
     if(committed)psx_mod_write_word(state+8u,owner+1u);
     else write_bytes(CAMERA,canonical,CAMERA_BYTES);
 }
@@ -185,7 +188,7 @@ void mmx4_coop_split_camera_prepare(unsigned owner) {
      * rather than inherit the fallen P1's origins and clamping targets. */
     if(previous && previous!=owner+1u && mmx4_coop_lifecycle_script_owner()<0 &&
        !psx_mod_read_byte(MMX4_PLAY+0x10) && !psx_mod_read_byte(MMX4_PLAY+0x1C))
-        copy_bytes(CAMERA,state+16u+owner*CAMERA_BYTES,CAMERA_BYTES);
+        copy_camera(CAMERA,state+16u+owner*CAMERA_BYTES);
     psx_mod_write_word(state+8u,owner+1u);
 }
 void mmx4_coop_split_flip_cameras(void) {
@@ -204,7 +207,7 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     uint8_t canonical[CAMERA_BYTES];read_bytes(CAMERA,canonical,CAMERA_BYTES);
     mmx4_coop_call(cpu,0x80027D40u,0,0);
     mmx4_coop_call(cpu,0x800281E8u,0,0);
-    copy_bytes(state+16u+owner*CAMERA_BYTES,CAMERA,CAMERA_BYTES);
+    copy_camera(state+16u+owner*CAMERA_BYTES,CAMERA);
     psx_mod_write_word(state+8u,owner+1u);
     write_bytes(CAMERA,canonical,CAMERA_BYTES);
     unsigned other=owner^1u;
@@ -212,7 +215,7 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
      * That pause must not copy room bounds or clamp the distant partner. */
     if(mmx4_coop_lifecycle_script_owner()>=0 ||
        psx_mod_read_byte(MMX4_PLAY+0x1C) || !mmx4_coop_alive(other)) {
-        copy_bytes(state+16u+other*CAMERA_BYTES,state+16u+owner*CAMERA_BYTES,CAMERA_BYTES);
+        copy_camera(state+16u+other*CAMERA_BYTES,state+16u+owner*CAMERA_BYTES);
         mmx4_coop_lifecycle_camera_bounds(cpu,owner);
         return;
     }
@@ -220,12 +223,12 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     /* Current/target limits, dead zones and authored room metadata belong
      * to the individual view. Shared scripts synchronize whole records above. */
     for(unsigned offset=0;offset<8u;++offset)psx_mod_write_byte(shadow+offset,canonical[offset]);
-    copy_bytes(CAMERA,shadow,CAMERA_BYTES);
+    copy_camera(CAMERA,shadow);
     if(other)mmx4_coop_enter_second();
     mmx4_coop_call(cpu,0x80027850u,0,0);
     mmx4_coop_call(cpu,0x80027D40u,0,0);
     mmx4_coop_call(cpu,0x800281E8u,0,0);
-    copy_bytes(shadow,CAMERA,CAMERA_BYTES);
+    copy_camera(shadow,CAMERA);
     if(other)mmx4_coop_leave_second();
     write_bytes(CAMERA,canonical,CAMERA_BYTES);
     psx_mod_counter_add("mmx4.coop.split-camera-ticks",1);
@@ -431,7 +434,7 @@ static int scan_players(CPUState *cpu,uint32_t address) {
     uint32_t result=0;
     for(unsigned seat=0;seat<2;++seat) {
         if(!actors[seat].active || (owner>=0 && owner!=(int)seat))continue;
-        copy_bytes(CAMERA,state+16u+seat*CAMERA_BYTES,CAMERA_BYTES);
+        copy_camera(CAMERA,state+16u+seat*CAMERA_BYTES);
         result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     }
     write_bytes(CAMERA,canonical,CAMERA_BYTES);
@@ -459,7 +462,7 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
     uint32_t result=draw?0:1;bounds_call=1;
     for(unsigned seat=0;seat<2;++seat) {
         if(!actors[seat].active || (owner>=0 && owner!=(int)seat))continue;
-        copy_bytes(CAMERA,state+16u+seat*CAMERA_BYTES,CAMERA_BYTES);
+        copy_camera(CAMERA,state+16u+seat*CAMERA_BYTES);
         uint32_t candidate=mmx4_coop_call(cpu,native,actor,cpu->gpr[5]);
         if(draw) {
             if(psx_mod_read_byte(actor+3u)) {visible=1;result=candidate;}

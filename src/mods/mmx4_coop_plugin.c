@@ -6,6 +6,7 @@
 #include "cpu_state.h"
 #include "sio.h"
 #include "mmx4_coop_assets.h"
+#include "mmx4_coop_memory.h"
 #include "mmx4_coop_internal.h"
 #include "mmx4_diagnostics.h"
 #include "mmx4_coop_debug_protocol.h"
@@ -89,10 +90,10 @@ static void put32(uint8_t *p,uint32_t value) {
     for(unsigned i=0;i<4;++i)p[i]=(uint8_t)(value>>(i*8));
 }
 static void capture(uint32_t a,void *data,size_t n) {
-    uint8_t *p=data;for(size_t i=0;i<n;++i)p[i]=psx_mod_read_byte(a+(uint32_t)i);
+    mmx4_coop_capture(a,data,n);
 }
 static void project(uint32_t a,const void *data,size_t n) {
-    const uint8_t *p=data;for(size_t i=0;i<n;++i)psx_mod_write_byte(a+(uint32_t)i,p[i]);
+    mmx4_coop_project(a,data,n);
 }
 static void capture_player(PlayerContext *p) {
     capture(PLAYER,p->body,sizeof p->body);capture(SHOTS,p->shots,sizeof p->shots);

@@ -109,3 +109,36 @@ Executable SHA256:
 All seven game CTests passed. The owner requested focused validation of the
 co-op integration; broader transport qualification belongs to the established
 netplay engine. These checks do not claim an online stage-clear matrix.
+
+## X5 state-copy optimization, 2026-10-11
+
+X5's c021463 optimization also applies to X4's player and independent camera
+contexts. Copy aligned guest words through the existing runtime accessors,
+with byte prefixes/tails and explicit little-endian host buffers. This reduces
+one native camera copy from252 to63 accesses in each direction. Host stores
+still use the normal invalidation and render-pass journal paths. Native player
+updates, devices, guest timing and snapshot layouts are unchanged. The new
+source/header participates in the co-op compatibility fingerprint.
+
+`tools/measure_mmx4_coop_performance.py` measures private, hidden, paced LAN
+peers at1080p with normal BIOS HLE and restoration hashes disabled by default.
+Native input separates the views, activates distant enemies and rejoins them;
+the existing sandbox fault and core/mod agreement checks remain active.
+`--invulnerable` is an explicit synchronized development fixture, requiring
+`MMX4_COOP_NETPLAY_DEBUG`; it is not a release setting or a gameplay change.
+
+QA-perf-byte-90's healthy distant window measured53.5-53.6Hz versus59.5-60Hz
+in QA-perf-word-91. The latter's later return-window death invalidates that
+complete run, so those figures qualify only the healthy sampled windows.
+The stable invulnerable controls, QA-perf-byte-invuln-92 and
+QA-perf-word-invuln-93, both complete around60Hz with matching core/mod samples
+through4693/4678. CPU reductions vary by seat/window; do not infer a universal
+frame-rate gain from the copy-count reduction.
+
+QA-perf-word-verify-94 separately enables full restoration hashes. It passes
+separation/rejoin and matching state through3797, with no RAM/VRAM, nesting or
+device faults. Those diagnostic redraws cost15-18ms and run around36-39Hz;
+they are not production performance. All22 Windows checks and the Linux
+memory/camera checks pass. Inspected independent images retain each seat's
+own body, HUD, scenery and enemies. Wider stage/network performance remains
+for playtesting; these are loopback and controlled intro qualifications.

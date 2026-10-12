@@ -85,6 +85,7 @@ set(MMX4_COOP_CONTRACT_FILES
     game.toml src/mods/mmx4_coop_plugin.c src/mods/mmx4_coop_lifecycle.c
     src/mods/mmx4_coop_combat.c src/mods/mmx4_coop_assets.c src/mods/mmx4_coop_audio.c
     src/mods/mmx4_coop_internal.h src/mods/mmx4_coop_assets.h
+    src/mods/mmx4_coop_memory.c src/mods/mmx4_coop_memory.h
     src/mods/mmx4_coop_snapshot.h
     src/mods/mmx4_cheats.c src/mods/mmx4_cheats.h
     src/mods/mmx4_coop_views.c src/mods/mmx4_coop_views.h
@@ -139,6 +140,9 @@ add_custom_command(TARGET psx-runtime POST_BUILD
     VERBATIM)
 
 if(BUILD_TESTING)
+    add_executable(mmx4_coop_memory_test tests/test_mmx4_coop_memory.c src/mods/mmx4_coop_memory.c)
+    target_include_directories(mmx4_coop_memory_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
+    add_test(NAME mmx4_coop_memory_test COMMAND mmx4_coop_memory_test)
     add_executable(mmx4_cheats_test tests/test_mmx4_cheats.c src/mods/mmx4_cheats.c)
     target_include_directories(mmx4_cheats_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_cheats_test COMMAND mmx4_cheats_test)
@@ -171,7 +175,7 @@ if(BUILD_TESTING)
     target_include_directories(mmx4_coop_views_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_coop_views_test COMMAND mmx4_coop_views_test)
     add_executable(mmx4_coop_split_test tests/test_mmx4_coop_split.c
-        src/mods/mmx4_coop_split.c src/mods/mmx4_coop_views.c)
+        src/mods/mmx4_coop_split.c src/mods/mmx4_coop_views.c src/mods/mmx4_coop_memory.c)
     target_include_directories(mmx4_coop_split_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_coop_split_test COMMAND mmx4_coop_split_test)
     add_executable(mmx4_coop_web_test tests/test_mmx4_coop_web.c src/mods/mmx4_coop_web.c)
