@@ -80,3 +80,18 @@ and co-op profile match. Both packaged applications produce portable startup
 logs. The remaining open reports stay open:34/36/41/43 need current evidence;
 30/31/32/46 are parked/backlog. This release adds no new WAN or broad gameplay
 qualification. Release tracking: beads-eio.9.69.
+
+Owner's subsequent October11 scope update parks further staircase reproduction
+(items34/36) pending a future matching diagnostic recording. The supplied ZIP
+passes its CRC check and contains39013 sequential native input rows, but only
+Web Spider stage1 sections0/1, with netplay=true. Its captured local diagnostic
+feature is disabled. Netplay records through the co-op profile regardless of
+that local toggle; a later local run with diagnostics disabled would not record.
+This is consistent with an older netplay session being sent, not proof of
+which later run the tester played.
+
+For the next local Mushroom run, enable Playtest Diagnostics and confirm REC
+on the input display. After reproducing the second/purple staircase issue,
+quit normally and send the complete session folder identified by
+diagnostics-location.txt, plus the matching video and approximate problem time.
+Do not attempt offline replay of the older network trace as a Mushroom test.
