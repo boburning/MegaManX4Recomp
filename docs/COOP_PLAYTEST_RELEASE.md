@@ -5,6 +5,24 @@ Adds the Mushroom P2 progression and portal collision/arrival fixes,
 independent-view catch-up fix, and X5 aligned state-copy optimization.
 Unified and Stacked remain defaults; Split remains experimental.
 
+Production builds pass24 Windows and23 Linux title checks. Packaged hidden
+launchers, complete room offers, execution identity and co-op profile agree
+across platforms. Both packages create portable startup logs with the correct
+build identities. Development controls are disabled. Windows imports only
+system DLLs; AppImage layout/seeding passes (glibc2.38 or newer).
+
+Compiled source: `0238fcf`, framework `9bd4c20f9`, UI `06fd73e7`,
+nested network `e5305930`. Production profile:
+`mmx4-coop-delay-v3:3e87cf5824269d9f1d2f7de427303fb9bf7927d2`.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `59ecf7236d69aa66133b7be410dfa547d8729418c4a0e9582dea0af6c0f8bec6` |
+| Linux x86_64 AppImage | `c27fe1dfbccf5771be40867353f93604d815a406a14468ab27bc42cc5a069b79` |
+
+Public assets/checksums are staged under `dist/playtest8-public`.
+Private source, cards, diagnostic logs and QA remain excluded.
+
 Diagnostics also record startup failures before the launcher or
 game reaches gameplay. Send the newest `startup-*.log` files from
 `saves/diagnostics` beside each player's executable or AppImage.
