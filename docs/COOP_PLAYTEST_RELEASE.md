@@ -23,6 +23,10 @@ nested network `e5305930`. Production profile:
 Public assets/checksums are staged under `dist/playtest8-public-final`.
 Private source, cards, diagnostic logs and QA remain excluded.
 
+Source changes after Playtest8 add explicit co-op disable reasons and
+partner removal/return context to the portable log. These messages are for
+a subsequent build; the published Playtest8 assets are unchanged.
+
 Diagnostics also record startup failures before the launcher or
 game reaches gameplay. Send the newest `startup-*.log` files from
 `saves/diagnostics` beside each player's executable or AppImage.

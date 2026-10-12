@@ -60,6 +60,8 @@ static unsigned hud_side_by_side;
 static uint32_t hud_arena;
 static uint32_t world_packet_used;
 static unsigned bank_count,inside,enrolled,failed,rendering;
+/* Host-only reporting history; excluded from snapshots and simulation hashes. */
+static unsigned traced_failure;
 static uint32_t arena,diagnostic,frames;
 static uint32_t saved_resources[9];
 static const unsigned resource_offsets[9]={0x14,0x1C,0x24,0x28,0x34,0x38,0x3C,0x44,0x48};
@@ -370,6 +372,27 @@ static int retained_upload(CPUState *cpu,uint32_t address) {
     upload_guard=0;return mmx4_coop_finish(cpu,0);
 }
 static void diagnostics(void) {
+    /* Presentation failures also stop P2's controller/HUD. Capture their
+     * reason in the portable startup log even if input recording is off.
+     * A sandboxed own-view failure is transient until its context restores. */
+    if(!psx_mod_local_view_scope()) {
+        if(!failed)traced_failure=0;
+        else if(failed!=traced_failure) {
+            static const char *const reasons[]={"none","initialization-or-enrollment",
+                "reserved","reserved","actor-packet-bounds","actor-packet-format",
+                "hud-packet-bounds","hud-texture-or-arena","actor-texture","character-upload-bounds"};
+            fprintf(stderr,"mmx4.coop: disabled code=%u reason=%s frame=%u mode=%u/%u "
+                "stage=%u section=%u checkpoint=%u enrolled=%u banks=%u ui-banks=%u "
+                "p2=%u/%u/%u hp=%u x=%d y=%d\n",failed,
+                failed<sizeof reasons/sizeof reasons[0]?reasons[failed]:"unknown",frames,
+                psx_mod_read_byte(PLAY),psx_mod_read_byte(PLAY+1),
+                psx_mod_read_byte(PLAY+0x0C),psx_mod_read_byte(PLAY+0x0D),
+                psx_mod_read_byte(PLAY+0x1D),enrolled,bank_count,ui_bank_count,
+                second.body[0],second.body[3],second.body[4],second.body[0x5C]&127u,
+                (int16_t)(le32(second.body+8)>>16),(int16_t)(le32(second.body+12)>>16));
+            fflush(stderr);traced_failure=failed;
+        }
+    }
     psx_mod_write_word(diagnostic,0x5834434Fu);psx_mod_write_word(diagnostic+4,frames);
     project(diagnostic+0x100,second.body,sizeof second.body);
     project(diagnostic+0x200,second.vehicle,sizeof second.vehicle);
@@ -1271,6 +1294,7 @@ static void activate(void) {
     split_views=mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
     memset(&first,0,sizeof first);memset(&second,0,sizeof second);
     bank_count=ui_bank_count=inside=enrolled=failed=rendering=projected=camera_call=camera_update_call=hud_call=upload_guard=0;
+    traced_failure=0;
     world_packet_used=0;saved_cheat=0;
     view_bank_count=view_ui_bank_count=local_view_call=local_view_seat=0;
     if(!mmx4_coop_split_activate() || !mmx4_coop_web_activate())failed=1;

@@ -55,7 +55,7 @@ static unsigned direct_initial_spawn;
 static uint8_t warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible;
 static uint32_t warp_origin_x,warp_origin_y;
 /* Logging history is host-only and never influences simulation decisions. */
-static struct { unsigned valid,stage,section,hp[2]; } trace_previous;
+static struct { unsigned valid,stage,section,hp[2],second_active,second_hidden; } trace_previous;
 static void start_arrival(CPUState *cpu,unsigned seat);
 static uint32_t body_word(const uint8_t *body,unsigned at);
 
@@ -755,6 +755,18 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
     const uint8_t *second=mmx4_coop_second_body();
     unsigned stage=psx_mod_read_byte(PLAY+0x0C),section=psx_mod_read_byte(PLAY+0x0D);
     unsigned hp[2]={psx_mod_read_byte(PLAYER+0x5C)&127u,second[0x5C]&127u};
+    unsigned hidden=mmx4_coop_lifecycle_hidden(1);
+    if(!psx_mod_local_view_scope() && trace_previous.valid &&
+       (second[0]!=trace_previous.second_active || hidden!=trace_previous.second_hidden)) {
+        fprintf(stderr,"mmx4.coop: partner-presence stage=%u section=%u checkpoint=%u "
+            "mode=%u/%u active=%u->%u hidden=%u->%u visible=%u state=%u/%u hp=%u "
+            "x=%d y=%d warp=%u pending=%u owner=%u withdrawn=%u script=%u/%u\n",
+            stage,section,psx_mod_read_byte(PLAY+0x1D),psx_mod_read_byte(PLAY),psx_mod_read_byte(PLAY+1),
+            trace_previous.second_active,second[0],trace_previous.second_hidden,hidden,
+            second[3],second[4],second[5],hp[1],
+            (int16_t)(body_word(second,8)>>16),(int16_t)(body_word(second,12)>>16),
+            warp_phase,warp_pending,warp_owner,departed,script_active,script_owner);
+    }
     if(trace_previous.valid)for(unsigned seat=0;seat<2;++seat) {
         if(hp[seat]!=trace_previous.hp[seat])
             fprintf(stderr,"mmx4.coop: health seat=%u stage=%u section=%u hp=%u->%u "
@@ -766,6 +778,7 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
     }
     trace_previous.valid=1;trace_previous.stage=stage;trace_previous.section=section;
     memcpy(trace_previous.hp,hp,sizeof hp);
+    trace_previous.second_active=second[0];trace_previous.second_hidden=hidden;
     warp_tick(cpu);
     rescue_dead_scene_owner(cpu);
     if(warp_pending || warp_phase) {

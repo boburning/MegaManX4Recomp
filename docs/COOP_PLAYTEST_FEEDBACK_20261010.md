@@ -121,3 +121,19 @@ characters, HUD visibility and whether P2 returns or dies are still unspecified.
 Request a matching video and complete Playtest8 diagnostic session with REC
 visible. Treat shared cause with the earlier reports as unproven; the backlog
 scope remains unchanged until active reproduction is requested.
+
+The owner could not readily obtain those details, so bounded hidden local
+probes resumed for item31. QA105 qualifies P2-led dragon entry and a short
+native combat sequence with both HP32, active bodies and HUDs, failed0.
+Its midair-teleport water samples leave Zero floating and are excluded from
+the disappearance conclusion. QA106 instead walks from native starts and
+checkpoints without teleporting: both cross the first water and descend the
+secret waterfall, retaining bodies/HUDs and failed0. P2 takes a real hit32->29
+in the first route. Inspected captures confirm both sprites and HUD groups.
+This does not cover an unspecified waterfall or the reporter's full prior route.
+
+New source logging records co-op disable reason codes and partner-presence
+transitions with scene/withdrawal/warp state, health and positions. These use
+the existing automatic portable startup log even when input diagnostics is off.
+The changes are for a subsequent build, not the published Playtest8 assets.
+The report remains unchecked; logging is not a disappearance fix.
