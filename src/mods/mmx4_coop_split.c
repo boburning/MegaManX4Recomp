@@ -10,7 +10,8 @@
 #define TRAIN_SLOTS 4u
 #define TRAIN_ACTOR_BYTES 0x30u
 #define VISITS_OFFSET (16u+2u*CAMERA_BYTES)
-#define STATE_BYTES (VISITS_OFFSET+MMX4_COOP_PLACEMENTS/8u)
+#define STAIRS_OFFSET (VISITS_OFFSET+MMX4_COOP_PLACEMENTS/8u)
+#define STATE_BYTES (STAIRS_OFFSET+2u*0x30u)
 
 static uint32_t state;
 static unsigned scanning,bounds_call,supplemental,spatial_call,background_call;
@@ -82,7 +83,10 @@ unsigned mmx4_coop_split_view_seat(unsigned seat) {
     return seat;
 }
 int mmx4_coop_split_camera_copy(unsigned seat,uint8_t layers[0xFC]) {
-    if(!state || !mmx4_coop_split_views() || seat>1 || !psx_mod_read_word(state))return 0;
+    if(!state || !mmx4_coop_split_views() || seat>1)return 0;
+    /* Initial arrivals render before the first enabled camera tick. Use the
+     * authored starting camera without mutating snapshot state in a draw. */
+    if(!psx_mod_read_word(state)) {read_bytes(CAMERA,layers,CAMERA_BYTES);return 1;}
     seat=mmx4_coop_split_view_seat(seat);
     read_bytes(state+16u+seat*CAMERA_BYTES,layers,CAMERA_BYTES);
     return 1;
@@ -214,7 +218,7 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     /* PLAY+10 also freezes the world while a native pickup counts health.
      * That pause must not copy room bounds or clamp the distant partner. */
     if(mmx4_coop_lifecycle_script_owner()>=0 ||
-       psx_mod_read_byte(MMX4_PLAY+0x1C) || !mmx4_coop_alive(other)) {
+       (psx_mod_read_byte(MMX4_PLAY+0x1C) && !mmx4_coop_lifecycle_nova_active()) || !mmx4_coop_alive(other)) {
         copy_camera(state+16u+other*CAMERA_BYTES,state+16u+owner*CAMERA_BYTES);
         mmx4_coop_lifecycle_camera_bounds(cpu,owner);
         return;
@@ -317,18 +321,51 @@ static int spatial_stage_actor(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add(target?"mmx4.coop.p2-spatial-stage":"mmx4.coop.p1-spatial-stage",1);
     return mmx4_coop_finish(cpu,result);
 }
+static void mushroom_stair_views(CPUState *cpu,uint32_t actor,unsigned section) {
+    if(!available() || psx_mod_read_byte(actor+4)!=1 ||
+       psx_mod_read_byte(MMX4_PLAY+1) || psx_mod_read_byte(MMX4_PLAY+0x10) ||
+       psx_mod_read_byte(MMX4_PLAY+0x1C))return;
+    initialize_cameras();
+    Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+    uint8_t canonical[CAMERA_BYTES];read_bytes(CAMERA,canonical,sizeof canonical);
+    unsigned owner=psx_mod_read_word(state+8u);
+    owner=owner?owner-1u:0u;
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t animation=state+STAIRS_OFFSET+seat*0x30u;
+        /* Retail B7528's first region is the rotating staircase, in either
+         * section. Only B7140's camera/animation helper is repeated here:
+         * B7394/B7440/B74EC still commit shared checkpoints exactly once. */
+        if(!actors[seat].active || actors[seat].world_x>=
+           (int16_t)psx_mod_read_half(section?0x8010BE1Cu:0x8010B4D0u)) {
+            psx_mod_write_byte(animation+6,0);continue;
+        }
+        uint32_t shadow=state+16u+seat*CAMERA_BYTES;
+        copy_camera(CAMERA,shadow);
+        mmx4_coop_call(cpu,section?0x800BA644u:0x800B7140u,animation,0);
+        copy_camera(shadow,CAMERA);
+        if(seat==owner) {
+            canonical[4]=psx_mod_read_byte(CAMERA+4);
+            read_bytes(CAMERA+0x54u+8,canonical+0x54u+8,4);
+            canonical[0x54u+0x4C]=psx_mod_read_byte(CAMERA+0x54u+0x4C);
+        }
+        psx_mod_counter_add(seat?"mmx4.coop.p2-stair-animation":"mmx4.coop.p1-stair-animation",1);
+    }
+    write_bytes(CAMERA,canonical,sizeof canonical);
+}
 static int mushroom_stage_camera(CPUState *cpu,uint32_t address) {
     if(mushroom_camera_call || !mmx4_coop_ready() || mmx4_coop_projected() ||
        psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6 ||
        psx_mod_read_byte(MMX4_PLAY+12)!=3 || mmx4_coop_lifecycle_script_owner()>=0 ||
        !mmx4_coop_alive(1))return 0;
     uint32_t actor=cpu->gpr[4];
+    unsigned section=address==0x800BA57Cu;
     if(actor<0x80142F98u || actor>=0x80143598u || (actor-0x80142F98u)%0x30u ||
-       psx_mod_read_byte(actor+1)!=8)return 0;
+       psx_mod_read_byte(actor+1)!=(section?22u:8u))return 0;
     Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
-    unsigned returning=psx_mod_read_byte(MMX4_PLAY+0x1D)>=2;
-    if(actors[0].active && (returning?actors[0].world_x<=actors[1].world_x:
-                                    actors[0].world_x>=actors[1].world_x))return 0;
+    unsigned returning=!section && psx_mod_read_byte(MMX4_PLAY+0x1D)>=2;
+    unsigned second_leads=!actors[0].active || (returning?actors[0].world_x>actors[1].world_x:
+                                                       actors[0].world_x<actors[1].world_x);
+    if(!second_leads && !mmx4_coop_split_views())return 0;
     /* Retail B7528 selects the spiral/room phase from player X/Y. B7394
      * advances to the lift checkpoint at X3536; B7440/B74EC advance the
      * leftward return at its top. These routines read player position but
@@ -340,12 +377,15 @@ static int mushroom_stage_camera(CPUState *cpu,uint32_t address) {
         (uint32_t)body[10]<<16|(uint32_t)body[11]<<24;
     uint32_t second_y=(uint32_t)body[12]|(uint32_t)body[13]<<8|
         (uint32_t)body[14]<<16|(uint32_t)body[15]<<24;
-    psx_mod_write_word(MMX4_PLAYER+8,second_x);psx_mod_write_word(MMX4_PLAYER+12,second_y);
+    if(second_leads) {
+        psx_mod_write_word(MMX4_PLAYER+8,second_x);psx_mod_write_word(MMX4_PLAYER+12,second_y);
+    }
     mushroom_camera_call=1;
     uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     mushroom_camera_call=0;
     psx_mod_write_word(MMX4_PLAYER+8,x);psx_mod_write_word(MMX4_PLAYER+12,y);
-    psx_mod_counter_add("mmx4.coop.p2-mushroom-stage",1);
+    mushroom_stair_views(cpu,actor,section);
+    if(second_leads)psx_mod_counter_add("mmx4.coop.p2-mushroom-stage",1);
     return mmx4_coop_finish(cpu,result);
 }
 static unsigned eligible_regions(PSXPlacementRect regions[2]) {
@@ -474,6 +514,7 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B7078u,mushroom_stage_camera);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800BA57Cu,mushroom_stage_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8648u,train_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D9218u,train_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D964Cu,train_foreground);

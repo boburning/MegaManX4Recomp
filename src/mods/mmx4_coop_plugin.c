@@ -58,6 +58,7 @@ static UiBank view_ui_banks[4096];
 static unsigned view_bank_count,view_ui_bank_count,local_view_call,local_view_seat;
 static unsigned ui_bank_count,hud_call;
 static unsigned hud_side_by_side;
+static unsigned boss_door_both;
 static uint32_t hud_arena;
 static uint32_t world_packet_used;
 static unsigned bank_count,inside,enrolled,failed,rendering;
@@ -281,6 +282,7 @@ static void leave_second(void) {
     diagnostics();
 }
 int mmx4_coop_ready(void) { return enrolled && !failed; }
+int mmx4_coop_both_door_players(void) {return (int)boss_door_both;}
 int mmx4_coop_projected(void) { return (int)projected; }
 int mmx4_coop_split_views(void) { return (int)split_views; }
 int mmx4_coop_alive(unsigned seat) {
@@ -600,7 +602,18 @@ static void constrain_team(CPUState *cpu,uint32_t address) {
     }
 }
 static int camera_update(CPUState *cpu,uint32_t address) {
-    if(camera_update_call || projected || !camera_world_ready())return 0;
+    if(camera_update_call || projected)return 0;
+    /* With no survivor, falling back to the singleton camera follows P1's
+     * old corpse after a P2-led climb. Keep the last view through the native
+     * death sequence; the stage loader will initialize the respawn camera.
+     * Healthy players hidden by a shared scene must retain that scene's pan. */
+    if(mmx4_coop_ready() && psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+1)<=1 &&
+       !mmx4_coop_alive(0) && !mmx4_coop_alive(1) &&
+       mmx4_coop_lifecycle_script_owner()<0 &&
+       (psx_mod_read_byte(PLAYER+4)>=2 || second.body[4]>=2 ||
+        !(psx_mod_read_byte(PLAYER+0x5C)&127u) || !(second.body[0x5C]&127u)))
+        return mmx4_coop_finish(cpu,0);
+    if(!camera_world_ready())return 0;
     constrain_team(cpu,address);
     if(!mmx4_coop_camera_scope_requested((int)split_views,mmx4_coop_ready(),
         mmx4_coop_alive(0),mmx4_coop_alive(1)))return 0;
@@ -756,10 +769,13 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
     }else if(command==5) {
         fixture_invulnerable=first_arg&3u;
         psx_mod_write_word(diagnostic+0x54,1);
-    }else if(command==7 && mmx4_coop_ready() && first_arg<2 && second_arg<=8 && third_arg<=1) {
+    }else if(command==7 && mmx4_coop_ready() && first_arg<2 && second_arg<=8 && third_arg<=2) {
         /* Weapon/progress setup follows the same admitted native boundary
          * in offline and development netplay; P1 still owns all progress. */
         if(third_arg)psx_mod_write_byte(PLAY+0x59,255);
+        if(third_arg==2) {
+            psx_mod_write_byte(PLAY+0x47,15);psx_mod_write_byte(PLAY+0x48,2);
+        }
         psx_mod_write_byte(PLAYER+0xB9,psx_mod_read_byte(PLAY+0x59));
         if(first_arg)enter_second();
         psx_mod_write_byte(PLAY+0x60,(uint8_t)second_arg);
@@ -1130,6 +1146,7 @@ static uint32_t hash_player(uint32_t hash,const PlayerContext *p) {
 static uint32_t state_digest(void) {
     uint32_t hash=2166136261u;
     hash=hash_word(hash,split_views);
+    hash=hash_word(hash,boss_door_both);
     hash=hash_word(hash,ultimate_armor_x);hash=hash_word(hash,black_zero);
     hash=hash_word(hash,mmx4_cheats_character_enabled(0));hash=hash_word(hash,mmx4_cheats_character_enabled(1));
     hash=hash_word(hash,x_variant);
@@ -1180,7 +1197,8 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
        psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+1)!=0 ||
        cpu->gpr[31]!=0x80012080u || mmx4_coop_lifecycle_script_owner()>=0 ||
        psx_mod_read_byte(PLAY+0x0F) || psx_mod_read_byte(PLAY+0x10) ||
-       psx_mod_read_byte(PLAY+0x1C))return 0;
+       (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
+        !mmx4_coop_lifecycle_nova_active()))return 0;
     uint32_t buffer=psx_mod_read_word(0x80142F80u);
     if(cpu->gpr[4]!=buffer+0x9Cu)return 0;
     local_view_call=1;
@@ -1266,8 +1284,9 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x32503458u); /* X4P2, format version 2 */
+    mmx4_snapshot_fixed(s,0x33503458u); /* X4P3, optional co-op rules */
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
+    mmx4_snapshot_fixed(s,boss_door_both);
     mmx4_snapshot_fixed(s,ultimate_armor_x);mmx4_snapshot_fixed(s,black_zero);
     mmx4_snapshot_fixed(s,mmx4_cheats_character_enabled(0));
     mmx4_snapshot_fixed(s,mmx4_cheats_character_enabled(1));
@@ -1346,13 +1365,14 @@ static void snapshot_resources_restored(void) {
 static void activate(void) {
     mmx4_diagnostics_reset();
     ui_layout_ready=0;memset(ui_layout,0,sizeof ui_layout);
-    char cameras[16],layout[24],ultimate[8],black[8];
+    char cameras[16],layout[24],ultimate[8],black[8],doors[8];
     if(!psx_mod_current_option_value("cameras",cameras,sizeof cameras))strcpy(cameras,"unified");
     hud_side_by_side=psx_mod_current_option_value("hud_layout",layout,sizeof layout) &&
         !strcmp(layout,"side_by_side");
     ultimate_armor_x=psx_mod_current_option_value("ultimate_armor_x",ultimate,sizeof ultimate) &&
         !strcmp(ultimate,"true");
     black_zero=psx_mod_current_option_value("black_zero",black,sizeof black) && !strcmp(black,"true");
+    boss_door_both=psx_mod_current_option_value("boss_doors",doors,sizeof doors) && !strcmp(doors,"both");
     mmx4_cheats_configure_coop((int)ultimate_armor_x,(int)black_zero);
     x_variant=mmx4_cheats_character_enabled(0)!=0;
     split_views=mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
@@ -1402,7 +1422,7 @@ static void activate(void) {
     }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
-    static const PSXModSnapshotProvider snapshot={2,snapshot_bytes,snapshot_write,
+    static const PSXModSnapshotProvider snapshot={3,snapshot_bytes,snapshot_write,
         snapshot_validate,snapshot_read,snapshot_ready};
     psx_mod_register_snapshot_provider(ID,&snapshot);
     psx_mod_register_savestate_plugin(ID,snapshot_resources_restored);

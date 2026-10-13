@@ -84,6 +84,10 @@ int main(int argc, char** argv) {
     if(manager.feature_option_value("mmx4.coop","coop","ultimate_armor_x")!="false" ||
        manager.feature_option_value("mmx4.coop","coop","black_zero")!="false")
         return fail("netplay character options must default off");
+    if(manager.feature_option_value("mmx4.coop","coop","boss_doors")!="either")
+        return fail("boss doors must default to either player");
+    if(!manager.set_feature_option("mmx4.coop","coop","boss_doors","both",&error))return fail(error);
+    if(!manager.set_feature_option("mmx4.coop","coop","boss_doors","either",&error))return fail(error);
     for(const auto& feature:std::vector<std::pair<const char*,const char*>>{
         {"mmx4.cheat.ultimate-armor","ultimate-armor"},{"mmx4.cheat.black-zero","black-zero"}}) {
         if(!manager.set_feature_enabled(feature.first,feature.second,true,&error))return fail(error);

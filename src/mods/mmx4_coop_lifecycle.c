@@ -46,6 +46,7 @@ static unsigned menu_active, menu_owner, menu_projecting;
 static unsigned normal_guard, menu_guard, world_guard, pickup_guard;
 static unsigned collect_guard, save_guard, reward_guard, death_guard, death_check_guard, capsule_guard;
 static unsigned scene_guard, script_pool_guard, command_guard, control_guard,text_guard,text_init_guard;
+static unsigned door_wait;
 static uint32_t projected_portal_solid;
 static unsigned flip_guard;
 static unsigned script_active, script_owner, script_serial;
@@ -63,7 +64,7 @@ int mmx4_coop_lifecycle_snapshot_ready(void) {
     return !(inventory_projected || menu_projecting || normal_guard || menu_guard || world_guard ||
         pickup_guard || collect_guard || save_guard || reward_guard || death_guard || death_check_guard ||
         capsule_guard || scene_guard || script_pool_guard || command_guard || control_guard || text_guard ||
-        text_init_guard || flip_guard || warp_guard);
+        text_init_guard || flip_guard || warp_guard || door_wait);
 }
 static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
     MMX4_SNAPSHOT_BOOL(s,inventory->character);MMX4_SNAPSHOT_U8(s,inventory->hp);
@@ -208,6 +209,7 @@ void mmx4_coop_lifecycle_activate(void) {
     normal_guard=menu_guard=world_guard=pickup_guard=0;
     collect_guard=save_guard=reward_guard=death_guard=death_check_guard=capsule_guard=0;
     scene_guard=script_pool_guard=command_guard=control_guard=text_guard=text_init_guard=0;
+    door_wait=0;
     projected_portal_solid=0;
     memset(&view_second_inventory,0,sizeof view_second_inventory);
     memset(&view_saved_inventory,0,sizeof view_saved_inventory);
@@ -503,6 +505,16 @@ int mmx4_coop_lifecycle_hidden(unsigned seat) {
 }
 int mmx4_coop_lifecycle_arriving(unsigned seat) {
     return warp_phase==2 && seat==(warp_owner^1u);
+}
+int mmx4_coop_lifecycle_initial_arrival(void) {return initial_arrival!=0;}
+int mmx4_coop_lifecycle_nova_active(void) {
+    if(!mmx4_coop_ready() || script_active)return 0;
+    /* Original 800375B4 enters X action34 and asserts PLAY+1C. This attack
+     * lock is not a shared room transition or a command to join cameras. */
+    if(psx_mod_read_byte(PLAYER) && psx_mod_read_byte(PLAYER+2)==0 &&
+       psx_mod_read_byte(PLAYER+4)==1 && psx_mod_read_byte(PLAYER+5)==0x22)return 1;
+    const uint8_t *body=mmx4_coop_projected()?mmx4_coop_first_body():mmx4_coop_second_body();
+    return body[0] && !body[2] && body[4]==1 && body[5]==0x22;
 }
 void mmx4_coop_lifecycle_camera_bounds(CPUState *cpu,unsigned owner) {
     unsigned seat=owner^1u;
@@ -1260,6 +1272,13 @@ static int shared_text_init(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.canonical-dialogue-init",1);
     return mmx4_coop_finish(cpu,result);
 }
+static int waiting_door_query(CPUState *cpu,uint32_t address) {
+    (void)address;
+    /* Only suppress admission, never the native door's animation/render pass. */
+    if(!door_wait)return 0;
+    psx_mod_counter_add("mmx4.coop.boss-door-waits",1);
+    return mmx4_coop_finish(cpu,0);
+}
 static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(scene_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected())return 0;
     uint32_t actor=cpu->gpr[4];unsigned owner=0;
@@ -1280,11 +1299,13 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
          * P1 wins a simultaneous door entry; P2 can enter independently. */
         uint32_t first_hit=mmx4_coop_alive(0)?
             mmx4_coop_call(cpu,0x800C1E7Cu,actor,0):0;
-        if(!first_hit) {
+        if(!first_hit || mmx4_coop_both_door_players()) {
             mmx4_coop_enter_second();
             uint32_t second_hit=mmx4_coop_call(cpu,0x800C1E7Cu,actor,0);
             mmx4_coop_leave_second();
-            if(second_hit)owner=1;
+            if(!first_hit && second_hit)owner=1;
+            if(mmx4_coop_both_door_players() && mmx4_coop_alive(0) &&
+               (first_hit || second_hit) && (!first_hit || !second_hit))door_wait=1;
         }
     }
     else if((address==0x800BD654u || address==0x800C165Cu || address==0x800C169Cu) &&
@@ -1320,7 +1341,7 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
             mmx4_coop_call(cpu,0x8002E184u,actor,0);
         }
     }else result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
-    scene_guard=0;
+    scene_guard=door_wait=0;
     unsigned new_door=address==0x800C1994u?(owner?
         mmx4_coop_second_body()[0xC4]:psx_mod_read_byte(PLAYER+0xC4)):0;
     if(address==0x800C1994u && !old_door && new_door) {
@@ -1527,6 +1548,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x8002217Cu,shared_text_init);
     psx_mod_register_function_filter_plugin(ID,0x800C2BE0u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1994u,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
     psx_mod_register_function_filter_plugin(ID,0x800BD654u,scene_actor);
     /* Destructible section exits (Jungle waterfall): bind the outgoing walk
      * and its completion query to one body. Otherwise C165C redirects the

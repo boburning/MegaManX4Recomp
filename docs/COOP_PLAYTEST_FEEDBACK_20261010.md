@@ -63,9 +63,14 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 55 | [x] | Playtest 10: X's armor artwork does not update after a capsule in Zero's campaign | The private body renderer omitted native800257BC's acquired-armor pass. Prior Zero/P1-X/P2 capsule evidence retained boot flag8 across save/load but showed unarmored artwork. Include the native armor pass in private texture conversion. Seven armor configurations pass for both X/P1 and X/P2, with inspected armor captures; all32 title checks pass. One P1-owned campaign remains canonical. Published in [Playtest 11](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.11). `beads-eio.9.77` |
 | 56 | [x] | Zero/P2 loops against Lightning Web and slides when touching its top | **Both reproduced, fixed and published in [Playtest 12](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.12).** The supplied Playtest10 [video](https://youtu.be/fSi_JH0r6HM) and recording agree; all6,092 retained replay checks pass. The contact gate rejected native WallGrip9, repeatedly restarting Fall7; preserve grip contact and Zero's double-jump state. Partner top/bottom contact also never reached the web's native expiration check, leaving Zero suspended; include it in the original once-only update. Unchanged Playtest11 fails both native regressions; fixed left/right slide-then-jump and X/Zero top-collapse cases pass in both rosters, eight cases total with HP32. All32 Windows title checks pass. `beads-eio.9.79` |
 | 57 | [x] | With P1 dead, Mushroom latch remains open after P2 passes | **Fixed in source; not yet released.** Native closing predicate now uses the living P2 when P1 is dead. Recorded-checkpoint A/B leaves the latch open on Playtest12 and closes it on the fix; P2 lands safely and P1 remains dead. Both-campaign ownership tests pass. `beads-eio.9.81` |
-| 58 | [x] | With P1 dead, camera drops back down and surviving P2 dies | **Qualified: native damage, not a camera-caused death in this recording.** All 43,365 original input/state checks pass; an exact 249-input fatal excerpt identifies a 4-point native collision hit against Zero's last 2 HP before the camera descends. No camera patch made on this evidence. `beads-eio.9.82` |
+| 58 | [x] | Camera pans toward dead P1 during P2's subsequent death | **Clarified, reproduced and fixed in source; not released.** Damage still precedes death in the original recording. The unwanted pan afterward is a separate defect: with neither player alive, hold the current camera through native death/termination instead of targeting P1's corpse. Identical-checkpoint native death A/B: old camera Y2091..2251; corrected Y1963 throughout the death sequence; both reach native respawn. `beads-eio.9.82` |
 | 59 | [x] | Horizontal lines in special-weapon sprites | **Fixed in source; not yet released.** Private origin zero exposed native page-edge clipping, shortening flipped tiles from 16 to 15 pixels. Private tiles now retain all 16 rows/columns and reflect their pixels. Frost Tower captures are continuous and all 349 excerpt gameplay hashes match; 1,024 tile-origin/reflection cases pass. `beads-eio.9.83` |
 | 60 | [x] | Jet Stingray intro: P2 appears standing instead of riding in behind P1 | **Fixed in source; not yet released.** P2 joins during the native bike entrance, starting 32 pixels behind P1. Both rosters pass the native entrance/control check with one shared READY actor, and preserve a dead partner across the section transfer. `beads-eio.9.84` |
+| 61 | [x] | Optional boss doors require both living, present players | **Implemented in source; not released.** Default remains Either player. Native checks verify either seat waits alone at the door, both then enter, and either sole survivor can enter. Unit checks cover withdrawn partners. Eight native room offers include the host's choice in the agreed settings identity. `beads-eio.9.85` |
+| 62 | [ ] | Optional sequential Double and Iris fights | Requested, default off; implementation pending. P1 remains sole campaign/save owner. `beads-eio.9.86` |
+| 63 | [ ] | Optional double boss HP and separate player hit cooldowns | Requested, default unchanged; native damage/weakness timer investigation in progress. Owner accepts reduced shared cooldowns if separate cooldowns are impractical. `beads-eio.9.87` |
+| 64 | [x] | LAN independent-camera Mushroom stairs stop animating for P2 | **Reproduced and fixed in source; not released.** Both supplied peer recordings match, including233 full component digests through sim8704. The original controller drives one stair animation from one camera. Each view now keeps its own native animation state; the shared checkpoint controller still runs once. Native two-peer checks pass both seats on both green/purple staircases, with peer state matching through sim9061. Separate from item51's missing controller input and item36's reported floating feet. `beads-eio.9.88` |
+| 65 | [x] | Independent netplay shows unified HUD during arrival; Nova Strike disturbs cameras | **Reproduced and fixed in source; not released.** Supplied `Nova strike netplay individual camera bugs.zip` and [video](https://youtu.be/GXLj0-7lkZw). Native attack34 uses PLAY+1C, also used by scene locks. Distinguish Nova from shared scenes and render private views during ordinary concurrent arrivals. Native LAN checks pass with X in either seat: idle partner camera stays fixed, both private renderers keep advancing, and peers retain matching state through sim5154/4672. `beads-eio.9.89` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -468,3 +473,42 @@ losing either player or disabling the renderer. All32 Windows title checks
 pass after the final changes. Final hidden development executable SHA256:
 `76a261b6cc74ef92c57924d2d85f45d8465028c6681574c34154c44aed6b942e`.
 These source fixes have not been published as another playtest release.
+
+2026-10-13 camera/QoL follow-up: item58 now follows the clarified report: the
+unwanted camera movement **after** fatal damage is itself a bug. The corrected
+camera gate holds through both gameplay and the native termination minor mode.
+It still permits shared scene pans and the loader's normal respawn camera.
+
+For item64, the native green/purple staircase controllers (800B7078/800BA57C)
+advance their shared checkpoint once. Their animation helpers
+(800B7140/800BA644) now run with separate per-view animation records and camera
+layers. The `--stairs-only` hidden LAN regression exercises either moving seat
+on each staircase. All three animation phases cycle and full peer state stays
+identical through sim9061. The original native baseline leaves P2 phase0
+unchanged as P2 walks up the stairs. The supplied paired logs also match233
+component digests through sim8704; this was a camera presentation defect, not
+evidence of simulation desynchronization.
+
+For item65, X's native Nova Strike (action34, entered by800375B4) sets PLAY+1C.
+That flag had incorrectly selected shared cameras and suppressed private
+rendering. Recognize the personal attack separately while retaining actual
+scene ownership. Ordinary simultaneous arrivals also render their private HUD
+before the first camera tick, using the authored starting camera read-only.
+The valid pre-fix `nova-before-2` run has both players alive: cameras collapse
+to367/367,412/412,548/548 and private rendering stops during Nova. Corrected
+`nova-fixed-2` and `nova-fixed-zero` runs perform the native attack with X in
+either seat; the idle partner camera remains0, both view counters advance,
+and peer CRCs match through5154/4672. Both runs pass the existing view isolation
+probe (RAM/VRAM/device preservation). The earlier `nova-before`/`nova-fixed`
+fixtures put the partner off safe ground and are excluded from conclusions.
+`screenshot_hires` reads the canonical pre-present buffer in this runtime, so
+those captures are not presented as visual proof of the displayed private HUD.
+
+For item61, native Jungle door runs cover either waiting seat and either sole
+survivor, under both default Either and optional Both policies. Waiting stops
+only the door admission query; the native door still renders and updates.
+The existing unit suite covers withdrawn-partner exemptions. Eight native
+room-offer queries verify distinct agreed settings and preserve offline
+preferences. All32 Windows checks pass. Private receipts are under
+`build-pr23/feedback-qol-20261013/`. None of this follow-up is released yet;
+items62/63 remain open.

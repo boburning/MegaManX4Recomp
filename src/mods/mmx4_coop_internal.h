@@ -31,6 +31,7 @@ int mmx4_coop_ready(void);
 void mmx4_coop_development_mask_pad(void);
 int mmx4_coop_projected(void);
 int mmx4_coop_split_views(void);
+int mmx4_coop_both_door_players(void);
 int mmx4_coop_split_activate(void);
 void mmx4_coop_split_reset(void);
 uint32_t mmx4_coop_split_digest(uint32_t seed);
@@ -85,6 +86,8 @@ int mmx4_coop_lifecycle_can_tick(void);
 int mmx4_coop_lifecycle_script_owner(void);
 int mmx4_coop_lifecycle_hidden(unsigned seat);
 int mmx4_coop_lifecycle_arriving(unsigned seat);
+int mmx4_coop_lifecycle_initial_arrival(void);
+int mmx4_coop_lifecycle_nova_active(void);
 /* A projected portal dispatch defers its shared collision until restoration. */
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor);
 void mmx4_coop_lifecycle_room_entry(unsigned owner);

@@ -46,9 +46,13 @@ def main():
     parser.add_argument('--doors', action='store_true', help='Also traverse the P2-led Cyber door')
     parser.add_argument('--train-only',action='store_true',help='Qualify both Slash Split background panes and CRCs')
     parser.add_argument('--latch-only',action='store_true',help='Qualify the native Mushroom latch and matching peer state')
+    parser.add_argument('--stairs-only',action='store_true',help='Qualify independent Mushroom stair animation with the partner ahead')
+    parser.add_argument('--nova-only',action='store_true',help='Qualify native Nova Strike camera independence')
+    parser.add_argument('--expect-camera-fallback',action='store_true',help='Require the unfixed Nova camera failure in an A/B baseline')
     parser.set_defaults(latency=0, jitter=0, seed=714, delay=2,
                         frontend='headless-opengl', boot_timeout=100, phase_timeout=35)
     args = parser.parse_args()
+    if args.nova_only:args.ultimate_armor=True
     for name in ('exe', 'bios', 'disc', 'config', 'game_root', 'output'):
         setattr(args, name, getattr(args, name).resolve())
     args.output.mkdir(parents=True, exist_ok=False)
@@ -76,6 +80,108 @@ def main():
         exercise = Exercise(args, peers, report)
         exercise.boot(args.campaign)
         debug = NetplayDevelopment(ports[2], ports[3])
+        if args.nova_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            runtime=NetplayRuntime(debug)
+            runtime.fixture(5,3)
+            runtime.fixture(7,args.campaign,0,2)
+            runtime.fixture(1,1,0,args.campaign)
+            exercise.wait_observation('two native initial arrivals',lambda s:s['stage']==1 and
+                s['mode']==6 and s['minor']==0 and s['enrolled'] and
+                all(s[p]['state']==1 and s[p]['action']==0 for p in ('p1','p2')))
+            arrival_counts=[]
+            for peer in peers:
+                counts={c['name']:c['count'] for c in peer.request('mod_counters')['counters']}
+                arrival_counts.append(counts.get('mmx4.coop.local-view-committed',0))
+            exercise.wait_ticks(6)
+            report['arrival_views']=[]
+            for peer,before_count in zip(peers,arrival_counts):
+                counts={c['name']:c['count'] for c in peer.request('mod_counters')['counters']}
+                after_count=counts.get('mmx4.coop.local-view-committed',0)
+                report['arrival_views'].append(dict(seat=peer.seat,before=before_count,after=after_count))
+                if not args.expect_camera_fallback:
+                    assert after_count>before_count,('Arrival fell back to unified HUD',report['arrival_views'])
+            runtime.wait_playable(45,advance_dialogue=True)
+            exercise.split_presentation_probe()
+            runtime.teleport(args.campaign,500,427);runtime.teleport(args.campaign^1,56,139)
+            exercise.wait_ticks(60)
+            exercise.wait_observation('two living grounded Nova participants',lambda s:
+                all(s[p]['state']==1 and s[p]['hp']>0 and s[p]['grounded'] for p in ('p1','p2')))
+            def capture(label):
+                p=runtime.players()
+                counters={c['name']:c['count'] for c in peers[0].request('mod_counters')['counters']}
+                state=counters['mmx4.coop.split-state']
+                layers=runtime.read(state+16,2*0xfc)
+                play=runtime.read(0x801721c0,0x64)
+                row=dict(label=label,players=[b.hex() for b in p],lock=play[0x1c],freeze=play[0x10],
+                         cameras=[struct.unpack_from('<h',layers,i*0xfc+10)[0] for i in (0,1)],
+                         rendered=[{c['name']:c['count'] for c in peer.request('mod_counters')['counters']
+                                    if c['name'].startswith('mmx4.coop.local-view')}for peer in peers])
+                report['observations'].append(row);return row
+            before=capture('before-nova')
+            report['nova_samples']=samples=[]
+            # Native default R2 is Nova Strike; only the armor/progress setup is a fixture.
+            runtime.input(0xfdff,args.campaign)
+            try:
+                for i in range(50):
+                    row=capture('nova-'+str(i));samples.append(row)
+                    if i in (2,8,18):
+                        for peer in peers:peer.request('screenshot_hires',path=str(args.output/f'nova-{i}-peer{peer.seat}.png'))
+                    exercise.wait_ticks(2)
+            finally:runtime.release()
+            attacks=[s for s in samples if bytes.fromhex(s['players'][args.campaign])[5]==0x22]
+            assert attacks,'Native Nova Strike was not performed'
+            assert all(all(bytes.fromhex(p)[4]==1 and bytes.fromhex(p)[0x5c]&127 for p in s['players'])for s in attacks),'Participant died during the fixture'
+            merged=any(s['cameras'][0]==s['cameras'][1] for s in attacks)
+            assert merged==args.expect_camera_fallback,('Unexpected Nova camera result',[(s['lock'],s['cameras'])for s in attacks])
+            if not args.expect_camera_fallback:
+                partner=args.campaign^1
+                assert all(s['cameras'][partner]==before['cameras'][partner] for s in attacks),'Nova moved the idle partner camera'
+                for seat in (0,1):
+                    key='mmx4.coop.local-view-committed'
+                    assert attacks[-1]['rendered'][seat][key]>attacks[0]['rendered'][seat][key],'Private rendering stopped during Nova'
+            tick=min(peer.status()['tick'] for peer in peers)
+            exercise.checkpoint('Nova Strike expected baseline failure' if args.expect_camera_fallback else
+                                'Nova Strike independent cameras',tick,min_digests=2)
+            report.update(status='passed')
+            return
+        if args.stairs_only:
+            if args.cameras!='split':raise ValueError('Stair camera qualification requires --cameras split')
+            from mmx4_netplay_runtime import NetplayRuntime
+            runtime=NetplayRuntime(debug)
+            runtime.fixture(5,3)
+            cases=[];report['stairs']=cases
+            for section in (0,1):
+                for moving in (1,0):
+                    runtime.fixture(1,3,section,args.campaign)
+                    runtime.wait_playable(45,advance_dialogue=True)
+                    runtime.teleport(moving^1,1570,322)
+                    runtime.teleport(moving,800,500)
+                    exercise.wait_ticks(30)
+                    samples=[]
+                    case=dict(section=section,moving=moving,samples=samples);cases.append(case)
+                    runtime.input(0xffdf,moving)
+                    try:
+                        for i in range(20):
+                            peer=peers[moving]
+                            counters=peer.request('mod_counters')['counters']
+                            state=next(c['count'] for c in counters if c['name']=='mmx4.coop.split-state')
+                            layers=peer.read(state+16+moving*0xfc,0xfc)
+                            samples.append(dict(x=struct.unpack_from('<h',layers,10)[0],
+                                                phase=struct.unpack_from('<h',layers,0x54+10)[0],
+                                                camera_mode=layers[4],background_mode=layers[0x54+4],
+                                                players=[b.hex() for b in runtime.players()]))
+                            if i in (0,10,19):
+                                peer.request('screenshot_hires',path=str(args.output/f'stairs-{section}-{moving}-{i}.png'))
+                            exercise.wait_ticks(6)
+                    finally:runtime.release()
+                    assert max(s['x'] for s in samples)-min(s['x'] for s in samples)>64,('Stair camera did not move',case)
+                    assert len({s['phase'] for s in samples})==3,('Stair animation stopped',case)
+                    tick=min(peer.status()['tick'] for peer in peers)
+                    exercise.checkpoint(f'Mushroom stairs section{section} moving{moving}',tick,min_digests=2)
+            report.update(status='passed')
+            print('Independent Mushroom stairs: both seats and sections animate with matching peer CRCs',flush=True)
+            return
         if args.latch_only:
             from mmx4_netplay_runtime import NetplayRuntime
             runtime=NetplayRuntime(debug)

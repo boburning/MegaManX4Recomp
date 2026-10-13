@@ -46,6 +46,20 @@ label = "Stacked"
 value = "side_by_side"
 label = "Side by side"
 
+[[option]]
+feature = "coop"
+id = "boss_doors"
+label = "Boss doors"
+description = "Either player opens the door by default. Both players requires both living players to touch it; a dead or teleported-out partner does not hold it closed. The host chooses for both peers."
+type = "choice"
+default = "either"
+[[option.choice]]
+value = "either"
+label = "Either player"
+[[option.choice]]
+value = "both"
+label = "Both players"
+
 [[plugin]]
 feature = "coop"
 id = "mmx4.coop"

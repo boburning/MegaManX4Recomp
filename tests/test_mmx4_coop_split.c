@@ -11,6 +11,8 @@
 static uint8_t ram[0x200000],second[0xE4],backup[0xE4];
 static unsigned split=1,projected,local_scope,ready=1,capacity=16,allocations,scans;
 static int script_owner=-1;
+static unsigned nova_active;
+int mmx4_coop_lifecycle_nova_active(void) {return (int)nova_active;}
 static unsigned room_entries,room_owner;
 void mmx4_coop_lifecycle_room_entry(unsigned owner) {++room_entries;room_owner=owner;}
 typedef struct {uint32_t address;PSXModFunctionFilterCallback callback;} Filter;
@@ -55,6 +57,7 @@ uint8_t *mmx4_coop_first_body(void) {return backup;}
 static unsigned actor_context;
 static unsigned area_calls,checkpoint_calls,shared_area_writes;
 static unsigned mushroom_calls;
+static unsigned stair_calls;
 static int mushroom_x,mushroom_y;
 static unsigned train_calls,train_foreground_calls;
 int mmx4_coop_combat_actor_context(void) {return (int)actor_context;}
@@ -185,11 +188,29 @@ static uint32_t invoke(CPUState *cpu,uint32_t address) {
             psx_mod_write_byte(MMX4_PLAY+0x1D,2);
         return 0;
     }
-    if(address==0x800B7078u) {
+    if(address==0x800B7078u || address==0x800BA57Cu) {
         ++mushroom_calls;
         mushroom_x=(int16_t)psx_mod_read_half(MMX4_PLAYER+10);
         mushroom_y=(int16_t)psx_mod_read_half(MMX4_PLAYER+14);
         if(mushroom_x>=3536)psx_mod_write_byte(MMX4_PLAY+0x1D,2);
+        return 0;
+    }
+    if(address==0x800B7140u || address==0x800BA644u) {
+        ++stair_calls;
+        if(!psx_mod_read_byte(actor+6)) {
+            psx_mod_write_byte(actor+6,1);psx_mod_write_byte(CAMERA+4,2);
+            psx_mod_write_byte(actor+0x16,0);psx_mod_write_half(actor+0x18,0);return 0;
+        }
+        int dx=(int16_t)psx_mod_read_half(CAMERA+10)-(int16_t)psx_mod_read_half(CAMERA+22);
+        if(dx>8)dx=8;if(dx<-8)dx=-8;
+        int fraction=(int8_t)psx_mod_read_byte(actor+0x17)+dx;
+        psx_mod_write_byte(actor+0x17,(uint8_t)fraction);
+        if(fraction>=8 || fraction<=-8) {
+            unsigned phase=(psx_mod_read_byte(actor+0x16)+(fraction<0?2:1))%3;
+            psx_mod_write_byte(actor+0x16,(uint8_t)phase);psx_mod_write_byte(actor+0x17,0);
+            psx_mod_write_half(CAMERA+0x54u+10,(uint16_t)(phase*512));
+            psx_mod_write_byte(CAMERA+0x54u+0x4C,1);
+        }
         return 0;
     }
     if(address==0x8002B1E8u || address==0x8002B318u) {
@@ -530,6 +551,12 @@ int main(void) {
     CHECK(mmx4_coop_split_camera_copy(1,view) && !view[0x26] && !view[0x27]);
     CHECK(second[10]==100 && !second[11]);
     psx_mod_write_byte(MMX4_PLAY+0x10,0);
+    /* Nova Strike's native global lock must not merge distant cameras. */
+    psx_mod_write_byte(MMX4_PLAY+0x1C,1);nova_active=1;
+    mmx4_coop_split_camera(&cpu,0);
+    CHECK(mmx4_coop_split_camera_copy(1,view) && !view[0x26] && !view[0x27]);
+    CHECK(second[10]==100 && !second[11]);
+    nova_active=0;psx_mod_write_byte(MMX4_PLAY+0x1C,0);
     /* One spatial script actor, two camera areas. P2 can activate the
      * original region while P1 stays outside; shared writes happen once. */
     mmx4_coop_split_reset();actor_position(MMX4_PLAYER,100,140);second_position(1200,2000);
@@ -615,5 +642,32 @@ int main(void) {
     actor_position(MMX4_PLAYER,6048,2304);second_position(5890,139);
     invoke(&cpu,0x800B7078u);CHECK(mushroom_calls==2 && mushroom_x==5890);
     CHECK(psx_mod_read_half(MMX4_PLAYER+10)==6048 && psx_mod_read_half(MMX4_PLAYER+14)==2304);
+    /* Each independent staircase follows its own camera motion, even after
+     * the leading player leaves it. Shared controller/checkpoint runs once. */
+    split=1;CHECK(mmx4_coop_split_activate());
+    psx_mod_write_byte(MMX4_PLAY+1,0);psx_mod_write_byte(MMX4_PLAY+0x10,0);
+    psx_mod_write_byte(MMX4_PLAY+0x1C,0);psx_mod_write_byte(MMX4_PLAY+0x1D,0);
+    psx_mod_write_half(0x8010B4D0u,1536);psx_mod_write_byte(stage_actor+4,1);
+    actor_position(MMX4_PLAYER,1570,322);second_position(800,512);
+    mmx4_coop_split_camera_prepare(0);
+    cpu.gpr[4]=stage_actor;stair_calls=0;mushroom_calls=0;
+    invoke(&cpu,0x800B7078u);CHECK(stair_calls==1 && mushroom_calls==1);
+    psx_mod_write_half(saved_camera(1,0)+10,640);psx_mod_write_half(saved_camera(1,0)+22,632);
+    for(unsigned tick=0;tick<3;++tick) {
+        invoke(&cpu,0x800B7078u);
+        CHECK(psx_mod_read_half(saved_camera(1,1)+10)==((tick+1)%3)*512);
+        CHECK(psx_mod_read_half(MMX4_PLAYER+10)==1570);
+    }
+    CHECK(mushroom_calls==4 && stair_calls==4 && !psx_mod_read_byte(MMX4_PLAY+0x1D));
+    /* Reverse direction and roles; the old P2 camera must stop cycling. */
+    actor_position(MMX4_PLAYER,800,512);second_position(1570,322);
+    invoke(&cpu,0x800B7078u);
+    psx_mod_write_half(saved_camera(0,0)+10,632);psx_mod_write_half(saved_camera(0,0)+22,640);
+    invoke(&cpu,0x800B7078u);
+    CHECK(psx_mod_read_half(saved_camera(0,1)+10)==1024);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+10)==0);
+    unsigned before=stair_calls;
+    psx_mod_write_byte(MMX4_PLAY+0x10,1);invoke(&cpu,0x800B7078u);CHECK(stair_calls==before);
+    CHECK(mmx4_coop_split_snapshot_ready());
     puts("mmx4_coop_split_test: PASS");return 0;
 }

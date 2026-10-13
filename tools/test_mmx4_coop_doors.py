@@ -37,7 +37,7 @@ def snapshot(runtime):
                 camera=list(struct.unpack('<12h', runtime.read(0x801419b0, 24))))
 
 
-def run_case(runtime, campaign, owner, survivor, output):
+def run_case(runtime, campaign, owner, survivor, output, both=False):
     name = f'campaign-{campaign}-owner-{owner}-survivor-{int(survivor)}'
     record = dict(name=name, owner=owner, survivor=survivor,
                   method='native checkpoint fixture; controller-only traversal')
@@ -60,6 +60,25 @@ def run_case(runtime, campaign, owner, survivor, output):
                 raise TimeoutError('Original partner death did not finish')
         record['before'] = snapshot(runtime)
         before_lives = record['before']['lives']
+        if both and not survivor:
+            def wait_count():
+                return sum(c['count'] for c in runtime.request('mod_counters')['counters']
+                           if c['name']=='mmx4.coop.boss-door-waits')
+            before_wait=wait_count()
+            runtime.input(0xffdf,owner)
+            deadline=time.monotonic()+15
+            while time.monotonic()<deadline:
+                state=snapshot(runtime);events.append(state)
+                if state['blocked'] or any(p['door'] or p['script'] for p in state['players']):
+                    raise AssertionError('Both-player door opened for the first player alone')
+                if wait_count()>=before_wait+20:break
+                time.sleep(.05)
+            else:raise TimeoutError('First player never reached the waiting door')
+            record['waiting']=state
+            runtime.screenshot(output/(name+'-waiting.png'))
+            runtime.input(0xffff,owner)
+            runtime.input(0xffdf,owner^1)
+            owner=0 # Both touch; native canonical player has deterministic priority.
         runtime.input(0xffdf, owner)
         entered = False
         deadline = time.monotonic() + 30

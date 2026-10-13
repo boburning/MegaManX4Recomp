@@ -255,6 +255,15 @@ class Scenarios:
         self.sample(label + '-finished', True)
         return row
 
+    def boss_door_policy(self):
+        from test_mmx4_coop_doors import run_case
+        cases=[]
+        for survivor,owner in ((False,0),(False,1),(True,0),(True,1)):
+            case=run_case(self.r,self.campaign,owner,survivor,self.output,self.boss_doors=='both')
+            cases.append(case)
+            assert case['status']=='passed',case
+        return dict(policy=self.boss_doors,doors=cases)
+
     def cyber(self):
         self.load(6, 1, 1)
         self.r.teleport_both(568, 2507)
@@ -1609,8 +1618,9 @@ def main():
     parser.add_argument('--hold-on-failure',type=int,default=0,
                         help='Keep only this owned hidden process alive for bounded TCP investigation')
     parser.add_argument('--cameras',choices=('unified','split'),default='unified')
+    parser.add_argument('--boss-doors',choices=('either','both'),default='either')
     parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','storm_warp', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
-                        'spider_visual','cyber_missiles','spider_hole','victory','diagnostics','audio',
+                        'boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
@@ -1628,7 +1638,7 @@ def main():
         shutil.copy2(dll, args.output / dll.name)
     (args.output / 'mods/state.toml').write_text('format_version = 2\n\n[[feature]]\n'
         'package_id = "mmx4.coop"\nid = "coop"\nenabled = true\n'
-        '[feature.values]\ncameras = "'+args.cameras+'"\n\n[[feature]]\n'
+        '[feature.values]\ncameras = "'+args.cameras+'"\nboss_doors = "'+args.boss_doors+'"\n\n[[feature]]\n'
         'package_id = "mmx4.enhancement.widescreen"\nid = "widescreen"\nenabled = false\n')
     config = args.game.read_text(encoding="utf-8").replace('exe = "mmx4/SLUS_005.61"',
         'exe = ' + json.dumps((args.game.parent / 'mmx4/SLUS_005.61').as_posix()))
@@ -1643,6 +1653,7 @@ def main():
             '--memcard-dir', str(args.output / 'saves')]
     runtime = Runtime(args.port)
     scenarios = Scenarios(runtime, args.output, args.campaign,args.victory_seat,args.clears)
+    scenarios.boss_doors=args.boss_doors
     report = dict(campaign=args.campaign, cases=[], argv=argv)
     with (args.output / 'runtime.log').open('wb') as log:
         process = subprocess.Popen(argv, cwd=args.output, env=env, stdout=log, stderr=log,

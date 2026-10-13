@@ -23,6 +23,8 @@ static unsigned pause_commit,pause_exit,world_draws;
 static unsigned reward_calls,save_calls,observed_menu_select;
 static uint8_t saved_palette_dirty;
 static int split_views;
+static int both_door_players;
+int mmx4_coop_both_door_players(void) {return both_door_players;}
 static unsigned stage_script_calls,scene_calls,observed_controls;
 static unsigned canonical_portal_solids;
 static unsigned latch_calls,latch_owner,latch_y;
@@ -377,7 +379,7 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     case 0x800C1994:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         if(!psx_mod_read_byte(a0+5) &&
-           psx_mod_read_word(MMX4_PLAYER+8)==psx_mod_read_word(a0+8)) {
+           mmx4_coop_call(cpu,0x800C1E7Cu,a0,0)) {
             psx_mod_write_byte(MMX4_PLAYER+0xC4,1);psx_mod_write_byte(a0+5,1);
         }else if(psx_mod_read_byte(a0+5)==3) {
             psx_mod_write_word(MMX4_PLAYER+8,psx_mod_read_word(MMX4_PLAYER+8)+0x10000u);
@@ -393,6 +395,7 @@ done:
 #include "../src/mods/mmx4_coop_lifecycle.c"
 #define CHECK(x) do {if(!(x)) {fprintf(stderr,"line %d: %s\n",__LINE__,#x);return 1;}}while(0)
 static void reset(void) {
+    both_door_players=0;
     CPUState cpu={0};memset(ram,0,sizeof ram);memset(p2,0,sizeof p2);
     memset(p2_vehicle,0,sizeof p2_vehicle);
     fresh_game(&cpu,0);projected=local_view=0;inputs[0]=inputs[1]=0;
@@ -1438,6 +1441,34 @@ int main(void) {
     CHECK(psx_mod_read_word(PLAYER+8)==0x02010000u);
     CHECK(!scene_record(actor,0));
 
+    /* Both-player admission retains the idle native pass. Contact must be
+     * simultaneous, not remembered after the first player walks away. */
+    for(unsigned leader=0;leader<2;++leader) {
+        reset();both_door_players=1;
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        if(leader)p2[11]=2;else psx_mod_write_word(PLAYER+8,0x02000000u);
+        psx_mod_write_word(actor+8,0x02000000u);
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK(scene_calls==1 && !script_active && !p2[0xC4] && !psx_mod_read_byte(PLAYER+0xC4));
+        CHECK(!door_wait && !psx_mod_read_byte(actor+5));
+        p2[11]=2;psx_mod_write_word(PLAYER+8,0x02000000u);
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK(scene_calls==2 && script_active && !script_owner && psx_mod_read_byte(PLAYER+0xC4));
+        CHECK(!door_wait && !projected);
+    }
+    for(unsigned absent=0;absent<2;++absent) {
+        reset();both_door_players=1;
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        if(absent) {p2[4]=3;p2[0x5C]=0;}
+        else {psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);}
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK(script_active && script_owner==(absent^1u) && !door_wait);
+    }
+    reset();both_door_players=1;departed=1;
+    psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+    mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(script_active && !script_owner && !door_wait);
+
     /* P1 wins simultaneous eligibility; a corpse cannot enter or be revived. */
     reset();psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
     mmx4_coop_call(&cpu,0x800C1994u,actor,0);
@@ -1511,5 +1542,14 @@ int main(void) {
     CHECK(psx_mod_read_byte(ready+5)==2);
     cpu.gpr[31]=0x8001FE8Cu;CHECK(!shared_ride_ready(&cpu,0x8002AD7Cu));
     mmx4_coop_leave_second();CHECK(body_word(p2_vehicle,0xA0)==ready);
+    reset();psx_mod_write_byte(PLAYER+2,0);psx_mod_write_byte(PLAYER+5,0x22);
+    CHECK(mmx4_coop_lifecycle_nova_active());
+    mmx4_coop_enter_second();CHECK(mmx4_coop_lifecycle_nova_active());mmx4_coop_leave_second();
+    script_active=1;CHECK(!mmx4_coop_lifecycle_nova_active());script_active=0;
+    psx_mod_write_byte(PLAYER+5,2);p2[2]=0;p2[5]=0x22;
+    CHECK(mmx4_coop_lifecycle_nova_active());
+    p2[2]=1;CHECK(!mmx4_coop_lifecycle_nova_active());
+    initial_arrival=1;CHECK(mmx4_coop_lifecycle_initial_arrival());
+    initial_arrival=0;CHECK(!mmx4_coop_lifecycle_initial_arrival());
     puts("co-op lifecycle ownership checks passed");return 0;
 }

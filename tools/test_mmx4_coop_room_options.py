@@ -111,13 +111,15 @@ def main():
     report = dict(status='running', executable_sha256=sha256_file(args.exe), offers=[],
                   scope='Actual native room-offer publisher; not room-start adoption or transport qualification')
     try:
-        for choice, layout, codes in (('unified', 'stacked',False), ('split', 'stacked',False),
-                               ('unified', 'side_by_side',False), ('split', 'side_by_side',False),
-                               ('unified','stacked',True),('split','stacked',True)):
+        for choice, layout, codes, doors in (('unified', 'stacked',False,'either'), ('split', 'stacked',False,'either'),
+                               ('unified', 'side_by_side',False,'either'), ('split', 'side_by_side',False,'either'),
+                               ('unified','stacked',True,'either'),('split','stacked',True,'either'),
+                               ('unified','stacked',False,'both'),('split','stacked',False,'both')):
             args.cameras = choice
             args.hud_layout = layout
             args.ultimate_armor=args.black_zero=codes
-            case = output / (f'{choice}-{layout}'+('-codes'if codes else''))
+            args.boss_doors=doors
+            case = output / (f'{choice}-{layout}'+('-codes'if codes else'')+'-'+doors)
             case.mkdir()
             ports, reservations = reserve_ports()
             peer = prepare_peer(args, case, 0, ports, False, 0)
@@ -141,7 +143,7 @@ def main():
                     raise
             require(code == 0, f'Native room offer query failed for {choice}: {peer.log}')
             answer = json.loads(Path(str(request) + '.answer').read_text(encoding='utf-8'))
-            offer = dict(choice=choice, hud_layout=layout, codes=codes, answer=answer, argv=argv,
+            offer = dict(choice=choice, hud_layout=layout, codes=codes, boss_doors=doors, answer=answer, argv=argv,
                          source_state_unchanged=sha256_file(state) == previous)
             report['offers'].append(offer)
             require(answer.get('disc_ok') is True and 'start' in answer,
@@ -149,9 +151,9 @@ def main():
             caps = answer['start']['match_caps']
             package = next((item for item in caps.get('mods', []) if item['id'] == 'mmx4.coop'), None)
             value=str(codes).lower()
-            require(package is not None and package['feats'] == f'coop=cameras~{choice}+hud_layout~{layout}+ultimate_armor_x~{value}+black_zero~{value}',
+            require(package is not None and package['feats'] == f'coop=cameras~{choice}+hud_layout~{layout}+boss_doors~{doors}+ultimate_armor_x~{value}+black_zero~{value}',
                     f'Native publisher omitted the declared camera selection: {caps}')
-            canonical = f"psx-trusted-settings-v1\nmmx4.coop\n{package['ver']}\ncoop\nblack_zero={value}\ncameras={choice}\nhud_layout={layout}\nultimate_armor_x={value}\n"
+            canonical = f"psx-trusted-settings-v1\nmmx4.coop\n{package['ver']}\ncoop\nblack_zero={value}\nboss_doors={doors}\ncameras={choice}\nhud_layout={layout}\nultimate_armor_x={value}\n"
             expected = hashlib.sha256(canonical.encode()).hexdigest()
             require(caps.get('mod_plan_fp') == expected,
                     f'Native publisher settings identity is missing or inconsistent: {caps}')
@@ -160,7 +162,7 @@ def main():
                 report['offers'][1]['answer']['start']['match_caps']['mod_plan_fp'],
                 'Unified and Split room offers did not identify different agreed settings')
         require(len({offer['answer']['start']['match_caps']['mod_plan_fp']
-                     for offer in report['offers']}) == 6,
+                     for offer in report['offers']}) == 8,
                 'Camera/HUD/code combinations did not identify distinct agreed settings')
         if args.launch_checks:
             report['launch_checks'] = qualify_launch_options(args, output, report['offers'])
