@@ -1,6 +1,30 @@
 #include "mmx4_coop_assets.h"
 static uint16_t u16(const uint8_t *p) { return (uint16_t)(p[0]|p[1]<<8); }
 static uint32_t u32(const uint8_t *p) { return (uint32_t)u16(p)|(uint32_t)u16(p+2)<<16; }
+uint16_t mmx4_coop_sprite_quad_tile(uint32_t q[10]) {
+    /* 80024754/800247A8 shorten an edge when a flipped native tile would
+     * need a UV of -1 (or a forward tile would need 256). At private origin
+     * zero that drops a pixel from every vertically flipped first-row tile.
+     * Restore the full assembly square and reflect its pixels instead: all
+     * four edges then use representable, exclusive UVs 0..16. */
+    unsigned u=q[3]&255u,v=(q[3]>>8)&255u;
+    unsigned flip_x=u>(q[5]&255u),flip_y=v>((q[7]>>8)&255u);
+    int x=(int16_t)q[2],y=(int16_t)(q[2]>>16);
+    uint16_t tile=(uint16_t)((u&0xF0u)|((v&0xF0u)<<8)|flip_x|(flip_y<<1));
+    for(unsigned i=0;i<4;++i) {
+        q[2+i*2]=(uint16_t)(x+(i&1)*16)|((uint32_t)(uint16_t)(y+(i>>1)*16)<<16);
+        q[3+i*2]=(q[3+i*2]&0xFFFF0000u)|(i&1)*16|((i>>1)*16<<8);
+    }
+    return tile;
+}
+void mmx4_coop_sprite_tile_pixels(const uint16_t pixels[256*256],uint16_t tile,
+                                  uint16_t out[16*16]) {
+    for(unsigned y=0;y<16;++y)for(unsigned x=0;x<16;++x) {
+        unsigned sx=(tile&0xF0u)+((tile&1u)?15-x:x);
+        unsigned sy=((tile>>8)&0xF0u)+((tile&2u)?15-y:y);
+        out[y*16+x]=pixels[sy*256+sx];
+    }
+}
 int mmx4_coop_arc_asset(const uint8_t *data,size_t size,unsigned member,Mmx4Asset *out) {
     if (!data || !out || size<2048 || u32(data+4)!=size) return 0;
     unsigned count=u32(data); size_t cursor=2048;

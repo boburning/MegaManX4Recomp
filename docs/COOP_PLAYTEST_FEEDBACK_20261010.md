@@ -62,6 +62,10 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 54 | [x] | Playtest 10: X alone defeating the intro dragon in Zero's campaign reportedly crashes | Reproduced a post-victory softlock on unchanged Playtest10: native X/P2 kills HP1 Eregion while Zero/P1 remains dead, then action20/gate1 persists for over4,900 frames. Rescue actors44/46 used the corpse position, setting an unreachable camera target. Bind their init/update to the committed scene owner. The fixed native sequence reaches MISSION COMPLETED with Zero's campaign unchanged and P1 still dead; both-campaign ownership regressions and all32 title checks pass. Separate from the earlier WARNING-only report. Published in [Playtest 11](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.11). `beads-eio.9.76`; related deferred `beads-enkq` |
 | 55 | [x] | Playtest 10: X's armor artwork does not update after a capsule in Zero's campaign | The private body renderer omitted native800257BC's acquired-armor pass. Prior Zero/P1-X/P2 capsule evidence retained boot flag8 across save/load but showed unarmored artwork. Include the native armor pass in private texture conversion. Seven armor configurations pass for both X/P1 and X/P2, with inspected armor captures; all32 title checks pass. One P1-owned campaign remains canonical. Published in [Playtest 11](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.11). `beads-eio.9.77` |
 | 56 | [x] | Zero/P2 loops against Lightning Web and slides when touching its top | **Both reproduced, fixed and published in [Playtest 12](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.12).** The supplied Playtest10 [video](https://youtu.be/fSi_JH0r6HM) and recording agree; all6,092 retained replay checks pass. The contact gate rejected native WallGrip9, repeatedly restarting Fall7; preserve grip contact and Zero's double-jump state. Partner top/bottom contact also never reached the web's native expiration check, leaving Zero suspended; include it in the original once-only update. Unchanged Playtest11 fails both native regressions; fixed left/right slide-then-jump and X/Zero top-collapse cases pass in both rosters, eight cases total with HP32. All32 Windows title checks pass. `beads-eio.9.79` |
+| 57 | [x] | With P1 dead, Mushroom latch remains open after P2 passes | **Fixed in source; not yet released.** Native closing predicate now uses the living P2 when P1 is dead. Recorded-checkpoint A/B leaves the latch open on Playtest12 and closes it on the fix; P2 lands safely and P1 remains dead. Both-campaign ownership tests pass. `beads-eio.9.81` |
+| 58 | [x] | With P1 dead, camera drops back down and surviving P2 dies | **Qualified: native damage, not a camera-caused death in this recording.** All 43,365 original input/state checks pass; an exact 249-input fatal excerpt identifies a 4-point native collision hit against Zero's last 2 HP before the camera descends. No camera patch made on this evidence. `beads-eio.9.82` |
+| 59 | [x] | Horizontal lines in special-weapon sprites | **Fixed in source; not yet released.** Private origin zero exposed native page-edge clipping, shortening flipped tiles from 16 to 15 pixels. Private tiles now retain all 16 rows/columns and reflect their pixels. Frost Tower captures are continuous and all 349 excerpt gameplay hashes match; 1,024 tile-origin/reflection cases pass. `beads-eio.9.83` |
+| 60 | [x] | Jet Stingray intro: P2 appears standing instead of riding in behind P1 | **Fixed in source; not yet released.** P2 joins during the native bike entrance, starting 32 pixels behind P1. Both rosters pass the native entrance/control check with one shared READY actor, and preserve a dead partner across the section transfer. `beads-eio.9.84` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -413,3 +417,54 @@ launch modes. Developer controls are off. Item56 is complete; unrelated
 unresolved reports retain their prior status. Private release receipts:
 `build-pr23/release12-qa/release-receipt-final.json` and
 `build-pr23/release12-qa/publication.json`. Release tracking: `beads-eio.9.80`.
+
+October 13 follow-up (items 57-60): `Kill cam.zip` contains a complete local
+Playtest12 recording and both populated startup logs. The unmodified compatible
+debug build verifies all 43,365 original input/state hashes. Its saved checkpoints
+allow short, explicit branches rather than another full-stage playthrough.
+
+Item57's native latch predicate 800C36E8 reads the canonical body through a2.
+The existing both-living-player wait guard skipped dead-P1 cases. Projecting the
+living P2 through this one native predicate retains the canonical campaign and
+original shared gate/closing animation. In the checkpoint A/B, P1 stays dead at
+y2507. P2 is explicitly placed above the actual latch and made invulnerable to
+isolate closure: the old latch stays open; the fixed latch closes and P2 lands
+at y2202 with unchanged HP. This is a deliberate branch, not an unmodified
+continuation of the recording.
+
+For item58, the exact saved-state excerpt retains 249 original input/state hashes.
+At global frame38861, native collision routine 8002D9BC writes HP2 -> FE at
+8002DC1C (subtract 4), then marks death 80 at8002DC3C. The camera is still at y1923
+before the fatal hit and moves toward dead P1 only afterward. Nearby enemies
+are visible in the raw frame capture. The reported ordering is not reproduced;
+this recording shows damage causing death followed by a camera drop.
+
+For item59, original GPU packets show Frost Tower assembly rows starting 16
+pixels apart but flipped quads ending after 15 pixels. Native 80024754/800247A8
+clip UV endpoints at texture-page edges; the private origin introduced for
+item50 makes the first-row seam repeat. Convert compressed assembly quads to
+complete 16x16 private tiles and reflect the pixels within each tile. Palette,
+blend flags and actor positions remain native. Existing bank keys use aligned
+origins, leaving two low bits for reflection; old snapshots retain their
+unreflected tile/full-frame banks. All 256 tile origins and 4 reflections are
+checked, including the captured clipped Frost Tower packet. The candidate
+retains all 349 original gameplay hashes in the visual excerpt after an explicit
+private build-header translation; it is not described as an unchanged-build
+replay. The old and corrected raw captures were inspected.
+
+Private evidence: `build-pr23/feedback-killcam-20261013/`, including
+`inspect-original`, `latch-old`, `latch-fixed`, `death-excerpt-2`,
+`weapon-excerpt-2`, `weapon-fixed-2`, `jet-before`, and `jet-after-1`.
+
+Item60 now enrolls P2 during the authored Marine Base acceleration, starting
+32 pixels behind P1. Each bike runs its native entry animation and shares the
+existing READY actor; ordinary checkpoint/story locks still cannot enroll P2
+early. Carried deaths and withdrawn players retain their lifecycle rules.
+The retained `jet` scenario checks both native entrances before control, one
+READY actor, control release, and a dead P2 staying dead in section2. Both
+X and Zero campaigns pass (`jet-final-x`, `jet-weapons-final-zero`).
+The latter also passes all18 attacks in the native P2-X weapon cycle without
+losing either player or disabling the renderer. All32 Windows title checks
+pass after the final changes. Final hidden development executable SHA256:
+`76a261b6cc74ef92c57924d2d85f45d8465028c6681574c34154c44aed6b942e`.
+These source fixes have not been published as another playtest release.

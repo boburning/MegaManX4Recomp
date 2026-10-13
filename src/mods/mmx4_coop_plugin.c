@@ -477,7 +477,7 @@ static int enroll(CPUState *cpu) {
      * Keep P1's actual camera state during either concurrent or late arrival. */
     uint8_t camera_enabled[3]={psx_mod_read_byte(0x801419F4u),
         psx_mod_read_byte(0x80141A48u),psx_mod_read_byte(0x80141A9Cu)};
-    uint32_t spawn_x=x+(24u<<16);
+    uint32_t spawn_x=on_chaser && incoming?x-(32u<<16):x+(24u<<16);
     enter_second();psx_mod_write_byte(PLAY+0x43,(uint8_t)counterpart);
     psx_mod_write_byte(PLAY+0x1E,0);
     guest(cpu,0x80035240,0,0);
@@ -501,6 +501,7 @@ static int enroll(CPUState *cpu) {
     mmx4_coop_spawn_facing_right();
     if(on_chaser) {
         guest(cpu,0x80035A24,PLAYER,0);guest(cpu,0x80021C14,0,0);
+        if(incoming)psx_mod_counter_add("mmx4.coop.concurrent-chaser-arrivals",1);
     }
     /* An authored incoming position can be inside the stage's ceiling.
      * Its native delay/beam clears that before installing a normal box. */
@@ -809,8 +810,7 @@ static int define_sprite_bank(const SpriteBank *bank) {
         in+=chunk*128;row+=16;remaining-=chunk;
     }
     if(bank->tile!=UINT16_MAX) {
-        uint16_t part[256];for(unsigned y=0;y<16;++y)for(unsigned x=0;x<16;++x)
-            part[y*16+x]=pixels[(((bank->tile>>8)+y)&255)*256+(((bank->tile&255)+x)&255)];
+        uint16_t part[256];mmx4_coop_sprite_tile_pixels(pixels,bank->tile,part);
         return psx_mod_define_texture_bank(bank->id,16,16,part);
     }
     return psx_mod_define_texture_bank(bank->id,256,256,pixels);
@@ -1032,6 +1032,7 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
             }
             q[3]|=clut;q[5]|=(psx_mod_read_word(mode+4)&0x60u)<<16;
         }else if((command&0xFC)!=0x2C) {failed=5;return;}
+        else if(compressed)tile=mmx4_coop_sprite_quad_tile(q);
         uint16_t page=tile==UINT16_MAX?(uint16_t)(q[5]>>16):(uint16_t)psx_mod_read_word(mode+4);
         uint16_t bank=compressed?sprite_bank(character,table,frame,(uint16_t)(q[3]>>16),tile):
             ui_tile(character,page,(uint16_t)(q[3]>>16),tile,1);

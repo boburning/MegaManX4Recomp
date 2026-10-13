@@ -184,8 +184,34 @@ class Scenarios:
             self.r.fixture(3, checkpoint)
             self.r.wait_playable(45, advance_dialogue=True)
 
+    def jet_intro(self):
+        self.r.fixture(1,5,0,self.campaign)
+        deadline=time.monotonic()+45;entered=None;ready_peak=0
+        while time.monotonic()<deadline:
+            play=self.r.read(0x801721c0,0x20)
+            if play[0]==6 and play[12]==5:
+                mirror=self.r.read(self.r.diagnostic(),0x6d0)
+                bodies=[mirror[at:at+0xe4] for at in (0x300,0x100)]
+                bikes=[mirror[at:at+0xb0] for at in (0x620,0x200)]
+                actors=self.r.read(0x80142f98,32*0x30)
+                ready_peak=max(ready_peak,sum(actors[i*0x30]!=0 and actors[i*0x30+1]==27 for i in range(32)))
+                if entered is None and play[0x1c] and all(b[0] and b[4:6]==bytes([1,0]) and b[6] in (1,2) for b in bikes):
+                    assert all(b[4:6]==bytes([1,18]) and b[0xc5]==255 for b in bodies)
+                    xs=[struct.unpack_from('<i',b,8)[0] for b in bodies]
+                    assert xs[1]<xs[0],('P2 should enter behind P1',xs)
+                    pointers=[struct.unpack_from('<I',b,0xa0)[0] for b in bikes]
+                    assert pointers[0]==pointers[1]!=0,pointers
+                    entered=dict(separation=(xs[0]-xs[1])/65536,ready_actor=pointers[0])
+                    self.sample('jet-concurrent-entrance',True)
+                if not play[0x1c] and all(b[0] and b[4]==1 and b[5]==1 for b in bikes):break
+            time.sleep(.025)
+        else:raise TimeoutError('Jet entrance did not release both bikes')
+        assert entered and ready_peak<=1,(entered,ready_peak)
+        self.sample('jet-concurrent-controls',True)
+        return dict(**entered,ready_peak=ready_peak,both_native_entrances=True)
+
     def jet(self):
-        self.load(5, 0)
+        entrance=self.jet_intro()
         counts = []
         for _ in range(20):
             actors = self.r.read(0x80142f98, 32 * 0x30)
@@ -211,7 +237,7 @@ class Scenarios:
         assert row['players'][1]['hp'] == 0 and row['players'][1]['state'] == 3
         assert not vehicle[0] and not vehicle[3]
         assert row['players'][0]['hp'] > 0 and row['lives'] == before['lives']
-        return dict(ready_peak=max(counts), ready_pointers=pointers, shared_callbacks=shared,
+        return dict(entrance=entrance,ready_peak=max(counts), ready_pointers=pointers, shared_callbacks=shared,
                     corpse_stays_dead=True, shared_retry_lives=row['lives'])
 
     def door(self, owner, label):

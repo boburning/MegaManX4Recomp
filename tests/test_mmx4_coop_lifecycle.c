@@ -25,6 +25,7 @@ static uint8_t saved_palette_dirty;
 static int split_views;
 static unsigned stage_script_calls,scene_calls,observed_controls;
 static unsigned canonical_portal_solids;
+static unsigned latch_calls,latch_owner,latch_y;
 static unsigned boundary_calls[2];
 static unsigned dialogue_calls,dialogue_edge;
 static unsigned dialogue_init_calls,dialogue_init_character,stage_script_projected;
@@ -134,6 +135,12 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         result=cpu->gpr[2];goto done;
     }
     switch(address) {
+    case 0x800C36E8:
+        ++latch_calls;latch_owner=projected;
+        latch_y=psx_mod_read_half(cpu->gpr[6]+14);
+        observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        psx_mod_write_byte(a1+0x10,1);
+        psx_mod_write_byte(a0+5,1);break;
     case 0x80027BE4: {
         ++boundary_calls[projected];
         int camera_x=(int16_t)psx_mod_read_half(a0+10);
@@ -447,6 +454,41 @@ static void prepare_direct_spawn(CPUState *cpu,unsigned campaign) {
 }
 int main(void) {
     CPUState cpu={0};reset();
+    /* Bike entry may enroll under READY, but never resurrect a carried death
+     * or treat an ordinary checkpoint/story lock as this initial entrance. */
+    reset();psx_mod_write_byte(PLAY+0x0C,5);psx_mod_write_byte(PLAY+0x1C,1);
+    psx_mod_write_byte(PLAYER+5,18);psx_mod_write_byte(PLAYER+0xC5,255);
+    psx_mod_write_byte(MMX4_VEHICLE,1);psx_mod_write_byte(MMX4_VEHICLE+4,1);
+    psx_mod_write_byte(MMX4_VEHICLE+6,1);psx_mod_write_word(MMX4_VEHICLE+0xA0,0x80142F98u);
+    CHECK(!mmx4_coop_lifecycle_can_enroll());
+    psx_mod_write_word(MMX4_VEHICLE+0x20,4u<<16);
+    CHECK(mmx4_coop_lifecycle_can_enroll());
+    carry_dead=1;CHECK(!mmx4_coop_lifecycle_can_enroll());carry_dead=0;
+    carry_first_dead=1;CHECK(!mmx4_coop_lifecycle_can_enroll());carry_first_dead=0;
+    departed=1;CHECK(!mmx4_coop_lifecycle_can_enroll());departed=0;
+    psx_mod_write_byte(PLAY+0x1D,1);CHECK(!mmx4_coop_lifecycle_can_enroll());
+    psx_mod_write_byte(PLAY+0x1D,0);psx_mod_write_byte(MMX4_VEHICLE+5,1);
+    CHECK(!mmx4_coop_lifecycle_can_enroll());
+    for(unsigned campaign=0;campaign<2;++campaign) {
+        reset();latch_calls=0;
+        uint32_t fan=0x80165A30u;
+        psx_mod_write_byte(PLAY+12,3);psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(PLAYER+0x5C,0);psx_mod_write_byte(PLAYER+4,3);
+        psx_mod_write_half(PLAYER+14,2507);p2[14]=100;p2[15]=0;
+        psx_mod_write_byte(fan,1);psx_mod_write_byte(fan+1,13);psx_mod_write_byte(fan+4,1);
+        cpu.gpr[6]=PLAYER;
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);
+        CHECK(latch_calls==1 && latch_owner==1 && latch_y==100);
+        CHECK(observed_campaign==campaign && psx_mod_read_byte(PLAY+0x43)==campaign);
+        CHECK(!projected && !psx_mod_read_byte(PLAYER+0x5C));
+        CHECK(psx_mod_read_half(PLAYER+14)==2507 && p2[14]==100);
+        CHECK(psx_mod_read_byte(PLAY+0x10)==1 && psx_mod_read_byte(fan+5)==1);
+        psx_mod_write_byte(fan+5,0);p2[0x5C]=0;
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);
+        CHECK(latch_calls==2 && latch_owner==0 && latch_y==2507);
+    }
+    reset();
     /* The ordinary unlocked enrollment policy is retained. READY has not
      * begun the native beam yet, and genuine scene locks remain ineligible. */
     CHECK(mmx4_coop_lifecycle_can_enroll());

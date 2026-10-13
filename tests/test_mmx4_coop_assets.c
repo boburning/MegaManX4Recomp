@@ -24,6 +24,30 @@ static int original(const char *path) {
     printf("%s: %u original sprite frames decoded\n",path,frames);free(b);return 0;
 }
 int main(int argc,char **argv) {
+    /* Captured Frost Tower row: native page-edge clipping left a gap at
+     * screen y174. Rebuild the missing edge without dropping source row0. */
+    uint32_t ice[10]={0x123456,0x2D000000,0x009F0073,0x78000FD0,
+        0x009F0083,0x00200FE0,0x00AE0073,0x000000D0,0x00AE0083,0x000000E0};
+    CHECK(mmx4_coop_sprite_quad_tile(ice)==0x00D2);
+    CHECK(ice[0]==0x123456 && ice[1]==0x2D000000);
+    CHECK(ice[6]==0x00AF0073 && ice[8]==0x00AF0083);
+    CHECK(ice[3]==0x78000000 && ice[5]==0x00200010 && ice[7]==0x1000 && ice[9]==0x1010);
+    static uint16_t pixels[256*256];uint16_t tile_pixels[256];
+    for(unsigned i=0;i<256*256;++i)pixels[i]=(uint16_t)i;
+    for(unsigned row=0;row<16;++row)for(unsigned col=0;col<16;++col)
+    for(unsigned flip=0;flip<4;++flip) {
+        unsigned u=col*16+(flip&1?15:0),v=row*16+(flip&2?15:0);
+        unsigned end_u=flip&1?(col?u-16:0):(col==15?255:u+16);
+        unsigned end_v=flip&2?(row?v-16:0):(row==15?255:v+16);
+        uint32_t q[10]={0,0x2D808080,0xFFF0FFF0,u|(v<<8),0,end_u|(v<<8),
+            0,u|(end_v<<8),0,end_u|(end_v<<8)};
+        uint16_t key=mmx4_coop_sprite_quad_tile(q);
+        CHECK(key==(col*16|(row*16<<8)|flip));
+        CHECK(q[2]==0xFFF0FFF0 && q[4]==0xFFF00000 && q[6]==0x0000FFF0 && q[8]==0);
+        mmx4_coop_sprite_tile_pixels(pixels,key,tile_pixels);
+        for(unsigned y=0;y<16;++y)for(unsigned x=0;x<16;++x)
+            CHECK(tile_pixels[y*16+x]==(row*16+(flip&2?15-y:y))*256+col*16+(flip&1?15-x:x));
+    }
     unsigned char out[16];size_t n=999;
     /* Literal 0x1234, overlapping three-word backref, explicit terminator. */
     const unsigned char src[]={0,0x60,0x34,0x12,1,0x18,0,0,0,0};

@@ -363,6 +363,24 @@ static int direct_pair_candidate(void) {
         !script_active && !warp_pending && !warp_phase && !departed &&
         !carry_dead && !carry_first_dead && !carry_departure;
 }
+static int native_chaser_arrival(void) {
+    /* Marine Base's native bike entrance owns the lock until READY finishes.
+     * Enroll after P1 starts accelerating, so P2 runs the same entrance just
+     * behind it instead of appearing after control is released. The existing
+     * shared_ride_ready filter retains the one canonical READY actor. */
+    return !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+        psx_mod_read_byte(PLAY)==6 && !psx_mod_read_byte(PLAY+1) &&
+        psx_mod_read_byte(PLAY+0x0C)==5 && !psx_mod_read_byte(PLAY+0x1D) &&
+        psx_mod_read_byte(PLAY+0x1C)==1 &&
+        psx_mod_read_byte(PLAYER+4)==1 && psx_mod_read_byte(PLAYER+5)==18 &&
+        psx_mod_read_byte(PLAYER+0xC5)==255 && (psx_mod_read_byte(PLAYER+0x5C)&127u) &&
+        psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_byte(MMX4_VEHICLE+4)==1 &&
+        !psx_mod_read_byte(MMX4_VEHICLE+5) && psx_mod_read_byte(MMX4_VEHICLE+6)==1 &&
+        psx_mod_read_word(MMX4_VEHICLE+0x20)>=4u*65536u &&
+        psx_mod_read_word(MMX4_VEHICLE+0xA0) &&
+        !script_active && !warp_pending && !warp_phase && !departed &&
+        !carry_dead && !carry_first_dead && !carry_departure;
+}
 int mmx4_coop_lifecycle_can_enroll(void) {
     /* Mushroom's negative portal return installs an idle body before the
      * first native world-solid pass lands it on the entrance platform.
@@ -373,7 +391,7 @@ int mmx4_coop_lifecycle_can_enroll(void) {
        psx_mod_read_byte(PLAY+0x1E)==255 && !psx_mod_read_byte(PLAY+0x1C) &&
        !(psx_mod_read_byte(PLAYER+0x89)&8u))return 0;
     return psx_mod_read_byte(PLAYER+4)==1 &&
-        (!psx_mod_read_byte(PLAY+0x1C) || native_initial_arrival());
+        (!psx_mod_read_byte(PLAY+0x1C) || native_initial_arrival() || native_chaser_arrival());
 }
 
 void mmx4_coop_lifecycle_enrolled(CPUState *cpu) {
@@ -1153,14 +1171,22 @@ static int stage_scripts(CPUState *cpu,uint32_t address) {
     script_pool_guard=0;return mmx4_coop_finish(cpu,result);
 }
 static int fan_latch(CPUState *cpu,uint32_t address) {
-    (void)address;
     uint32_t actor=cpu->gpr[4];
     if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
        psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12)!=3 ||
        actor<0x80165A30u || actor>=0x80165A30u+32u*0x8Cu ||
        (actor-0x80165A30u)%0x8Cu || psx_mod_read_byte(actor+1)!=13 ||
-       psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5) ||
-       !mmx4_coop_alive(0) || !mmx4_coop_alive(1) ||
+       psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5))return 0;
+    /* The native closing predicate reads PLAYER via a2, even after P1 has
+     * died. Let the living partner cross that same threshold; retain the
+     * original once-only animation and shared input freeze. */
+    if(!mmx4_coop_alive(0) && mmx4_coop_alive(1) &&
+       !mmx4_coop_lifecycle_hidden(1) && cpu->gpr[6]==PLAYER) {
+        uint32_t result=call_story_as_second(cpu,address,actor,cpu->gpr[5]);
+        psx_mod_counter_add("mmx4.coop.survivor-latch",1);
+        return mmx4_coop_finish(cpu,result);
+    }
+    if(!mmx4_coop_alive(0) || !mmx4_coop_alive(1) ||
        mmx4_coop_lifecycle_hidden(0) || mmx4_coop_lifecycle_hidden(1))return 0;
     const uint8_t *body=mmx4_coop_second_body();
     Mmx4CoopViewActor players[2]={
