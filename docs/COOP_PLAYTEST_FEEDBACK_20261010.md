@@ -67,7 +67,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 59 | [x] | Horizontal lines in special-weapon sprites | **Fixed in source; not yet released.** Private origin zero exposed native page-edge clipping, shortening flipped tiles from 16 to 15 pixels. Private tiles now retain all 16 rows/columns and reflect their pixels. Frost Tower captures are continuous and all 349 excerpt gameplay hashes match; 1,024 tile-origin/reflection cases pass. `beads-eio.9.83` |
 | 60 | [x] | Jet Stingray intro: P2 appears standing instead of riding in behind P1 | **Fixed in source; not yet released.** P2 joins during the native bike entrance, starting 32 pixels behind P1. Both rosters pass the native entrance/control check with one shared READY actor, and preserve a dead partner across the section transfer. `beads-eio.9.84` |
 | 61 | [x] | Optional boss doors require both living, present players | **Implemented in source; not released.** Default remains Either player. Native checks verify either seat waits alone at the door, both then enter, and either sole survivor can enter. Unit checks cover withdrawn partners. Eight native room offers include the host's choice in the agreed settings identity. `beads-eio.9.85` |
-| 62 | [ ] | Optional sequential Double and Iris fights | Requested, default off; implementation pending. P1 remains sole campaign/save owner. `beads-eio.9.86` |
+| 62 | [x] | Optional sequential Double and Iris fights | **Implemented and qualified; not released.** Default off. Both native encounter orders complete and X's default-off control runs only Double. The second encounter reloads at the inner boss-door checkpoint, preserving lives and P1's campaign. Includes snapshot/digest state and encounter-specific dialogue resources. All33 checks pass. `beads-eio.9.86` |
 | 63 | [ ] | Optional double boss HP and separate player hit cooldowns | Requested, default unchanged; native damage/weakness timer investigation in progress. Owner accepts reduced shared cooldowns if separate cooldowns are impractical. `beads-eio.9.87` |
 | 64 | [x] | LAN independent-camera Mushroom stairs stop animating for P2 | **Reproduced and fixed in source; not released.** Both supplied peer recordings match, including233 full component digests through sim8704. The original controller drives one stair animation from one camera. Each view now keeps its own native animation state; the shared checkpoint controller still runs once. Native two-peer checks pass both seats on both green/purple staircases, with peer state matching through sim9061. Separate from item51's missing controller input and item36's reported floating feet. `beads-eio.9.88` |
 | 65 | [x] | Independent netplay shows unified HUD during arrival; Nova Strike disturbs cameras | **Reproduced and fixed in source; not released.** Supplied `Nova strike netplay individual camera bugs.zip` and [video](https://youtu.be/GXLj0-7lkZw). Native attack34 uses PLAY+1C, also used by scene locks. Distinguish Nova from shared scenes and render private views during ordinary concurrent arrivals. Native LAN checks pass with X in either seat: idle partner camera stays fixed, both private renderers keep advancing, and peers retain matching state through sim5154/4672. `beads-eio.9.89` |
@@ -551,3 +551,25 @@ still reports layerFF and unchanged native coordinates outside each draw.
 Both peers match state through sim5444, and local rendering verification
 reports no RAM, VRAM or device leaks. Thirty-two checks pass; targeted tests
 also retain unrelated screen effects and avoid fractional camera rounding.
+
+Item62 is qualified by the `story_bosses` original-disc scenario in
+`tools/coop_story_scenarios.py`. `story-both-x-final` completes Double then
+Iris and enters stage11/1 at frame14136; `story-both-zero-final` completes
+Iris then Double and enters Zero's normal movie route at frame14963.
+Each records exactly two native defeats and one handoff, with lives2 and
+P1's campaign identity preserved. `story-default-x-final` leaves the toggle
+off, defeats only Double and enters stage11/1 at frame11089 without a handoff.
+The fixture lowers boss HP, then actual charged-buster/saber hits perform
+the kills; Iris's separate vulnerable core must first be exposed normally.
+Captured fights show both native boss sprites. All33 Windows checks pass,
+including option defaults, lifecycle resets, snapshot state and hook contracts.
+
+The optional second encounter uses the native inner-door checkpoint, so
+players walk through that door again. It does not introduce a P2 campaign
+or modify the canonical character byte to select the extra fight. Stage
+banks, admission, text and portrait/voice indices use scoped register hooks.
+The original loader is scheduled normally rather than called recursively
+inside a host callback, since disc loading can suspend. The apparent final
+Double stall was a40-second test timeout during his388-character speech;
+allowing the native text to finish completes the sequence. Private receipts
+remain in `build-pr23/feedback-qol-20261013/`.

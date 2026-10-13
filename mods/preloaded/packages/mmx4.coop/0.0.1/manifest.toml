@@ -66,6 +66,14 @@ id = "mmx4.coop"
 
 [[option]]
 feature = "coop"
+id = "both_story_bosses"
+label = "Fight Double and Iris"
+description = "After your campaign's encounter, return to the boss door for the other fight before continuing the story. Co-op only. The host chooses for both peers."
+type = "boolean"
+default = false
+
+[[option]]
+feature = "coop"
 id = "ultimate_armor_x"
 label = "Ultimate Armor X code"
 description = "Automatically enable X's native Ultimate Armor code for either player. A capsule still grants the armor. The host chooses for both peers. Works together with Black Zero."

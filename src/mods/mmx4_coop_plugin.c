@@ -283,6 +283,9 @@ static void leave_second(void) {
 }
 int mmx4_coop_ready(void) { return enrolled && !failed; }
 int mmx4_coop_both_door_players(void) {return (int)boss_door_both;}
+uint32_t mmx4_coop_counterpart_story_text(void) {
+    return assets[counterpart].initialized?assets[counterpart].menu[4]:0;
+}
 int mmx4_coop_projected(void) { return (int)projected; }
 int mmx4_coop_split_views(void) { return (int)split_views; }
 int mmx4_coop_alive(unsigned seat) {
@@ -740,6 +743,7 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
            (stage==8 && section==0 && checkpoint<3) ||
            (stage==8 && section==1 && checkpoint<4) ||
            (stage==6 && section==0 && checkpoint<6) ||
+           (stage==11 && section==0 && checkpoint<2) ||
            ((stage==5 || stage==6) && section==1 && checkpoint<2) ||
            (stage==12 && section==1 && checkpoint<7)) {
             psx_mod_write_byte(PLAY+0x1D,(uint8_t)checkpoint);
@@ -1150,6 +1154,7 @@ static uint32_t hash_player(uint32_t hash,const PlayerContext *p) {
 }
 static uint32_t state_digest(void) {
     uint32_t hash=2166136261u;
+    hash=mmx4_coop_bosses_digest(hash);
     hash=hash_word(hash,split_views);
     hash=hash_word(hash,boss_door_both);
     hash=hash_word(hash,ultimate_armor_x);hash=hash_word(hash,black_zero);
@@ -1241,7 +1246,8 @@ static int snapshot_ready(void) {
         mmx4_coop_lifecycle_snapshot_ready() && mmx4_coop_combat_snapshot_ready() &&
         mmx4_coop_web_snapshot_ready() && mmx4_coop_audio_snapshot_ready() &&
         mmx4_coop_split_snapshot_ready() && mmx4_widescreen_snapshot_ready() &&
-        mmx4_diagnostics_snapshot_ready() && mmx4_cheats_snapshot_ready();
+        mmx4_diagnostics_snapshot_ready() && mmx4_cheats_snapshot_ready() &&
+        mmx4_coop_bosses_snapshot_ready();
 }
 static void snapshot_player(Mmx4SnapshotIO *s,PlayerContext *player) {
     if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok && s->pos<=s->len &&
@@ -1290,7 +1296,8 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x33503458u); /* X4P3, optional co-op rules */
+    mmx4_snapshot_fixed(s,0x34503458u); /* X4P4, optional boss encounters */
+    mmx4_coop_bosses_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
     mmx4_snapshot_fixed(s,boss_door_both);
     mmx4_snapshot_fixed(s,ultimate_armor_x);mmx4_snapshot_fixed(s,black_zero);
@@ -1389,6 +1396,7 @@ static void activate(void) {
     view_bank_count=view_ui_bank_count=local_view_call=local_view_seat=0;
     if(!mmx4_coop_split_activate() || !mmx4_coop_web_activate())failed=1;
     mmx4_coop_lifecycle_activate();mmx4_coop_combat_reset();
+    mmx4_coop_bosses_activate();
     frames=fixture_sequence=fixture_invulnerable=previous_input=0;counterpart=0;menu_texture_owner=2;
 #ifdef MMX4_COOP_NETPLAY_DEBUG
     memset(&development_decoder,0,sizeof development_decoder);
@@ -1428,7 +1436,7 @@ static void activate(void) {
     }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
-    static const PSXModSnapshotProvider snapshot={3,snapshot_bytes,snapshot_write,
+    static const PSXModSnapshotProvider snapshot={4,snapshot_bytes,snapshot_write,
         snapshot_validate,snapshot_read,snapshot_ready};
     psx_mod_register_snapshot_provider(ID,&snapshot);
     psx_mod_register_savestate_plugin(ID,snapshot_resources_restored);

@@ -179,6 +179,7 @@ static void pickup_forget(uint32_t actor) {
 }
 static void fresh_game(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
+    mmx4_coop_bosses_new_stage();
     memset(&second_inventory,0,sizeof second_inventory);
     memset(&saved_inventory,0,sizeof saved_inventory);
     memset(pickups,0,sizeof pickups);
@@ -217,6 +218,7 @@ void mmx4_coop_lifecycle_activate(void) {
 }
 static void full_stage(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
+    mmx4_coop_bosses_new_stage();
     if(!mmx4_coop_projected())full_stage_load=1;
 }
 static void stage_selection(CPUState *cpu,uint32_t address) {
@@ -225,6 +227,7 @@ static void stage_selection(CPUState *cpu,uint32_t address) {
     /* Native8002E420 clears PLAYER for the frontend at8002E478, outside
      * stage_initialization. Selecting the same stage afterward is a fresh
      * entry, not a section transfer with a frontend-zeroed P1 corpse. */
+    mmx4_coop_bosses_new_stage();
     stage_known=0;first_before_clear_valid=0;
     carry_resources=carry_dead=carry_first_dead=carry_departure=carry_refill=0;
     direct_initial_spawn=0;
@@ -254,6 +257,7 @@ void mmx4_coop_lifecycle_follow_progress(uint8_t *body,unsigned character) {
 static void stage_initialization(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
     if(mmx4_coop_projected())return;
+    mmx4_coop_bosses_stage_initialization();
     direct_initial_spawn=0;
     /* Native 8001FC20 calls 8002A7D0/8002A728 to clear PLAYER before
      * 80035240 initializes it. Capture the prior survivor status here;
