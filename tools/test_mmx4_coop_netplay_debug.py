@@ -59,6 +59,7 @@ def main():
     parser.add_argument('--dragon-only',action='store_true',help='Inspect intro dragon placement in two independent views')
     parser.add_argument('--wrap-only',action='store_true',help='Inspect distant player sprites around the 2048px GPU boundary')
     parser.add_argument('--expect-sprite-wrap',action='store_true',help='Capture the old build without the distant-sprite correction')
+    parser.add_argument('--expect-duplicated-dragon',action='store_true',help='Capture the old screen-relative intro boss')
     parser.add_argument('--frontend',choices=('headless-opengl','hidden-window'),default='headless-opengl')
     parser.add_argument('--expect-camera-fallback',action='store_true',help='Require the unfixed Nova camera failure in an A/B baseline')
     parser.set_defaults(latency=0, jitter=0, seed=714, delay=2,
@@ -137,11 +138,15 @@ def main():
             from mmx4_netplay_runtime import NetplayRuntime
             runtime=NetplayRuntime(debug)
             runtime.fixture(5,3)
-            runtime.teleport(0,2850,363)
+            # Enter before the first encounter so its camera-relative phases
+            # and placement triggers run in their original order.
+            runtime.teleport(0,1200,427)
+            exercise.wait_ticks(160)
             report['dragon_samples']=samples=[]
+            attacks=0
             runtime.input(0xffdf,0)
             try:
-                for i in range(36):
+                for i in range(160):
                     row=exercise.split_world_observation('dragon-'+str(i))
                     row['pools']=[]
                     for base,stride,count in ((0x8013bed0,0x9c,48),(0x8013e510,0x70,32),
@@ -152,11 +157,26 @@ def main():
                             body=data[j*stride:(j+1)*stride]
                             if body[0] and body[3]:row['pools'].append(dict(address=hex(base+j*stride),body=body.hex()))
                     samples.append(row)
-                    if args.frontend=='hidden-window' and i%3==0:
+                    screen_attack=any(0x8013bed0<=int(a['address'],16)<0x8013bed0+48*0x9c and
+                        bytes.fromhex(a['body'])[1]==0 and bytes.fromhex(a['body'])[0x14]==255 and
+                        bytes.fromhex(a['body'])[5] in (1,4) for a in row['pools'])
+                    if screen_attack:attacks+=1
+                    if args.frontend=='hidden-window' and (i%6==0 or screen_attack):
                         for peer in peers:
                             peer.request('present_shot',path=str(args.output/f'dragon-{i}-peer{peer.seat}.png'))
                     exercise.wait_ticks(16)
+                    if attacks>=3:break
             finally:runtime.release()
+            flybys=[row for row in samples if any(
+                0x8013bed0<=int(a['address'],16)<0x8013bed0+48*0x9c and
+                bytes.fromhex(a['body'])[1]==0 and bytes.fromhex(a['body'])[0x14]==255
+                for a in row['pools'])]
+            assert flybys,'Native screen-relative intro boss phase did not run'
+            assert attacks>=3,'Native background attack was not captured'
+            for seat in (0,1):
+                projected=samples[-1]['peers'][seat]['counters'].get('mmx4.coop.split-intro-sprite-projected',0)
+                assert bool(projected)!=args.expect_duplicated_dragon,('Intro projection guard',seat,projected)
+                assert all(row['peers'][seat]['players']['p2']['x']==224 for row in flybys)
             exercise.split_presentation_probe()
             tick=min(peer.status()['tick'] for peer in peers)
             exercise.checkpoint('Intro dragon separated cameras',tick,min_digests=2)

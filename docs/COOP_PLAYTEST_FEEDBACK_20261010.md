@@ -71,7 +71,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 63 | [ ] | Optional double boss HP and separate player hit cooldowns | Requested, default unchanged; native damage/weakness timer investigation in progress. Owner accepts reduced shared cooldowns if separate cooldowns are impractical. `beads-eio.9.87` |
 | 64 | [x] | LAN independent-camera Mushroom stairs stop animating for P2 | **Reproduced and fixed in source; not released.** Both supplied peer recordings match, including233 full component digests through sim8704. The original controller drives one stair animation from one camera. Each view now keeps its own native animation state; the shared checkpoint controller still runs once. Native two-peer checks pass both seats on both green/purple staircases, with peer state matching through sim9061. Separate from item51's missing controller input and item36's reported floating feet. `beads-eio.9.88` |
 | 65 | [x] | Independent netplay shows unified HUD during arrival; Nova Strike disturbs cameras | **Reproduced and fixed in source; not released.** Supplied `Nova strike netplay individual camera bugs.zip` and [video](https://youtu.be/GXLj0-7lkZw). Native attack34 uses PLAY+1C, also used by scene locks. Distinguish Nova from shared scenes and render private views during ordinary concurrent arrivals. Native LAN checks pass with X in either seat: idle partner camera stays fixed, both private renderers keep advancing, and peers retain matching state through sim5154/4672. `beads-eio.9.89` |
-| 66 | [ ] | Intro dragon appears on both distant independent views; shots only in progressing player's view | `IMG_0890.mov` (5.33s) confirms the dragon at matching screen edges while Zero waits at the start and X advances. The new Opening stage dragon camera and web spider camera wrap around ZIP supplies the matching paired intro recording: X reaches3237 while Zero remains224. Investigate screen-relative effects and far-coordinate wrapping separately; no dragon fix claimed yet. `beads-eio.9.90` |
+| 66 | [x] | Intro dragon appears on both distant independent views; shots only in progressing player's view | **Reproduced and fixed in source; not released.** Native intro actor0 switches to screen-relative coordinates during its background attack. Rebase it and attached type10 effects through the canonical world camera only inside private rendering. Actual composed before/after captures show the boss and muzzle effect remaining with X at3237 while Zero at224 no longer sees a duplicate. Original state stays screen-relative, both peers match through sim5444, render isolation and all32 checks pass. `beads-eio.9.90` |
 | 67 | [ ] | Product-focused co-op README, fresh screenshots and MIT license | **Final action after the next release is published**, per owner. Lead with co-op, show all shipped alpha two-player features, use more actual screenshots and less developer prose, keep download/play instructions brief. Change the project's license to MIT while preserving third-party notices. Queued until release. `beads-eio.9.91` |
 | 68 | [x] | Distant player wraps onto the other Web Spider view | **Reproduced and fixed in source; not released.** Paired Jungle logs from Opening stage dragon camera and web spider camera wrap around ZIP match. Native GPU sprite positions wrap every2048px. Per-view bounds now reject distant world sprites and armor before emission without changing actor visibility/lifetime. Actual composed before/after captures verify both views with either player ahead; all32 checks pass, peer state matches through sim5891, and private rendering preserves RAM/VRAM/devices. `beads-eio.9.92` |
 
@@ -538,4 +538,16 @@ and is excluded. Hidden-window QA now disables host controller shortcuts only
 in its private settings because development packets can otherwise open F7.
 No player preferences changed. Receipts remain under
 `build-pr23/feedback-qol-20261013/`. The intro dragon remains item66; this
-player-wrap reproduction does not qualify that separate scripted encounter.
+player-wrap reproduction alone does not qualify that separate scripted encounter.
+
+Item66 is now independently qualified by `dragon-native-route` and
+`dragon-projected-attack`. Entering before the first encounter atX1200 and
+walking normally preserves the original native background phases. Before,
+the same boss appears at the left edge of both composed panes (sample66).
+After, samples77-79 show the native background attack at screen38,180 only
+in the progressing player's view, including its attached muzzle effect;
+the partner stays at224,426 with its own nearby enemies. The shared actor
+still reports layerFF and unchanged native coordinates outside each draw.
+Both peers match state through sim5444, and local rendering verification
+reports no RAM, VRAM or device leaks. Thirty-two checks pass; targeted tests
+also retain unrelated screen effects and avoid fractional camera rounding.

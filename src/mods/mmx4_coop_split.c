@@ -67,6 +67,36 @@ static int draw_armor(CPUState *cpu,uint32_t address) {
     (void)address;
     return mmx4_coop_split_sprite_outside(cpu->gpr[4])?mmx4_coop_finish(cpu,0):0;
 }
+static int intro_boss(uint32_t actor) {
+    return actor>=0x8013BED0u && actor<0x8013BED0u+48u*0x9Cu &&
+        !((actor-0x8013BED0u)%0x9Cu) && psx_mod_read_byte(actor) &&
+        psx_mod_read_byte(actor+1)==0;
+}
+static void project_intro_sprite(uint32_t actor) {
+    if(!psx_mod_read_byte(actor) || psx_mod_read_byte(actor+0x14u)!=255)return;
+    /* Native80041F00/8004205C change this boss between screen and world
+     * coordinates; type10 attachments inherit the same layer. Rebase only
+     * in the private draw transaction, before replacing the canonical camera.
+     * Integer halfwords match the native emitter without fractional carry. */
+    psx_mod_write_half(actor+10,psx_mod_read_half(actor+10)+psx_mod_read_half(CAMERA+10));
+    psx_mod_write_half(actor+14,psx_mod_read_half(actor+14)+psx_mod_read_half(CAMERA+14));
+    psx_mod_write_byte(actor+0x14u,0);
+    psx_mod_counter_add("mmx4.coop.split-intro-sprite-projected",1);
+}
+void mmx4_coop_split_project_intro_boss(void) {
+    if(!psx_mod_local_view_scope() || !mmx4_coop_split_views() || !mmx4_coop_ready() ||
+       psx_mod_read_byte(MMX4_PLAY)!=6 || psx_mod_read_byte(MMX4_PLAY+12) ||
+       psx_mod_read_byte(MMX4_PLAY+13))return;
+    for(unsigned i=0;i<48;++i) {
+        uint32_t actor=0x8013BED0u+i*0x9Cu;
+        if(intro_boss(actor))project_intro_sprite(actor);
+    }
+    for(unsigned i=0;i<32;++i) {
+        uint32_t actor=0x8013E510u+i*0x70u;
+        if(psx_mod_read_byte(actor+1)==10 && intro_boss(psx_mod_read_word(actor+0x50)))
+            project_intro_sprite(actor);
+    }
+}
 void mmx4_coop_split_reset(void) {
     if(!state || mmx4_coop_projected() || psx_mod_local_view_scope())return;
     for(unsigned offset=0;offset<STATE_BYTES;offset+=4)psx_mod_write_word(state+offset,0);

@@ -1184,6 +1184,7 @@ static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     uint32_t buffer=*(uint32_t *)user;
     uint8_t camera[0xFC];
     if(!mmx4_coop_split_camera_copy(local_view_seat,camera))return 0;
+    mmx4_coop_split_project_intro_boss();
     project(0x801419B0u,camera,sizeof camera);
     gpu_set_gp0_source(0);
     gpu_write_gp0(0x02000000u|psx_mod_read_byte(buffer+0x2Du)|

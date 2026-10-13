@@ -468,6 +468,31 @@ static void train_backgrounds(CPUState *cpu) {
 int main(void) {
     CPUState cpu={0};cpu.gpr[29]=0x801FF000u;
     psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAYER,1);
+    /* The native intro flyby is screen-relative only to the canonical
+     * camera. Its body and attached type10 sprites must become world
+     * coordinates in a private draw, while UI and unrelated effects stay. */
+    const uint32_t boss=0x8013BED0u,effect=0x8013E510u,unrelated=effect+0x70u;
+    actor_position(CAMERA,2976,256);actor_position(boss,38,180);
+    psx_mod_write_byte(boss,1);psx_mod_write_byte(boss+0x14,255);
+    psx_mod_write_half(boss+8,0xF000);psx_mod_write_half(CAMERA+8,0xF000);
+    actor_position(effect,45,170);psx_mod_write_byte(effect,1);
+    psx_mod_write_byte(effect+1,10);psx_mod_write_byte(effect+0x14,255);
+    psx_mod_write_word(effect+0x50,boss);
+    actor_position(unrelated,20,30);psx_mod_write_byte(unrelated,1);
+    psx_mod_write_byte(unrelated+1,11);psx_mod_write_byte(unrelated+0x14,255);
+    psx_mod_write_word(unrelated+0x50,boss);
+    mmx4_coop_split_project_intro_boss();CHECK(psx_mod_read_half(boss+10)==38);
+    local_scope=1;mmx4_coop_split_project_intro_boss();
+    CHECK(psx_mod_read_half(boss+10)==3014 && psx_mod_read_half(boss+14)==436);
+    CHECK(psx_mod_read_half(boss+8)==0xF000 && !psx_mod_read_byte(boss+0x14));
+    CHECK(psx_mod_read_half(effect+10)==3021 && psx_mod_read_half(effect+14)==426);
+    CHECK(!psx_mod_read_byte(effect+0x14) && psx_mod_read_byte(unrelated+0x14)==255);
+    CHECK(!mmx4_coop_split_sprite_outside(boss));
+    actor_position(CAMERA,64,256);CHECK(mmx4_coop_split_sprite_outside(boss));
+    CHECK(mmx4_coop_split_sprite_outside(effect));
+    CHECK(psx_mod_read_half(unrelated+10)==20 && psx_mod_read_half(unrelated+14)==30);
+    local_scope=0;psx_mod_write_byte(boss,0);psx_mod_write_byte(effect,0);
+    psx_mod_write_byte(unrelated,0);psx_mod_write_word(CAMERA+8,0);
     /* Far world sprites alias into a view after 11-bit GPU truncation.
      * Cull using the camera currently being drawn, not both live regions. */
     actor_position(CAMERA,1900,1200);actor_position(ACTOR,1900+160+2048,1200+120);
