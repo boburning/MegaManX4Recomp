@@ -379,4 +379,12 @@ fixture passing its isolated rerun. An earlier parallel run also exceeded the
 startup-log fixture's three-second live-observation deadline before passing
 isolated and full serial reruns. Record these timing failures rather than
 claiming every run was clean. Hook registration and Python syntax checks pass.
-These fixes are local and have not been published in a playtest release.
+These fixes are included in the Playtest11 release candidate.
+
+The owner's final bounded item53 probe (`build-pr23/qa-playtest11-entry`)
+passes three native Zero-campaign P2-owned entry cases: both players alive,
+P1 killed during the actual WARNING actor's display, and P2 killed during
+that display. Each reaches the live Eregion fight with scene/door gates clear
+and the surviving body healthy and controllable; the dead seat remains dead.
+No desktop crash or entry softlock is reproduced. Item53 stays unchecked,
+and the owner authorized proceeding with Playtest11 on that result.

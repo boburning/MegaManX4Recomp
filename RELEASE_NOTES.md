@@ -1,4 +1,26 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.10
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.11
+
+Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
+Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
+
+- Fixes the intro's post-dragon rescue scene locking when Zero/P1 is dead and
+  X/P2 wins in Zero's campaign. The scene follows its surviving owner while
+  preserving Player 1's campaign. Reproduced from a branch of a tester recording
+  and verified through Mission Completed.
+- Fixes X/P2's acquired armor artwork in Zero's campaign. Boots, helmet, body,
+  both arm variants and full armor render through the private character
+  textures. Permanent upgrades still belong to the single shared campaign.
+
+The separate P2 intro-door crash report remains unconfirmed; this release does
+not claim to fix every entry failure. Earlier unresolved staircase/input and
+experimental Split reports retain their documented status.
+
+For bug reports, quit normally and zip the complete `saves/diagnostics` folder
+beside the executable or AppImage. Keep Playtest Diagnostics enabled and include
+video when possible. Startup logging fixes from Playtest 9 are included.
+See the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.10
 
 Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
 Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
