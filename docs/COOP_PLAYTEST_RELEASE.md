@@ -1,14 +1,32 @@
 # Co-op playtest 10
 
-Version: `v0.1.1-coop-playtest.10`, prepared for Windows ZIP and Linux x86_64
+Version: [`v0.1.1-coop-playtest.10`](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.10), published Windows ZIP and Linux x86_64
 AppImage. Includes special-weapon texture origins (`1147b6a`), safe host texture
 slot reuse and capsule palettes (`c5ba8de`), and the surviving-player waterfall
 exit (`24a1205`). Unified cameras and Stacked lifebars remain defaults; Split
 remains experimental. Both peers must upgrade together.
 
 These fixes were qualified against the supplied diagnostic recordings and
-targeted native checks. The final gameplay build passed 30 Windows title tests.
-Release package qualification and publication are recorded below when complete.
+targeted native checks. Production builds pass 32 Windows and 26 Linux title
+tests. Both packaged hidden launchers pass, complete room offers and execution/
+co-op identities match, and private development controls are disabled. Windows
+detached, no-window and redirected launches write nonempty startup logs and
+capture a real pre-boot error. AppImage layout/seeding and portable logs pass;
+glibc 2.38 or newer remains required.
+
+Compiled source: `d60a2f2`, framework `9bd4c20f9`, UI `06fd73e7`.
+Production profile: `mmx4-coop-delay-v3:2bd5608dde5146b445b4acbc60e1011b84e3314b`.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `cc626e996b0ed9945fac79fae65e0d2921f1a234271f4b72d4900796fcfc77f9` |
+| Linux x86_64 AppImage | `f1bd3eac829f4c69a2ad25c2ea44a5d6a389b87d05ac319a128e01814193ce70` |
+
+Assets/checksums: `dist/playtest10-public`; private validation receipt:
+`build-pr23/release10-qa/release-receipt-final.json`. GitHub asset sizes and
+SHA256 digests match the validated files. No disc, private saves, settings,
+recordings or source archives are bundled.
+
 The Frozen Zero input-delivery report (checklist 51) remains unresolved; this
 release does not claim a fix for it.
 
