@@ -1,4 +1,46 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.12
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.13
+
+Two-player X + Zero co-op for Windows and Linux. Both netplay peers must update.
+Unified cameras and Stacked lifebars remain the defaults; independent Split
+cameras remain experimental.
+
+### Fixes
+
+- Distant players, enemies and weapon effects no longer wrap onto the other
+  player's independent screen. The intro dragon and its muzzle effect stay
+  with the progressing player's view.
+- Both independent views animate Split Mushroom's rotating staircases.
+- Nova Strike keeps the partner's camera steady. Independent HUDs appear
+  during ordinary simultaneous arrivals.
+- The camera stays put during a team wipe, and latches account for a dead
+  partner. Weapon sprites no longer show the reported horizontal seams.
+- P2 joins Jet Stingray's bike entrance with its native animation, slightly
+  behind P1, with one shared READY announcement.
+
+### Optional co-op settings
+
+- **Boss doors: Both players** — wait for both living, present players to
+  touch a boss door. **Either player** remains the default.
+- **Fight Double and Iris** — after the campaign's usual fight, return to
+  the inner boss door for the other encounter, then continue P1's story.
+  Off by default.
+- **Co-op boss scaling** — double effective boss health and shorten shared
+  hit cooldowns. This uses shorter shared cooldowns, not separate timers per
+  player. Off by default.
+
+The fixes have targeted original-disc gameplay checks, including paired LAN
+camera tests. The new boss options have native fight/defeat checks and save,
+load and rewind coverage. This release does not claim fixes for the parked
+online startup reports or every previously reported staircase issue.
+
+For a bug report, quit normally and zip the complete `saves/diagnostics` folder
+beside the executable or AppImage. Keep Playtest Diagnostics enabled and include
+a video when possible. Existing memory-card saves remain your campaign saves;
+use save states made with this release.
+
+See the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.12
 
 Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
 Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
