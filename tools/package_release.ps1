@@ -157,6 +157,16 @@ if (-not (Test-Path (Join-Path $BiosSrc "openbios.bin"))) {
 Copy-Item -Recurse -Force $BiosSrc (Join-Path $Stage "bios")
 Copy-Item (Join-Path $Root "README.md") $Stage
 Copy-Item (Join-Path $Root "LICENSE") $Stage
+Copy-Item (Join-Path $Root "THIRD_PARTY_NOTICES.md") $Stage
+Copy-Item (Join-Path $Root "DISC.md") $Stage
+Copy-Item -LiteralPath (Join-Path $Root "docs") -Destination (Join-Path $Stage "docs") -Recurse
+$NoticeStage = Join-Path $Stage "licenses"
+Copy-Item -LiteralPath (Join-Path $FrameworkRoot "runtime/licenses") -Destination $NoticeStage -Recurse
+Copy-Item -LiteralPath (Join-Path $FrameworkRoot "LICENSE") -Destination (Join-Path $NoticeStage "psxrecomp-LICENSE")
+Copy-Item -LiteralPath (Join-Path $FrameworkRoot "THIRD_PARTY_ATTRIBUTION.md") -Destination $NoticeStage
+Copy-Item -LiteralPath (Join-Path $Root "recomp-ui/LICENSE") -Destination (Join-Path $NoticeStage "recomp-ui-LICENSE")
+Copy-Item -LiteralPath (Join-Path $Root "recomp-ui/src/third_party/imgui/LICENSE.txt") -Destination (Join-Path $NoticeStage "imgui-LICENSE.txt")
+Copy-Item -LiteralPath (Join-Path $FrameworkRoot "lib/recomp-net/LICENSE") -Destination (Join-Path $NoticeStage "recomp-net-LICENSE")
 if (Test-Path (Join-Path $Root "RELEASE_NOTES.md")) {
     Copy-Item (Join-Path $Root "RELEASE_NOTES.md") $Stage
 }
@@ -170,6 +180,9 @@ if (-not (Test-Path (Join-Path $AssetsSrc "img"))) {
     throw "recomp-ui launcher assets missing at $AssetsSrc -- was the recomp-ui launcher built (recomp-ui junction present)?"
 }
 Copy-Item -Recurse -Force $AssetsSrc (Join-Path $Stage "assets")
+foreach ($AssetKind in @('fonts', 'img')) {
+    Copy-Item -LiteralPath (Join-Path $Root "recomp-ui/assets/common/$AssetKind/NOTICE.md") -Destination (Join-Path $Stage "assets/$AssetKind/NOTICE.md")
+}
 $fontCount = (Get-ChildItem (Join-Path $Stage "assets/fonts") -Filter *.ttf -ErrorAction SilentlyContinue).Count
 $imgCount  = (Get-ChildItem (Join-Path $Stage "assets/img")   -Filter *.tga -ErrorAction SilentlyContinue).Count
 Write-Host "Bundled recomp-ui launcher assets: $fontCount font(s) + $imgCount image(s)"

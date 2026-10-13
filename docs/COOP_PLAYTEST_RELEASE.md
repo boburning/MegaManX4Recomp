@@ -1,4 +1,30 @@
-# Co-op playtest 10
+# Co-op playtest 13
+
+[Published release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.13)
+with Windows ZIP and Linux x86_64 AppImage. Includes checklist57-66 and68:
+survivor latches, death-camera hold, weapon seams, bike arrivals, optional door
+policy, both story bosses, boss scaling, independent stairs/Nova/HUD fixes,
+intro flyby placement and distant-sprite wrap rejection.
+
+Unified and Stacked remain defaults. Extra boss fights and scaling default off;
+Both-player door admission is optional. Split remains experimental. Both peers
+must use the same release. Parked reports retain their existing limits.
+
+Compiled source `f459bf0`, framework `9bd4c20f9a7789d4d56f85a3ac44096403710776`, UI `06fd73e7cbcf0fd944148c8ccffec1edf729f3ab`.
+Production validation: 34 Windows / 28 Linux title checks, packaged hidden
+launchers, eight matching complete option offers, matching execution and co-op
+identities, AppImage layout and portable startup logs. Development controls
+are disabled. GitHub asset sizes and SHA256 digests match the local packages.
+
+| Asset | SHA256 |
+| --- | --- |
+| `MegaManX4Recomp-v0.1.1-coop-playtest.13-linux-x86_64.AppImage` | `3ea4326d99ed7d5228deb2f91465f72363544c6ee23c08d33a0e004bac0b4afc` |
+| `MegaManX4Recomp-v0.1.1-coop-playtest.13-windows-x64.zip` | `353aa60b0d3951bd1aebc58e51a58fe7cc87c7e3c47e17f360d9c266dc897c54` |
+
+Private receipts: `build-pr23/release13-qa/release-receipt-final.json` and
+`publication.json`. Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 10
 
 Version: [`v0.1.1-coop-playtest.10`](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.10), published Windows ZIP and Linux x86_64
 AppImage. Includes special-weapon texture origins (`1147b6a`), safe host texture

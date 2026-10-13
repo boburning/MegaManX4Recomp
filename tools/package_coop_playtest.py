@@ -58,8 +58,20 @@ def main():
         shutil.copy2(binary / "bios" / name, stage / "bios" / name)
     for name in ("game.toml", "input.ini", "START_HERE.txt"):
         shutil.copy2(ROOT / "packaging/release" / name, stage / name)
-    for name in ("README.md", "LICENSE", "RELEASE_NOTES.md"):
+    for name in ("README.md", "LICENSE", "RELEASE_NOTES.md", "THIRD_PARTY_NOTICES.md", "DISC.md"):
         shutil.copy2(ROOT / name, stage / name)
+    shutil.copytree(ROOT / "docs", stage / "docs")
+    # The root MIT license does not replace the framework's or libraries' terms.
+    shutil.copytree(framework / "runtime/licenses", stage / "licenses")
+    for source, name in ((framework / "LICENSE", "psxrecomp-LICENSE"),
+                         (framework / "THIRD_PARTY_ATTRIBUTION.md", "THIRD_PARTY_ATTRIBUTION.md"),
+                         (ROOT / "recomp-ui/LICENSE", "recomp-ui-LICENSE"),
+                         (ROOT / "recomp-ui/src/third_party/imgui/LICENSE.txt", "imgui-LICENSE.txt"),
+                         (framework / "lib/recomp-net/LICENSE", "recomp-net-LICENSE")):
+        shutil.copy2(source, stage / "licenses" / name)
+    for asset in ("fonts", "img"):
+        shutil.copy2(ROOT / "recomp-ui/assets/common" / asset / "NOTICE.md",
+                     stage / "assets" / asset / "NOTICE.md")
     shutil.copy2(binary / "psx_game_version.txt", stage / "psx_game_version.txt")
     run(sys.executable, gate, "stage-mods", "--build-path", binary,
         "--stage", stage, "--catalog-manifest", build / "psx_mod_catalog_psx-runtime.txt")
