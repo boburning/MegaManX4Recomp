@@ -7,6 +7,7 @@
 #include "sio.h"
 #include "mmx4_coop_assets.h"
 #include "mmx4_coop_memory.h"
+#include "mmx4_coop_texture_cache.h"
 #include "mmx4_coop_internal.h"
 #include "mmx4_diagnostics.h"
 #include "mmx4_coop_debug_protocol.h"
@@ -820,20 +821,40 @@ static uint16_t sprite_bank(unsigned character,uint32_t table,unsigned frame,uin
     CharacterAssets *a=&assets[character];uint8_t colors[32];
     unsigned variant=character?2u:x_variant;
     const Mmx4Asset *body=character_compressed(character);
-    if(table<a->sprites || table-a->sprites>=body->size || clut<0x7800)return 0;
+    if(table<a->sprites || table-a->sprites>=body->size || clut>=0x8000)return 0;
     size_t offset=table-a->sprites;
     if(frame*4+4>body->size-offset)return 0;
     uint32_t packed=le32(body->data+offset+frame*4),source=table+(packed&0xFFFFF);
-    unsigned tiles=packed>>20;size_t pal=(size_t)(clut-0x7800)*32;
-    if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=body->size || pal+32>0x1000)return 0;
-    capture(character_palette(character)+(uint32_t)pal,colors,sizeof colors);
+    unsigned tiles=packed>>20;
+    if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=body->size)return 0;
+    if(clut>=0x7800 && clut<0x7880) {
+        capture(character_palette(character)+(uint32_t)(clut-0x7800)*32,colors,sizeof colors);
+    }else {
+        /* Capsule upgrade effects reuse character geometry with shared
+         * animation CLUTs (e.g.78C0). Those colors are outside the private
+         * character bank and must come from the native GPU palette. */
+        const uint16_t *vram=gpu_get_vram();
+        for(unsigned i=0;i<16;++i) {
+            uint16_t color=vram[(unsigned)clut*16+i];
+            colors[i*2]=(uint8_t)color;colors[i*2+1]=(uint8_t)(color>>8);
+        }
+    }
     for(unsigned i=0;i<*count;++i)if(cache[i].variant==variant && cache[i].source==source &&
         cache[i].tile==tile && !memcmp(cache[i].colors,colors,32))return cache[i].id;
-    if(*count==4096)return 0;
-    uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xA000u:0x6000u)+*count);
+    unsigned slot=mmx4_coop_texture_cache_slot(*count,
+        psx_mod_local_view_scope()?0xA000u:0x6000u,
+        psx_mod_read_word(0x80141BD8u),arena,hud_arena,psx_mod_read_word);
+    if(slot>=4096)return 0;
+    uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xA000u:0x6000u)+slot);
     SpriteBank bank={source,id,tile,(uint16_t)tiles,(uint8_t)variant,{0}};memcpy(bank.colors,colors,32);
+    /* Forget drains queued GL work before reusing an unreferenced ID. Both
+     * DMA buffers remain pinned; saved cache entries still reconstruct every
+     * ID needed by restored packets, without changing the snapshot format. */
+    if(slot<*count && !psx_mod_forget_texture_bank_range(id,1))return 0;
     if(!define_sprite_bank(&bank))return 0;
-    cache[(*count)++]=bank;return id;
+    cache[slot]=bank;
+    if(slot==*count)++*count;else psx_mod_counter_add("mmx4.coop.sprite-cache-reuses",1);
+    return id;
 }
 static void triangle(uint32_t dst,uint32_t next,const uint32_t *q,unsigned a,unsigned b,unsigned c,uint16_t bank) {
     unsigned v[3]={a,b,c};psx_mod_write_word(dst,0x09000000u|(next&0xFFFFFF));
@@ -880,11 +901,17 @@ static uint16_t ui_tile(unsigned character,uint16_t page,uint16_t clut,uint16_t 
         UiBank *b=&cache[i];
         if(b->character==character && b->page==page && b->clut==clut && b->uv==uv && !memcmp(b->colors,colors,32))return b->id;
     }
-    if(*count>=4096)return 0;
-    uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xB000u:0x8000u)+*count);
+    unsigned slot=mmx4_coop_texture_cache_slot(*count,
+        psx_mod_local_view_scope()?0xB000u:0x8000u,
+        psx_mod_read_word(0x80141BD8u),arena,hud_arena,psx_mod_read_word);
+    if(slot>=4096)return 0;
+    uint16_t id=(uint16_t)((psx_mod_local_view_scope()?0xB000u:0x8000u)+slot);
     UiBank bank={page,clut,uv,id,{0},character};memcpy(bank.colors,colors,32);
+    if(slot<*count && !psx_mod_forget_texture_bank_range(id,1))return 0;
     if(!define_ui_bank(&bank))return 0;
-    cache[(*count)++]=bank;return id;
+    cache[slot]=bank;
+    if(slot==*count)++*count;else psx_mod_counter_add("mmx4.coop.ui-cache-reuses",1);
+    return id;
 }
 static int world_draw_visible(void) {
     /* Room setup commits mode6 before initializing the primary body. The

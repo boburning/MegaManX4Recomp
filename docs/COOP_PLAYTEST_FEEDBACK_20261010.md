@@ -57,7 +57,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 49 | [ ] | X's charge/release shows no travelling shot on the Mushroom staircase | **Bounded native attempt complete; exact report unreproduced and deferred.** IMG_0786.mov shows a charge effect ending around00:07.02 and a right-facing buster pose without a clear travelling shot; both bodies/HUD groups remain. QA113 visibly produces ordinary and three charged X/P1 shots on green and purple stairs. QA114 produces ordinary and three charged X/P2 shots on purple second-section stairs; its development-induced first-section hurt lock is excluded. No damage claim or exact-recording replay is possible from the empty ZIPs. Keep separate from floating stairs/elevator reports and leave unchecked. `beads-nbnc` |
 | 50 | [x] | Special weapons still have glitched graphics in Playtest 9 | **Fixed in source; not yet published.** `Boss weapons glitched.zip` reproduces invisible/malformed special-weapon sprites. Compressed private textures were sampled using the native VRAM allocation's row offset. Emitting those sprites with a temporary local tile origin fixes their appearance, preserving all 5,755 original input/state checks. The P2 native weapon-cycle regression passes18 attacks; all31 Windows title checks pass. Remaining charge-glow, Aiming Laser and charged wind/gravity shapes also occur with co-op disabled; do not classify them as this co-op regression. Item31's prior fix covered the reused buster failure. `beads-eio.9.72` |
 | 51 | [ ] | Zero stops moving near the top of Mushroom's second rotating staircase | **Gameplay lock not reproduced; input delivery remains open.** `Frozen Zero.zip` replays all 14,704 input/state checks on the published executable. The [video](https://youtu.be/y5omzTrBHLE) and trace agree: the final 1,135 boundaries contain 1,129 neutral P2 inputs and six Start inputs, with no movement buttons reaching the recorded controller state. In a separate development replay retaining every original hash check, Zero ends alive with31HP and immediately walks/jumps when P2 inputs are injected. This does not establish why the tester's controller stopped delivering movement. Separate from item36's reported stair-height issue. `beads-eio.9.73` |
-| 52 | [ ] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **Reviewed and deferred behind items50/51.** The three October12 clips and `metadata.zip` contain useful evidence:15 local recordings,12 save-state baselines and complete archive CRC checks; only the three startup logs are empty (the logging defect is fixed in9 under item48). Intro Eregion and the Jungle capsule sequence lose P2's body and HUD; the later waterfall clip loses visible bodies while both HUD groups remain. These are not proven duplicates of item31, so do not mark them fixed from the videos alone. Their replay qualification remains queued. `beads-eio.9.74` |
+| 52 | [ ] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **Intro and capsule fixed in source; waterfall transition lock reproduced and open.** Intro exhausts the 4,096-entry sprite cache, disabling co-op while X/P2 has27HP. Capsule effects use shared CLUT78C0, which the compressed-sprite path rejected. The fixes safely recycle unused texture IDs and read shared animation palettes. Both recordings reach their original failure boundaries with P2 retained; follow-up movement and save/load checks pass. At the waterfall P1 is dead and living P2 stalls in the scripted section-exit walk; this is separate from renderer shutdown. `beads-eio.9.74` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -255,16 +255,34 @@ X2096.8125/Y189 toX2162.3125/Y173; Jump then reachesY153.43. No collision or
 staircase workaround is warranted by this evidence. The cause of the missing
 controller input remains open.
 
-Item52's Playtest8 material is retained at lower priority as requested:
+Item52's Playtest8 material was initially deferred, then qualified after the
+owner requested continuation. The original executable verifies all7,876 intro,
+7,379 capsule and6,720 waterfall input/state checks. None of these recordings
+contains P2 Select withdrawal input.
 
 | Clip | Observation | Assessment |
 | --- | --- | --- |
-| `2026-10-12 17-31-15.mp4` (43.37s) | X/P2 and its HUD disappear around23-24s during the intro Eregion fight; Zero/P1 remains through the post-fight dialogue. | Not proven covered by item31; queue replay qualification. |
-| `2026-10-12 17-34-40.mp4` (32.43s) | Jungle capsule sequence in Zero's campaign leaves only Zero/P1 and its HUD after the room restarts. | Keep distinct from temporary story hiding; final partner loss remains unqualified. |
-| `2026-10-12 17-39-37.mp4` (16.79s) | At the waterfall passage, neither body remains visible while both HUD groups persist; P1's health is empty. | Distinct from complete co-op/HUD removal; camera/lifecycle cause is not established. |
+| `2026-10-12 17-31-15.mp4` (43.37s) | X/P2 and its HUD disappear around23-24s during the intro Eregion fight; Zero/P1 remains through the post-fight dialogue. | Reproduced cache exhaustion:4,096 sprite banks, failure8 at frame11796. Fixed in source; P2 remains active and moves after this boundary. |
+| `2026-10-12 17-34-40.mp4` (32.43s) | Jungle capsule sequence in Zero's campaign leaves only Zero/P1 and its HUD after the room restarts. | Reproduced rejected shared palette78C0 at2,911 banks, independently of exhaustion. Fixed in source; both sprites remain after the upgrade sequence. |
+| `2026-10-12 17-39-37.mp4` (16.79s) | At the waterfall passage, neither body remains visible while both HUD groups persist; P1's health is empty. | Reproduced: P1 HP0, P2 HP11, enrollment1/failure0. P2 stalls atX6360.5/Y427 in scripted action21 at the section0 exit, with cameraX6048. Camera/lifecycle cause under investigation. |
 
 `metadata.zip` passes all CRC checks and contains15 local sessions with cards,
 settings and input traces, including12 save-state baselines. Its three empty
 startup logs are the known Playtest8 logging defect corrected in9 (item48).
-The recordings are useful; gameplay reports are deferred to preserve the
-current special-weapon/input investigation, not discarded as unlogged.
+The two new rendering fixes are distinct from item31's stale buster pointer.
+Textures already live in host memory; the exhausted resource was a4,096-ID
+lifetime cache. Full pools now recycle only IDs absent from both world and HUD
+packet buffers. Pending GL work drains before a recycled ID is redefined.
+Victim selection uses saved guest memory, preserving the snapshot layout and
+deterministic reconstruction. Capsule effects outside the private character
+palette use their authored native VRAM palette.
+
+Fixed-source inspection retains the recordings' original checks until the
+expected first differences at intro input5124/frame11796 and capsule
+input5785/frame5413. These are changed gameplay outcomes, not claims that the
+entire buggy recording still matches. Separate follow-up control tests keep
+both bodies, exercise P2 movement/jump, and successfully save/load. Intro
+observes404 cache reuses; inspected before/jump/restored captures retain both
+sprites. All30 title checks in this debug configuration pass, including20,000
+safe replacements across the four texture pools and restored-packet retention.
+The fixes are not yet in a public release. The waterfall lock remains open.
