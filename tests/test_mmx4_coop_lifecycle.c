@@ -318,6 +318,21 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             psx_mod_write_byte(a0,0);
         }
         break;
+    case 0x800D1248:
+        observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        psx_mod_write_word(a0+8,psx_mod_read_word(MMX4_PLAYER+8)+352u*65536u);
+        psx_mod_write_byte(a0+4,1);break;
+    case 0x800D1284: {
+        observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        uint16_t target=(uint16_t)(psx_mod_read_half(MMX4_PLAYER+10)-48);
+        /* Original D12C0 initializes this boundary; D14F8 waits for it. */
+        if(!psx_mod_read_byte(a0+4)) {
+            psx_mod_write_half(0x801419D4u,target);
+            psx_mod_write_byte(a0+4,1);
+        }else if(psx_mod_read_half(0x801419BAu)==target)
+            psx_mod_write_byte(a0+5,1);
+        break;
+    }
     case 0x80036AE4:
         psx_mod_write_byte(MMX4_PLAYER+0xC0,1);psx_mod_write_byte(MMX4_PLAY+0x1C,1);break;
     case 0x80036B18:
@@ -1315,6 +1330,32 @@ int main(void) {
     mmx4_coop_call(&cpu,0x800BD654u,actor,0);
     CHECK(scene_calls==1 && observed_campaign==0 && psx_mod_read_byte(PLAY+0x1D)==8);
     CHECK(p2[0x5C]==12 && psx_mod_read_byte(PLAYER+4)==3 && !projected);
+
+    /* Rescue actors use the committed winner, including a surviving P2.
+     * A living but lagging P1 must not steal the scene either. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned scenario=0;scenario<3;++scenario) {
+        reset();unsigned owner=scenario!=0;
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);
+        second_inventory.character=p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_word(PLAYER+8,3936u<<16);
+        mmx4_coop_enter_second();psx_mod_write_word(PLAYER+8,4544u<<16);mmx4_coop_leave_second();
+        if(scenario==2) {psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);}
+        script_active=1;script_owner=owner;
+        uint32_t expected=owner?4544u:3936u;
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,0);
+        mmx4_coop_call(&cpu,0x800D1248u,actor,0);
+        CHECK(psx_mod_read_word(actor+8)==(expected+352u)*65536u);
+        psx_mod_write_byte(actor+4,0);
+        mmx4_coop_call(&cpu,0x800D1284u,actor,0);
+        CHECK(psx_mod_read_half(0x801419D4u)==expected-48u);
+        psx_mod_write_half(0x801419BAu,(uint16_t)(expected-48u));
+        mmx4_coop_call(&cpu,0x800D1284u,actor,0);
+        CHECK(psx_mod_read_byte(actor+5)==1 && observed_campaign==campaign);
+        CHECK(!projected && psx_mod_read_byte(PLAY+0x43)==campaign);
+        CHECK(psx_mod_read_word(PLAYER+8)==3936u*65536u);
+        if(scenario==2)CHECK(psx_mod_read_byte(PLAYER+4)==3 && !psx_mod_read_byte(PLAYER+0x5C));
+    }
 
     /* Waterfall exit completion belongs to the body sent on the outgoing
      * walk. A dead P1 must not block it, and a subsequently leading partner

@@ -76,6 +76,52 @@ class Scenarios:
                                    y=struct.unpack_from('<i',p,12)[0]/65536))
         return result
 
+    def x_armor(self):
+        """Render each shared armor upgrade on X in either roster.
+
+        The permanent flags are a developer setup, not capsule acquisition.
+        Captures qualify the artwork; the private producer counter guards
+        the missing native armor pass when X is the second player.
+        """
+        self.load(1,0)
+        # Same observed safe ledge used by enemy_activation; x320 is solid.
+        self.r.teleport_both(500,427)
+        self.r.teleport(1,556,427)
+        self.wait('armor-both-grounded',lambda s:all(p['grounded'] for p in s['players']),8)
+        original=self.r.read(0x80172207,2)
+        cases=[]
+        def armor_count():
+            return sum(c['count'] for c in self.r.request('mod_counters')['counters']
+                       if c['name']=='mmx4.coop.x-armor-primitives')
+        try:
+            for flags,arms in ((0,0),(8,0),(1,0),(2,0),(4,1),(4,2),(15,2)):
+                before=armor_count()
+                self.r.write(0x80172207,flags)
+                self.r.write(0x80172208,arms)
+                # P1 receives these bytes at native stage initialization.
+                # A raw PLAYER write can hit a temporary P2 projection and
+                # be discarded when P1's body is restored.
+                if not self.campaign:
+                    self.load(1,0)
+                    self.r.teleport_both(500,427)
+                    self.r.teleport(1,556,427)
+                    self.wait('armor-p1-grounded-%02x-%d'%(flags,arms),
+                              lambda s:all(p['grounded'] for p in s['players']),8)
+                time.sleep(.25)
+                row=self.sample('x-armor-%02x-%d'%(flags,arms),True)
+                body=self.r.players()[self.campaign]
+                assert body[0xa7]==flags and body[0xb8]==arms,(flags,arms,body.hex())
+                after=armor_count()
+                if self.campaign and flags:assert after>before,'Private X armor pass emitted no primitives'
+                if not self.campaign:assert after==before,'P1 armor emitted twice'
+                assert row['campaign']==self.campaign and all(p['hp']>0 for p in row['players']),row
+                cases.append(dict(flags=flags,arms=arms,private_armor_primitives=after-before))
+        finally:
+            self.r.write(0x80172207,original[0]);self.r.write(0x80172208,original[1])
+            if not self.campaign:
+                self.load(1,0)
+        return dict(x_seat=self.campaign,armor_cases=cases)
+
     def enemy_activation(self):
         self.watch_enemy=12
         cases=[]
@@ -1536,7 +1582,7 @@ def main():
     parser.add_argument('--cameras',choices=('unified','split'),default='unified')
     parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','storm_warp', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_visual','cyber_missiles','spider_hole','victory','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

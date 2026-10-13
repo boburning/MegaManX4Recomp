@@ -1242,6 +1242,8 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
         memset(record,0,sizeof *record);record=NULL;
     }
     if(record)owner=record->owner;
+    else if((address==0x800D1248u || address==0x800D1284u) && script_active)
+        owner=script_owner;
     else if(!mmx4_coop_alive(0) && mmx4_coop_alive(1))owner=1;
     else if(address==0x800C2BE0u && mmx4_coop_alive(1) &&
             !(mmx4_coop_solid_contact_bits(actor,0)&8u) &&
@@ -1506,6 +1508,14 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
      * Keep C1390's intact obstacle/contact update outside this projection. */
     psx_mod_register_function_filter_plugin(ID,0x800C165Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C169Cu,scene_actor);
+    /* Intro rescue actors live in the small sprite pool, outside the enemy
+     * and stage-script projections. Their initialization and camera wait
+     * must use the same body that owns the boss victory. Native D12C0 sets
+     * the scroll limit to PLAYER.x-48; D14F8 waits for that exact value.
+     * Reading a dead/lagging P1 puts the limit behind the arena and stalls
+     * the surviving P2's scene indefinitely. Keep story identity canonical. */
+    psx_mod_register_function_filter_plugin(ID,0x800D1248u,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800D1284u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C4EC8u,cyber_flip_query);
     psx_mod_register_function_filter_plugin(ID,0x800C4F40u,cyber_flip_world);
     psx_mod_register_function_filter_plugin(ID,0x80036AE4u,script_command);

@@ -58,6 +58,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 50 | [x] | Special weapons still have glitched graphics in Playtest 9 | **Published in Playtest 10.** `Boss weapons glitched.zip` reproduces invisible/malformed special-weapon sprites. Compressed private textures were sampled using the native VRAM allocation's row offset. Emitting those sprites with a temporary local tile origin fixes their appearance, preserving all 5,755 original input/state checks. The P2 native weapon-cycle regression passes18 attacks; all31 Windows title checks pass. Remaining charge-glow, Aiming Laser and charged wind/gravity shapes also occur with co-op disabled; do not classify them as this co-op regression. Item31's prior fix covered the reused buster failure. `beads-eio.9.72` |
 | 51 | [ ] | Zero stops moving near the top of Mushroom's second rotating staircase | **Gameplay lock not reproduced; input delivery remains open.** `Frozen Zero.zip` replays all 14,704 input/state checks on the published executable. The [video](https://youtu.be/y5omzTrBHLE) and trace agree: the final 1,135 boundaries contain 1,129 neutral P2 inputs and six Start inputs, with no movement buttons reaching the recorded controller state. In a separate development replay retaining every original hash check, Zero ends alive with31HP and immediately walks/jumps when P2 inputs are injected. This does not establish why the tester's controller stopped delivering movement. Separate from item36's reported stair-height issue. `beads-eio.9.73` |
 | 52 | [x] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **All three reproduced, fixed and published in Playtest 10.** Intro exhausted the 4,096-entry sprite cache; capsule effects used a rejected shared palette. Safe texture-ID reuse and shared-palette support preserve P2 through both failures, with follow-up movement and save/load checks passing (`c5ba8de`). The waterfall exit commanded surviving P2 but checked dead P1's position. Binding both phases to the same player lets P2 enter area2 at32HP and move/jump, while P1 stays dead. All30 Windows title checks pass. `beads-eio.9.74` |
+| 53 | [ ] | Playtest 10: entering the intro door as P2 reportedly crashes | Unreproduced in bounded checks. `Metadata 2.zip` has three local recordings and two nonempty startup logs with no explicit fatal error. Its Zero-campaign segment replays18,693 original checks with both players alive. Current native P2-led X-campaign entry reaches the real dragon fight with both visible/healthy; X/P2 survivor entry in Zero's campaign also passes. This does not establish the tester's exact trigger or cover a separate process crash. Keep open; item54 is the reproduced post-victory lock. `beads-eio.9.76` |
+| 54 | [x] | Playtest 10: X alone defeating the intro dragon in Zero's campaign reportedly crashes | Reproduced a post-victory softlock on unchanged Playtest10: native X/P2 kills HP1 Eregion while Zero/P1 remains dead, then action20/gate1 persists for over4,900 frames. Rescue actors44/46 used the corpse position, setting an unreachable camera target. Bind their init/update to the committed scene owner. The fixed native sequence reaches MISSION COMPLETED with Zero's campaign unchanged and P1 still dead; both-campaign ownership regressions and all32 title checks pass. Separate from the earlier WARNING-only report. Fixed locally, not yet published. `beads-eio.9.76`; related deferred `beads-enkq` |
+| 55 | [x] | Playtest 10: X's armor artwork does not update after a capsule in Zero's campaign | The private body renderer omitted native800257BC's acquired-armor pass. Prior Zero/P1-X/P2 capsule evidence retained boot flag8 across save/load but showed unarmored artwork. Include the native armor pass in private texture conversion. Seven armor configurations pass for both X/P1 and X/P2, with inspected armor captures; all32 title checks pass. One P1-owned campaign remains canonical. Fixed locally, not yet published. `beads-eio.9.77` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -304,3 +307,76 @@ exit, and immediately checks X/P2 arriving at32HP, moving and jumping in area2.
 Zero/P1 remains dead throughout; no camera-clamp bypass or forced resurrection
 is applied. Inspected arrival/jump captures show the surviving X. All30 Windows
 title checks pass, including the new exit ownership/commitment regression.
+
+## Metadata 2: intro rescue and acquired armor
+
+The new archive contains three local Playtest10 sessions and two nonempty
+startup logs, with no explicit fatal error. The supplied Zero-campaign baseline
+replays all18,693 retained original input/state checks on the unchanged build.
+Both players survive its intro fight, so that recording does not exercise the
+reported X-only victory. The owner cannot distinguish desktop exit from freeze
+from the secondhand report; those outcomes remain separate.
+
+A bounded native fixture reproduces item54. Zero/P1 dies through the original
+death path; X/P2 crosses the actual intro event and WARNING, then defeats
+HP1 Eregion with native attacks. Unchanged Playtest10 remains in gameplay with
+the scene gate set for over4,900 frames. Sprite-pool rescue actors44/46 read
+the dead P1 body outside the existing enemy/script projections: D12C0 sets
+the camera limit to P1.x-48=3888 while the arena minimum is4444, and D14F8
+waits for that unreachable position. Filtering their D1248/D1284 updates
+through the committed scene owner preserves the canonical campaign while
+using the surviving body. The fixed run reaches mode9/MISSION COMPLETED,
+with Zero's campaign unchanged and P1 still at0HP. Its screenshot was inspected.
+
+Private evidence lives under `build-pr23/qa-playtest10-metadata2/`:
+`inspect-zero-baseline-original`, `zero-alone-victory-2` (old behavior),
+`zero-alone-victory-3/live-pools.json`, and `zero-alone-victory-fixed-1`.
+The private runner disables frequent captures and allows30 seconds without a
+heartbeat because an earlier capture-heavy run hit the host's four-second
+watchdog before the door. That earlier timeout is not evidence of item53,
+and production watchdog behavior is unchanged.
+
+At the owner's request, a second reproduction branches from the tester's
+actual recording: all4,735 original input/state checks pass through the
+pre-door segment, then a saved state preserves both bodies atX3728. The branch
+kills Zero/P1 through native death without repositioning the players and drives
+X/P2 through the event. After X's native boss kill, unchanged Playtest10 remains
+locked for3,666 more frames. Its camera target3680 is below the arena minimum4444,
+confirming the same cause in the tester's state. This is a deliberate change
+after a verified replay prefix, not a claim that the altered continuation
+matches the original recording. Evidence: `recorded-pre-door-branch-1` and
+`recorded-p1-death-old-1`.
+The fixed branch also defeats Eregion. A debug-connection timeout interrupts
+the helper immediately after the kill; its captured post-kill state resumes
+on the final build and reaches MISSION COMPLETED with campaign1 and P1 HP0.
+The final capture was inspected. Evidence: `recorded-p1-death-fixed-1` and
+`recorded-victory-final-1`. Final executable SHA256:
+`467f47498faab53fc58eca42983366bbff3e6a2b53b76a1bba89a18d78db7ce7`.
+
+Item55 has a separate rendering cause. Shared permanent armor flags already
+reach X/P2, including after the previously captured Zero-campaign capsule and
+save/load. The co-op renderer called the native body emitter80024334 but
+omitted acquired-armor emitter800257BC. Include its packets in the same private
+texture conversion, retaining the local compressed tile origin until both
+passes finish. Only the projected P2 body gets this added call; P1's original
+caller already emits armor after its body filter returns. No P2 campaign/save
+record is introduced. The retained
+`x_armor` native scenario covers unarmored X, boots, helmet, body, both arm
+variants and full armor, with captures for visual inspection.
+All seven configurations pass in both rosters. P1's control case uses native
+stage initialization because a direct PLAYER write can land during a temporary
+P2 projection. Inspected full-armor and arm-variant captures show the expected
+armor; the final X-campaign run also passes P2-led native intro entry with
+both players visible and healthy. Evidence: `armor-fixed-1/zero-campaign` and
+`armor-p1-and-door-fixed-2` beneath the same private evidence directory.
+The final build's `armor-p1-final-1` repeats all seven P1 configurations and
+confirms the added private armor pass never runs for P1; its full-armor capture
+was also inspected.
+
+All32 title checks passed together before the final P1 armor guard. The final
+build passes31/32 on its first serial run, with the unchanged redirected-log
+fixture passing its isolated rerun. An earlier parallel run also exceeded the
+startup-log fixture's three-second live-observation deadline before passing
+isolated and full serial reruns. Record these timing failures rather than
+claiming every run was clean. Hook registration and Python syntax checks pass.
+These fixes are local and have not been published in a playtest release.

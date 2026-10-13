@@ -18,6 +18,7 @@ for name in ('exe','bios','disc','game','output'):parser.add_argument('--'+name,
 parser.add_argument('--campaign',type=int,choices=(0,1),default=0)
 parser.add_argument('--dead-seat',type=int,choices=(0,1),default=0)
 parser.add_argument('--entry',choices=('checkpoint','first','race','settled','warning'),default='settled')
+parser.add_argument('--defeat',action='store_true',help='Also defeat HP1 Eregion with native attacks and verify the rescue/selector transition')
 args=parser.parse_args()
 for name in ('exe','bios','disc','game'):setattr(args,name,getattr(args,name).resolve(strict=True))
 campaign=args.campaign;dead=args.dead_seat;run=args.output
@@ -94,6 +95,26 @@ try:
     r.input(0xffdf,survivor);time.sleep(.3);r.release()
     moved=s.sample('survivor-controls-after-warning',True)
     assert moved['players'][survivor]['x']>after['players'][survivor]['x']+5,'Survivor controls stayed locked'
+    if args.defeat:
+        r.fixture(5,1<<survivor)
+        boss=next(p for p in s.enemies() if p['type']==8 and p['hp']>1)
+        r.fixture(6,boss['slot'],1)
+        deadline=time.monotonic()+30
+        while time.monotonic()<deadline:
+            target=next((p for p in s.enemies() if p['slot']==boss['slot'] and p['type']==8),None)
+            if target is None or target['state'][0]==2:break
+            # Observed arena floor/body coordinates; HP setup accelerates
+            # the fight, while only a native attack completes the kill.
+            r.teleport(survivor,max(4452,min(4570,int(target['x'])-64)),
+                       max(310,min(443,int(target['y'])+24)))
+            r.input(0xffdf,survivor);time.sleep(.03);r.release()
+            r.input(0x7fff,survivor);time.sleep(.2);r.release();time.sleep(.12)
+        else:raise TimeoutError('Native survivor attack did not defeat HP1 Eregion')
+        record['after_kill']=s.sample('survivor-native-boss-killed',True)
+        assert record['after_kill']['players'][dead]['hp']==0,'Victory revived the dead seat'
+        record['victory']=s.wait('survivor-intro-victory',lambda v:v['mode'][0] in (3,9),45,True)
+        s.sample('survivor-after-intro-victory',True)
+        assert record['victory']['campaign']==campaign,'Victory changed campaign ownership'
     record.update(status='passed',saw_warning=saw_warning,warning_phases=sorted(warning_phases),saw_native_boss=saw_boss,after_entry=after,after_controls=moved)
 except Exception as error:
     record.update(status='failed',error=f'{type(error).__name__}: {error}')

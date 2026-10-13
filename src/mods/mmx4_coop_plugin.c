@@ -1002,6 +1002,17 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
     uint16_t tile_origin=psx_mod_read_half(actor+0x40);
     if(compressed)psx_mod_write_half(actor+0x40,0);
     guest(cpu,0x80024334,actor,0);
+    /* Native80023E88/80023EA4 draws X's acquired armor after the body.
+     * Its assembly tables use the same compressed frame and tile origin;
+     * include those packets in P2's private-bank conversion below. P1's
+     * original caller still emits its armor after our body filter returns. */
+    if(actor==PLAYER && !character && projected) {
+        uint32_t armor_start=psx_mod_read_word(SCRATCH+0x100);
+        guest(cpu,0x800257BC,actor,0);
+        uint32_t armor_end=psx_mod_read_word(SCRATCH+0x100);
+        if(armor_end>armor_start)psx_mod_counter_add("mmx4.coop.x-armor-primitives",
+            (armor_end-armor_start)/40);
+    }
     if(compressed)psx_mod_write_half(actor+0x40,tile_origin);
     uint32_t end=psx_mod_read_word(SCRATCH+0x100);
     if(end<start || end-base>40000 || (end-start)%40) { failed=4;return; }
