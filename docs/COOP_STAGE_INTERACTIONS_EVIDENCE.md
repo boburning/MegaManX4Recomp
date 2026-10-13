@@ -112,6 +112,63 @@ Spider. The boss's damaging/capturing web actors are different: secondary
 types 22/23 (`8009D74C`/`8009DD40`) have a null solid pointer and use native
 player damage/capture. They are outside the requested enhancement.
 
+### October 13 follow-up — feedback item 56
+
+The supplied `Player 2 Zero wall jump spider shot glitched.zip` contains three
+Playtest10 local recordings and five nonempty startup logs. The longest session,
+`session-1791910357664245`, replays all6,092 retained input/state checks on its
+original compatibility profile. The linked video `fSi_JH0r6HM` agrees with that
+recording's Mushroom section0 and controller display. Private evidence is kept
+under `build-pr23/feedback-web-zero`.
+
+Zero repeatedly alternates Fall7 and WallGrip9 at unchanged XY, including
+frames3837–3863,4695–4747 and4926–4951. The adapter accepted Fall7/FF and
+WallSlide11/FF but rejected the intervening WallGrip9. Original80034968 sets
+action9 and an eight-tick timer while inheriting the rising/falling control
+byte. Original80031B90 abandons the grip if contact disappears; otherwise its
+timer eventually selects WallSlide11. Rejecting the grip therefore creates a
+Fall7/Grip9 loop with zero velocity. The older single-jump check missed this:
+an immediate Jump edge can escape during an accepted Fall7 tick.
+
+Accept WallGrip9 with either inherited1 orFF, for the native X owner and Zero
+partner. Also accept Zero's native double jump6/FF: original80039D9C returns
+to action6 without replacing the falling control byte. X's invalid6/FF and
+the existing scene/death/warp/vehicle guards remain excluded. Geometry,
+contact history, snapshot format and body top/bottom cleanup are unchanged.
+
+The strengthened native probe first requires real side contact to reach
+WallSlide11 and move downward, then checks Jump10's upward/away trajectory.
+It fails on the unchanged Playtest11 debug executable with the same Grip9
+loop. The focused regression also fails against the original web adapter and
+passes the changed source. The probe additionally supports `--top-contact`
+to compare X and Zero falling onto the web.
+
+That comparison exposed the separate top-contact defect: original800931A8
+checks the previous contact's vertical bits and calls80093260 to expire the
+web before its next animation update. The adapter's partner-only history
+never reached that check, so Zero was pushed back above the web repeatedly
+instead of collapsing it as X does. A narrow filter on800931A8 temporarily
+includes the partner's previous vertical bits in that original check, then
+restores the owner's contact byte. It runs the original update exactly once;
+side contact and each player's carry history remain private. Focused tests
+cover top/bottom contact in both rosters, one native expiration, no early
+expiration for side contact, register/owner-history preservation, local-view
+exclusion, recursion and reused shot slots.
+
+Final hidden native runs `native-final-x` and `native-final-zero` each pass
+four cases on executableSHA256
+`4af7617c67e962dc0a6e2f21310167a236ccd79130b37ebcd53555586f0cb301`.
+Both sides reach WallSlide11 with downward motion, then Jump10 with upward
+and away motion. X and Zero each collapse the web and fall through its top
+in17–28 ticks after observing its opening, before its normal timeout; Zero's
+new native expiration counter advances exactly once. Both rosters retain
+HP32. The unchanged Playtest11 native baseline fails sustained side contact
+and independently leaves Zero atY86.789 above a web atY130 during the top
+case. All32 Windows title checks pass. No visible windows or desktop input
+were used. Only generated shard42 changes for the new trusted hook, listed
+in both development and release game configurations. This is source
+qualification for the next release; published Playtest11 remains unchanged.
+
 Lightning Web is player shot type 1, native update `80092F08` (dispatch table
 `800F25D8`). Its opening animation installs solid hitbox `80108800` at `+68`
 and enables `+75` in `800932A0`. The update calls original solid contact
@@ -153,9 +210,10 @@ clears both sets, and the deterministic digest includes every history byte.
 Queries exclude incoming actions 0/1, hidden/dead/vehicle bodies, scene and
 door holds, unknown `+67` movement states, other relevant native holds,
 and local drawing. `+67` is also used for normal airborne movement, so the
-adapter accepts precisely the inspected action/control pairs: Jump 6/1
-(`80034538`), Fall 7/FF (`80034604`), WallJump 10/1 (`800349F4`) and WallSlide
-11/FF (`80034AFC`), plus ordinary control 0. Treating every FF value as a
+adapter accepts the inspected action/control pairs: Jump 6/1
+(`80034538`), Fall 7/FF (`80034604`), WallGrip9 with inherited1/FF
+(`80034968`), WallJump 10/1 (`800349F4`) and WallSlide11/FF (`80034AFC`),
+plus Zero's double jump6/FF (`80039D9C`) and ordinary control0. Treating every FF value as a
 script lock would disable web contact while Zero approaches or slides along
 the anchor. Native `80033B34` requires Jump edge and positive wall-contact
 kind at `+4A`; `800349F4` then starts actual action 10 with upward velocity

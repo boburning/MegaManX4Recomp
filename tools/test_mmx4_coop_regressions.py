@@ -580,7 +580,10 @@ class Scenarios:
         output=self.output/'web-walljump';output.mkdir()
         probe=Probe(self.r,output,self.campaign)
         try:
-            probe.walljump('left')
+            for side in ('left','right'):
+                probe.walljump(side)
+            for seat in (probe.x_seat,probe.zero_seat):
+                probe.top_contact(seat)
             return dict(native_zero_web_walljump=True,campaign=self.campaign,cases=len(probe.cases))
         finally:
             self.r.release()

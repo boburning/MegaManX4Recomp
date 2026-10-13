@@ -14,6 +14,7 @@
 #define RESPONSE 0x8002E294u
 #define CARRY 0x8002E380u
 #define SIDES 0x8002C36Cu
+#define WEB_UPDATE 0x800931A8u
 #define NATIVE_RESULT 0x13579BDFu
 
 int mmx4_coop_web_activate(void);
@@ -27,6 +28,11 @@ static uint8_t ram[0x200000],first[0xE4],second[0xE4];
 static unsigned projected,ready=1,local_scope,hidden[2],allocation_failure;
 static unsigned originals,responses,carries,side_queries,dirty_mirror;
 static unsigned queries,wall_contacts;
+static unsigned web_updates,vertical_expirations;
+static PSXModFunctionFilterCallback web_filter;
+int psx_mod_register_function_filter_plugin(const char *id,uint32_t address,PSXModFunctionFilterCallback fn) {
+    CHECK(!strcmp(id,"mmx4.coop") && address==WEB_UPDATE);web_filter=fn;return 1;
+}
 static uint32_t observed_carry_sides;
 static int script_owner=-1;
 uint8_t psx_mod_read_byte(uint32_t address) {return ram[address&0x1FFFFFu];}
@@ -62,6 +68,7 @@ int mmx4_coop_alive(unsigned seat) {
 void psx_mod_counter_add(const char *name,uint32_t value) {
     if(!strcmp(name,"mmx4.coop.zero-web-queries"))queries+=value;
     else if(!strcmp(name,"mmx4.coop.zero-web-side-contacts"))wall_contacts+=value;
+    else if(!strcmp(name,"mmx4.coop.zero-web-vertical-expirations"))vertical_expirations+=value;
     else if(!strcmp(name,"mmx4.coop.zero-web-body-mirror"))CHECK(value==MIRROR);
     else CHECK(0);
 }
@@ -91,6 +98,14 @@ static void shot_position(int x,int y,int previous_x,int previous_y) {
 static uint32_t native(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4],body=cpu->gpr[5];
     CHECK(mmx4_coop_web_busy());
+    if(address==WEB_UPDATE) {
+        ++web_updates;CHECK(!web_filter(cpu,address));
+        CHECK(psx_mod_read_byte(actor+0x72)&0xCu);
+        /* Native800931A8 selects80093260 for vertical contact. */
+        psx_mod_write_byte(actor+4,4);psx_mod_write_byte(actor+5,0);
+        psx_mod_write_byte(actor+0x75,0);
+        return NATIVE_RESULT;
+    }
     if(address==SOLID) {
         ++originals;CHECK(actor==SHOT && !mmx4_coop_web_contact(cpu,address));
         psx_mod_write_byte(actor+0x72,2);psx_mod_write_byte(actor+0x76,1);
@@ -150,8 +165,10 @@ static void setup(void) {
     psx_mod_write_byte(MMX4_PLAYER+0x5C,32);
     zero_body(first,95,100);zero_body(second,95,100);
     psx_mod_write_byte(SHOT,1);psx_mod_write_byte(SHOT+1,1);psx_mod_write_byte(SHOT+0x75,1);
+    psx_mod_write_byte(SHOT+4,2);
     psx_mod_write_word(SHOT+0x68,WEB_SOLID);shot_position(100,100,100,100);
     originals=responses=carries=side_queries=queries=wall_contacts=0;
+    web_updates=vertical_expirations=0;
     mmx4_coop_web_reset();
 }
 static void contact(CPUState *cpu) {
@@ -167,7 +184,7 @@ static void contact(CPUState *cpu) {
     CHECK(psx_mod_read_word(SHOT+0x68)==WEB_SOLID && psx_mod_read_byte(SHOT+1)==1);
 }
 int main(void) {
-    CPUState cpu={0};CHECK(mmx4_coop_web_activate());setup();
+    CPUState cpu={0};CHECK(web_filter && mmx4_coop_web_activate());setup();
     uint32_t baseline_digest=mmx4_coop_web_digest(2166136261u);
     uint32_t original_fraction=body_word(second,8)&0xFFFFu;
     dirty_mirror=1;contact(&cpu);
@@ -202,26 +219,56 @@ int main(void) {
     CHECK((body_word(second,12)>>16)==62 && second[0x71]==1);
     mmx4_coop_web_forget(SHOT,0);zero_body(second,100,135);second[0x71]=2;contact(&cpu);
     CHECK((body_word(second,12)>>16)==138 && second[0x71]==2);
+    /* Partner vertical contact expires the web on its next native update,
+     * exactly once, in both seat arrangements; owner fields stay private. */
+    for(unsigned owner=0;owner<2;++owner)for(unsigned below=0;below<2;++below) {
+        setup();projected=owner;zero_body(partner(),100,below?135:65);contact(&cpu);
+        uint8_t owner_sides=psx_mod_read_byte(SHOT+0x72),carried=psx_mod_read_byte(SHOT+0x76);
+        CPUState before=cpu;
+        local_scope=1;CHECK(!web_filter(&cpu,WEB_UPDATE));local_scope=0;
+        projected^=1;CHECK(!web_filter(&cpu,WEB_UPDATE));projected^=1;
+        CHECK(web_filter(&cpu,WEB_UPDATE) && web_updates==1 && vertical_expirations==1);
+        CHECK(psx_mod_read_byte(SHOT+4)==4 && !psx_mod_read_byte(SHOT+0x75));
+        CHECK(psx_mod_read_byte(SHOT+0x72)==owner_sides && psx_mod_read_byte(SHOT+0x76)==carried);
+        before.gpr[2]=NATIVE_RESULT;CHECK(!memcmp(&before,&cpu,sizeof cpu));
+        CHECK(!mmx4_coop_web_busy() && !web_filter(&cpu,WEB_UPDATE) && web_updates==1);
+    }
+    setup();contact(&cpu);CHECK(!web_filter(&cpu,WEB_UPDATE)); /* Side contact stays native. */
+    setup();zero_body(second,100,65);contact(&cpu);mmx4_coop_web_forget(SHOT,0);
+    CHECK(!web_filter(&cpu,WEB_UPDATE)); /* Reused slots never inherit contact. */
     /* Active combat poses are normal bodies; native arrivals and shared
      * scripts are excluded before a partner query, with one owner call. */
     setup();second[5]=48;contact(&cpu);CHECK(responses==1);
     /* Native Jump/Fall/WallSlide/WallJump set nonzero movement control.
      * Sustained contact must survive this observed airborne progression. */
     setup();
-    const unsigned airborne[][2]={{6,1},{7,0xFF},{11,0xFF},{10,1}};
-    for(unsigned i=0;i<4;++i) {
+    const unsigned airborne[][2]={{6,1},{7,0xFF},{9,1},{9,0xFF},{11,0xFF},{10,1}};
+    for(unsigned i=0;i<sizeof airborne/sizeof airborne[0];++i) {
         second[5]=(uint8_t)airborne[i][0];second[0x67]=(uint8_t)airborne[i][1];
         contact(&cpu);CHECK(responses==i+1 && (second[0x71]&3u) && second[0x4A]==1);
         CHECK(second[5]==airborne[i][0] && second[0x67]==airborne[i][1]);
     }
-    for(unsigned i=0;i<4;++i) {
+    for(unsigned i=0;i<sizeof airborne/sizeof airborne[0];++i) {
         setup();psx_mod_write_byte(MMX4_PLAYER+5,(uint8_t)airborne[i][0]);
         psx_mod_write_byte(MMX4_PLAYER+0x67,(uint8_t)airborne[i][1]);
         contact(&cpu);CHECK(responses==1);
         setup();second[5]=(uint8_t)airborne[i][0];
-        second[0x67]=(uint8_t)(airborne[i][1]==1?0xFF:1);
+        second[0x67]=2;
         contact(&cpu);CHECK(!responses);
     }
+    /* Native wall grip inherits rising/falling control and must keep contact
+     * until the eight-tick animation completes, in either campaign roster. */
+    for(unsigned owner=0;owner<2;++owner)for(unsigned control=1;control<=0xFF;control+=254) {
+        setup();projected=owner;
+        uint8_t *zero=partner();zero[5]=9;zero[0x67]=(uint8_t)control;
+        for(unsigned tick=0;tick<12;++tick) {
+            zero[0x71]=zero[0x4A]=0;contact(&cpu);
+            CHECK(responses==tick+1 && (zero[0x71]&3u) && zero[0x4A]==1);
+        }
+    }
+    setup();second[5]=6;second[0x67]=0xFF;contact(&cpu);CHECK(responses==1);
+    setup();psx_mod_write_byte(MMX4_PLAYER+5,6);psx_mod_write_byte(MMX4_PLAYER+0x67,0xFF);
+    contact(&cpu);CHECK(!responses); /* X has no native Zero double jump. */
     const unsigned excluded[]={0x67,0x79,0xBC,0xC0,0xC3,0xC4,0xC5};
     for(unsigned i=0;i<sizeof excluded/sizeof excluded[0];++i) {
         setup();partner()[excluded[i]]=0xFF;contact(&cpu);CHECK(!responses && originals==1);

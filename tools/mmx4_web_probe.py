@@ -158,6 +158,15 @@ class Probe:
                 s['last_query']['wall_kind'] > 0, .8, True)
             if not any(w['slot'] == anchor['slot'] for w in touched['webs']):
                 raise AssertionError('The real web expired before the wall-jump input')
+            # The initial wall grip must finish its native eight-tick delay.
+            # An immediate Jump can succeed even when contact is dropped on
+            # every Grip9 tick, leaving Fall7/Grip9 stuck at one position.
+            sliding = self.wait('web-native-wallslide-' + side, lambda s:
+                s['players'][self.zero_seat]['action'] == 11 and
+                s['players'][self.zero_seat]['vy'] < 0 and
+                s['players'][self.zero_seat]['y'] > touched['players'][self.zero_seat]['y'] + 2,
+                .8, True)
+            assert any(w['slot'] == anchor['slot'] for w in sliding['webs']), sliding
             self.r.input(toward & JUMP, self.zero_seat)
             launched = self.wait('web-native-walljump-' + side, lambda s:
                 s['players'][self.zero_seat]['action'] == 10 and
@@ -177,8 +186,38 @@ class Probe:
         assert away, ('No upward/away native wall-jump trajectory', side, launched, trajectory)
         result = dict(side=side, x_seat=self.x_seat, zero_seat=self.zero_seat,
                       real_web=anchor, web_box=web_box, zero_box=zero_box,
-                      setup=[zero_x, zero_y], contact=touched, action10=launched,
+                      setup=[zero_x, zero_y], contact=touched, wallslide=sliding, action10=launched,
                       trajectory=away[0], status='passed')
+        self.cases.append(result)
+        return result
+
+    def top_contact(self, seat):
+        """Both bodies must collapse the real web and fall through its top."""
+        self.fixture_platform()
+        self.r.input(RIGHT, self.x_seat)
+        time.sleep(.025)
+        self.r.release()
+        self.r.input(SQUARE, self.x_seat)
+        time.sleep(.025)
+        self.r.release()
+        opened_row = self.wait('web-top-opened', lambda s: bool(s['webs']), 4, True)
+        anchor = opened_row['webs'][0]
+        web_box = struct.unpack('<bbBB', self.r.read(WEB_SOLID, 4))
+        player_box = struct.unpack('<bbBB', self.r.read(int(opened_row['players'][seat]['solid'], 16), 4))
+        x = round(anchor['x'] + web_box[0] - player_box[0])
+        surface = round(anchor['y'] + web_box[1] - web_box[3])
+        y = surface - player_box[1] - player_box[3]
+        before = self.counters().get('mmx4.coop.zero-web-vertical-expirations', 0)
+        self.r.teleport(seat, x, y - 5)
+        left = self.wait('web-top-fell-through', lambda s:
+            not any(w['slot'] == anchor['slot'] for w in s['webs']) and
+            s['players'][seat]['action'] == 7 and
+            s['players'][seat]['y'] > y + 8, .5, True)
+        assert left['frame'] - opened_row['frame'] < 35, ('Web timed out instead of collapsing on contact', left)
+        if seat == self.zero_seat:
+            assert self.counters().get('mmx4.coop.zero-web-vertical-expirations', 0) == before + 1
+        result = dict(kind='top-contact', seat=seat, character=left['players'][seat]['character'],
+                      opened=opened_row, left=left, collapsed_on_contact=True, status='passed')
         self.cases.append(result)
         return result
 
@@ -244,6 +283,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--scenario', choices=('web', 'train', 'both'), default='web')
     parser.add_argument('--side', choices=('left', 'right', 'both'), default='both')
+    parser.add_argument('--top-contact', action='store_true', help='Also check web collapse when X/Zero land on top')
     parser.add_argument('--owner', choices=('0', '1', 'both'), default='both')
     parser.add_argument('--seconds', type=float, default=2)
     args = parser.parse_args()
@@ -257,6 +297,9 @@ def main():
         if args.scenario in ('web', 'both'):
             for side in ('left', 'right') if args.side == 'both' else (args.side,):
                 probe.walljump(side)
+            if args.top_contact:
+                for seat in (probe.x_seat, probe.zero_seat):
+                    probe.top_contact(seat)
         if args.scenario in ('train', 'both'):
             for owner in (1, 0) if args.owner == 'both' else (int(args.owner),):
                 probe.train_background(owner, args.seconds)
