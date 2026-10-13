@@ -1,4 +1,18 @@
-# Co-op playtest 9
+# Co-op playtest 10
+
+Version: `v0.1.1-coop-playtest.10`, prepared for Windows ZIP and Linux x86_64
+AppImage. Includes special-weapon texture origins (`1147b6a`), safe host texture
+slot reuse and capsule palettes (`c5ba8de`), and the surviving-player waterfall
+exit (`24a1205`). Unified cameras and Stacked lifebars remain defaults; Split
+remains experimental. Both peers must upgrade together.
+
+These fixes were qualified against the supplied diagnostic recordings and
+targeted native checks. The final gameplay build passed 30 Windows title tests.
+Release package qualification and publication are recorded below when complete.
+The Frozen Zero input-delivery report (checklist 51) remains unresolved; this
+release does not claim a fix for it.
+
+## Previous co-op playtest 9
 
 Version: [`v0.1.1-coop-playtest.9`](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.9), published Windows ZIP and Linux x86_64 AppImage.
 Fixes P2/HUD removal caused by reused projectile sprite pointers and empty

@@ -1,4 +1,27 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.9
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.10
+
+Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
+Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
+
+- Fixes private special-weapon graphics sampling the wrong part of their texture.
+- Fixes P2 and the co-op HUD disappearing after exhausting private texture slots.
+  The host texture cache now safely reuses slots that neither player's queued
+  drawing commands reference, including after saving and loading.
+- Fixes P2 disappearing during an upgrade capsule's shared palette effects.
+- Fixes Web Spider's waterfall exit stalling when P1 is dead and P2 reaches it.
+  The surviving player can complete the exit and arrive in the next section.
+
+The reported Frozen Zero problem on Split Mushroom's second rotating staircase
+remains unresolved. Its supplied recording does not reproduce a character-state
+lock; movement inputs are absent during the reported stall. This release does
+not claim to fix the underlying input-delivery problem or every disappearance.
+
+For bug reports, quit normally and zip the complete `saves/diagnostics` folder
+beside the executable or AppImage. Keep Playtest Diagnostics enabled and include
+video when possible. Startup logging fixes from Playtest 9 are included.
+See the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.9
 
 Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
 Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
