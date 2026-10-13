@@ -59,8 +59,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 51 | [ ] | Zero stops moving near the top of Mushroom's second rotating staircase | **Gameplay lock not reproduced; input delivery remains open.** `Frozen Zero.zip` replays all 14,704 input/state checks on the published executable. The [video](https://youtu.be/y5omzTrBHLE) and trace agree: the final 1,135 boundaries contain 1,129 neutral P2 inputs and six Start inputs, with no movement buttons reaching the recorded controller state. In a separate development replay retaining every original hash check, Zero ends alive with31HP and immediately walks/jumps when P2 inputs are injected. This does not establish why the tester's controller stopped delivering movement. Separate from item36's reported stair-height issue. `beads-eio.9.73` |
 | 52 | [x] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **All three reproduced, fixed and published in Playtest 10.** Intro exhausted the 4,096-entry sprite cache; capsule effects used a rejected shared palette. Safe texture-ID reuse and shared-palette support preserve P2 through both failures, with follow-up movement and save/load checks passing (`c5ba8de`). The waterfall exit commanded surviving P2 but checked dead P1's position. Binding both phases to the same player lets P2 enter area2 at32HP and move/jump, while P1 stays dead. All30 Windows title checks pass. `beads-eio.9.74` |
 | 53 | [ ] | Playtest 10: entering the intro door as P2 reportedly crashes | Unreproduced in bounded checks. `Metadata 2.zip` has three local recordings and two nonempty startup logs with no explicit fatal error. Its Zero-campaign segment replays18,693 original checks with both players alive. Current native P2-led X-campaign entry reaches the real dragon fight with both visible/healthy; X/P2 survivor entry in Zero's campaign also passes. This does not establish the tester's exact trigger or cover a separate process crash. Keep open; item54 is the reproduced post-victory lock. `beads-eio.9.76` |
-| 54 | [x] | Playtest 10: X alone defeating the intro dragon in Zero's campaign reportedly crashes | Reproduced a post-victory softlock on unchanged Playtest10: native X/P2 kills HP1 Eregion while Zero/P1 remains dead, then action20/gate1 persists for over4,900 frames. Rescue actors44/46 used the corpse position, setting an unreachable camera target. Bind their init/update to the committed scene owner. The fixed native sequence reaches MISSION COMPLETED with Zero's campaign unchanged and P1 still dead; both-campaign ownership regressions and all32 title checks pass. Separate from the earlier WARNING-only report. Fixed locally, not yet published. `beads-eio.9.76`; related deferred `beads-enkq` |
-| 55 | [x] | Playtest 10: X's armor artwork does not update after a capsule in Zero's campaign | The private body renderer omitted native800257BC's acquired-armor pass. Prior Zero/P1-X/P2 capsule evidence retained boot flag8 across save/load but showed unarmored artwork. Include the native armor pass in private texture conversion. Seven armor configurations pass for both X/P1 and X/P2, with inspected armor captures; all32 title checks pass. One P1-owned campaign remains canonical. Fixed locally, not yet published. `beads-eio.9.77` |
+| 54 | [x] | Playtest 10: X alone defeating the intro dragon in Zero's campaign reportedly crashes | Reproduced a post-victory softlock on unchanged Playtest10: native X/P2 kills HP1 Eregion while Zero/P1 remains dead, then action20/gate1 persists for over4,900 frames. Rescue actors44/46 used the corpse position, setting an unreachable camera target. Bind their init/update to the committed scene owner. The fixed native sequence reaches MISSION COMPLETED with Zero's campaign unchanged and P1 still dead; both-campaign ownership regressions and all32 title checks pass. Separate from the earlier WARNING-only report. Published in [Playtest 11](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.11). `beads-eio.9.76`; related deferred `beads-enkq` |
+| 55 | [x] | Playtest 10: X's armor artwork does not update after a capsule in Zero's campaign | The private body renderer omitted native800257BC's acquired-armor pass. Prior Zero/P1-X/P2 capsule evidence retained boot flag8 across save/load but showed unarmored artwork. Include the native armor pass in private texture conversion. Seven armor configurations pass for both X/P1 and X/P2, with inspected armor captures; all32 title checks pass. One P1-owned campaign remains canonical. Published in [Playtest 11](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.11). `beads-eio.9.77` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -379,7 +379,7 @@ fixture passing its isolated rerun. An earlier parallel run also exceeded the
 startup-log fixture's three-second live-observation deadline before passing
 isolated and full serial reruns. Record these timing failures rather than
 claiming every run was clean. Hook registration and Python syntax checks pass.
-These fixes are included in the Playtest11 release candidate.
+These fixes are published in Playtest11.
 
 The owner's final bounded item53 probe (`build-pr23/qa-playtest11-entry`)
 passes three native Zero-campaign P2-owned entry cases: both players alive,
@@ -388,3 +388,15 @@ that display. Each reaches the live Eregion fight with scene/door gates clear
 and the surviving body healthy and controllable; the dead seat remains dead.
 No desktop crash or entry softlock is reproduced. Item53 stays unchecked,
 and the owner authorized proceeding with Playtest11 on that result.
+
+Playtest11 publication is complete: Windows ZIP, Linux x86_64 AppImage and
+SHA256SUMS are uploaded, with GitHub asset digests verified. Compiled source
+c6d8ea8 includes gameplay fix ef34a19 and is integrated into master.
+Production checks pass32/32 on Windows and26/26 on Linux. Both packaged
+hidden launchers expose two players and Netplay; default/code-enabled room
+offers, execution identity and co-op compatibility profile match across OSes.
+Portable startup logs pass, including three Windows no-console/redirected
+launch modes. Developer controls are off. Item53 remains open; publication
+does not turn its bounded non-reproduction into a claimed fix. Private release
+receipts: uild-pr23/release11-qa/release-receipt-final.json and
+uild-pr23/release11-qa/publication.json.
