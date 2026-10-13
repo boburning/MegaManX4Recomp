@@ -391,12 +391,12 @@ and the owner authorized proceeding with Playtest11 on that result.
 
 Playtest11 publication is complete: Windows ZIP, Linux x86_64 AppImage and
 SHA256SUMS are uploaded, with GitHub asset digests verified. Compiled source
-c6d8ea8 includes gameplay fix ef34a19 and is integrated into master.
+`c6d8ea8` includes gameplay fix `ef34a19` and is integrated into `master`.
 Production checks pass32/32 on Windows and26/26 on Linux. Both packaged
 hidden launchers expose two players and Netplay; default/code-enabled room
 offers, execution identity and co-op compatibility profile match across OSes.
 Portable startup logs pass, including three Windows no-console/redirected
 launch modes. Developer controls are off. Item53 remains open; publication
 does not turn its bounded non-reproduction into a claimed fix. Private release
-receipts: uild-pr23/release11-qa/release-receipt-final.json and
-uild-pr23/release11-qa/publication.json.
+receipts: `build-pr23/release11-qa/release-receipt-final.json` and
+`build-pr23/release11-qa/publication.json`.
