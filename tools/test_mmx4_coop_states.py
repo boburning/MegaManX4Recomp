@@ -10,13 +10,16 @@ def main():
     p.add_argument('--campaign',type=int,choices=(0,1),default=0)
     p.add_argument('--ultimate-armor',action='store_true')
     p.add_argument('--black-zero',action='store_true')
+    p.add_argument('--boss-scaling',action='store_true')
+    p.add_argument('--both-story-bosses',action='store_true')
     args=p.parse_args();qa=args.output.resolve();qa.mkdir(parents=True,exist_ok=False)
     original=args.exe.resolve(strict=True);exe=qa/original.name
     shutil.copy2(original,exe)
     for name in ('assets','mods'):shutil.copytree(original.parent/name,qa/name)
     for dll in original.parent.glob('*.dll'):shutil.copy2(dll,qa/dll.name)
     (qa/'mods/state.toml').write_text('format_version = 2\n\n[[feature]]\npackage_id = "mmx4.coop"\nid = "coop"\nenabled = true\n[feature.values]\ncameras = "unified"\nhud_layout = "stacked"\n'
-        f'ultimate_armor_x = {str(args.ultimate_armor).lower()}\nblack_zero = {str(args.black_zero).lower()}\n')
+        f'ultimate_armor_x = {str(args.ultimate_armor).lower()}\nblack_zero = {str(args.black_zero).lower()}\n'
+        f'boss_scaling = {str(args.boss_scaling).lower()}\nboth_story_bosses = {str(args.both_story_bosses).lower()}\n')
     (qa/'settings.toml').write_text('[video]\nrewind = true\nrewind_depth = 50\nrewind_interval = 15\n')
     cfg=args.game.resolve().read_text()
     for section,key,value in [('game','exe',str(Path(__file__).resolve().parents[1]/'mmx4/SLUS_005.61')),('video','internal_resolution','native'),('runtime','memcard_dir',str(qa/'private-cards')),('runtime','overlay_autocompile_cmd','')]:cfg=change_config(cfg,section,key,value)

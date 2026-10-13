@@ -181,6 +181,7 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
     mmx4_coop_bosses_new_stage();
     memset(&second_inventory,0,sizeof second_inventory);
+    mmx4_coop_balance_reset();
     memset(&saved_inventory,0,sizeof saved_inventory);
     memset(pickups,0,sizeof pickups);
     memset(scenes,0,sizeof scenes);
@@ -258,6 +259,7 @@ static void stage_initialization(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
     if(mmx4_coop_projected())return;
     mmx4_coop_bosses_stage_initialization();
+    mmx4_coop_balance_reset();
     direct_initial_spawn=0;
     /* Native 8001FC20 calls 8002A7D0/8002A728 to clear PLAYER before
      * 80035240 initializes it. Capture the prior survivor status here;

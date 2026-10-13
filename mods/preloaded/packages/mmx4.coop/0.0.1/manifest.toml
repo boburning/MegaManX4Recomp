@@ -74,6 +74,14 @@ default = false
 
 [[option]]
 feature = "coop"
+id = "boss_scaling"
+label = "Co-op boss scaling"
+description = "Double effective boss health and shorten shared hit cooldowns. Keeps native boss phases and weakness reactions. Off preserves the original balance. The host chooses for both peers."
+type = "boolean"
+default = false
+
+[[option]]
+feature = "coop"
 id = "ultimate_armor_x"
 label = "Ultimate Armor X code"
 description = "Automatically enable X's native Ultimate Armor code for either player. A capsule still grants the armor. The host chooses for both peers. Works together with Black Zero."

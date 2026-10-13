@@ -252,7 +252,7 @@ static int allocate_actor(CPUState *cpu, uint32_t address) {
     allocation_call=1;
     uint32_t actor=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     allocation_call=0;
-    if (actor) {forget_solid(actor);forget_hit(actor);}
+    if (actor) {forget_solid(actor);forget_hit(actor);mmx4_coop_balance_forget(actor);}
     if(address==0x8002AC0Cu && actor)
         mmx4_coop_web_forget(actor,(unsigned)(mmx4_coop_projected()!=0));
     if(actor>=SECONDARY_POOL && actor<SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE &&
@@ -611,7 +611,9 @@ static void update_actor(CPUState *cpu,uint32_t address) {
         if(psx_mod_read_byte(MMX4_PLAYER+0xBC)) {
             if(psx_mod_read_byte(actor+3))result=mmx4_coop_call(cpu,0x8002B3C0u,actor,0);
         }else {
+            mmx4_coop_balance_begin(actor);
             result=mmx4_coop_call(cpu,function,actor,cpu->gpr[5]);
+            mmx4_coop_balance_end();
             psx_mod_counter_add(target?"mmx4.coop.p2-native-ai":"mmx4.coop.p1-native-ai",1);
         }
         if(target) {

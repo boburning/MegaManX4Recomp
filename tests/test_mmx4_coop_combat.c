@@ -38,6 +38,9 @@ int mmx4_coop_web_busy(void) {return 0;}
 int mmx4_coop_web_contact(CPUState *cpu,uint32_t address) {(void)cpu;(void)address;return 0;}
 void mmx4_coop_web_forget(uint32_t actor,unsigned owner) {(void)actor;(void)owner;}
 void mmx4_coop_web_reset(void) {}
+void mmx4_coop_balance_forget(uint32_t actor) {(void)actor;}
+void mmx4_coop_balance_begin(uint32_t actor) {(void)actor;}
+void mmx4_coop_balance_end(void) {}
 uint32_t mmx4_coop_web_digest(uint32_t seed) {return seed;}
 static uint8_t ram[0x200000];
 static uint8_t scratchpad[1024];

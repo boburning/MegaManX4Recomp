@@ -791,6 +791,7 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         uint32_t actor=0x8013BED0u+first_arg*0x9Cu;
         if(psx_mod_read_byte(actor)) {
             psx_mod_write_byte(actor+0x5C,(uint8_t)second_arg);
+            mmx4_coop_balance_forget(actor);
             psx_mod_write_word(diagnostic+0x54,1);
         }
     }
@@ -1155,6 +1156,7 @@ static uint32_t hash_player(uint32_t hash,const PlayerContext *p) {
 static uint32_t state_digest(void) {
     uint32_t hash=2166136261u;
     hash=mmx4_coop_bosses_digest(hash);
+    hash=mmx4_coop_balance_digest(hash);
     hash=hash_word(hash,split_views);
     hash=hash_word(hash,boss_door_both);
     hash=hash_word(hash,ultimate_armor_x);hash=hash_word(hash,black_zero);
@@ -1247,7 +1249,7 @@ static int snapshot_ready(void) {
         mmx4_coop_web_snapshot_ready() && mmx4_coop_audio_snapshot_ready() &&
         mmx4_coop_split_snapshot_ready() && mmx4_widescreen_snapshot_ready() &&
         mmx4_diagnostics_snapshot_ready() && mmx4_cheats_snapshot_ready() &&
-        mmx4_coop_bosses_snapshot_ready();
+        mmx4_coop_bosses_snapshot_ready() && mmx4_coop_balance_snapshot_ready();
 }
 static void snapshot_player(Mmx4SnapshotIO *s,PlayerContext *player) {
     if(s->mode==MMX4_SNAPSHOT_VALIDATE && s->ok && s->pos<=s->len &&
@@ -1296,8 +1298,9 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x34503458u); /* X4P4, optional boss encounters */
+    mmx4_snapshot_fixed(s,0x35503458u); /* X4P5, optional boss balance */
     mmx4_coop_bosses_snapshot(s);
+    mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
     mmx4_snapshot_fixed(s,boss_door_both);
     mmx4_snapshot_fixed(s,ultimate_armor_x);mmx4_snapshot_fixed(s,black_zero);
@@ -1397,6 +1400,7 @@ static void activate(void) {
     if(!mmx4_coop_split_activate() || !mmx4_coop_web_activate())failed=1;
     mmx4_coop_lifecycle_activate();mmx4_coop_combat_reset();
     mmx4_coop_bosses_activate();
+    mmx4_coop_balance_activate();
     frames=fixture_sequence=fixture_invulnerable=previous_input=0;counterpart=0;menu_texture_owner=2;
 #ifdef MMX4_COOP_NETPLAY_DEBUG
     memset(&development_decoder,0,sizeof development_decoder);
@@ -1436,7 +1440,7 @@ static void activate(void) {
     }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
-    static const PSXModSnapshotProvider snapshot={4,snapshot_bytes,snapshot_write,
+    static const PSXModSnapshotProvider snapshot={5,snapshot_bytes,snapshot_write,
         snapshot_validate,snapshot_read,snapshot_ready};
     psx_mod_register_snapshot_provider(ID,&snapshot);
     psx_mod_register_savestate_plugin(ID,snapshot_resources_restored);
