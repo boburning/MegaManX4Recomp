@@ -1,4 +1,25 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.11
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.12
+
+Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
+Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
+
+- Fixes Zero getting stuck in an animation loop while gripping X's Lightning
+  Web. Zero can slide and wall-jump from either side, with either player order.
+- Fixes Zero staying suspended or sliding across the top of Lightning Web.
+  Vertical contact now collapses the web through its original behavior, as
+  it does for X. Zero's double-jump contact is also preserved.
+
+Both reported problems were reproduced on Playtest 11. The fixed build passes
+eight native gameplay cases covering both player orders, with the supplied
+recording also verified. Earlier unresolved reports retain their documented
+status; this release does not claim to fix every intro-door or staircase issue.
+
+For bug reports, quit normally and zip the complete `saves/diagnostics` folder
+beside the executable or AppImage. Keep Playtest Diagnostics enabled and include
+video when possible. Startup logging fixes from Playtest 9 are included.
+See the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.11
 
 Windows ZIP and Linux x86_64 AppImage. Both peers must use this release.
 Unified cameras and Stacked lifebars remain defaults; Split remains experimental.
