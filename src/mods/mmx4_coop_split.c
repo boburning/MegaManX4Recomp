@@ -47,6 +47,26 @@ static int available(void) {
         psx_mod_read_byte(MMX4_PLAY)==6 &&
         !psx_mod_local_view_scope();
 }
+int mmx4_coop_split_sprite_outside(uint32_t actor) {
+    if(!mmx4_coop_split_views() || !mmx4_coop_ready() ||
+       psx_mod_read_byte(MMX4_PLAY)!=6)return 0;
+    unsigned layer=psx_mod_read_byte(actor+0x14u);
+    if(layer>=3)return 0; /* Screen-relative UI and scripted graphics. */
+    uint32_t camera=CAMERA+layer*0x54u;
+    int x=(int16_t)(psx_mod_read_half(actor+10)-psx_mod_read_half(camera+10));
+    int y=(int16_t)(psx_mod_read_half(actor+14)-psx_mod_read_half(camera+14));
+    int margin=psx_mod_widescreen_x_margin();
+    /* 80024334 and the armor emitter use signed byte assembly offsets and
+     * 16px tiles, including horizontal flips. Keep a conservative 144px
+     * border, then reject before the GPU truncates coordinates to 11 bits.
+     * An actor can remain live/drawable for the other camera; neither its
+     * simulation visibility flag nor its lifetime may be changed here. */
+    return x < -144-margin || x > 320+144+margin || y < -144 || y > 240+144;
+}
+static int draw_armor(CPUState *cpu,uint32_t address) {
+    (void)address;
+    return mmx4_coop_split_sprite_outside(cpu->gpr[4])?mmx4_coop_finish(cpu,0):0;
+}
 void mmx4_coop_split_reset(void) {
     if(!state || mmx4_coop_projected() || psx_mod_local_view_scope())return;
     for(unsigned offset=0;offset<STATE_BYTES;offset+=4)psx_mod_write_word(state+offset,0);
@@ -513,6 +533,7 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800257BCu,draw_armor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B7078u,mushroom_stage_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800BA57Cu,mushroom_stage_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8648u,train_background);

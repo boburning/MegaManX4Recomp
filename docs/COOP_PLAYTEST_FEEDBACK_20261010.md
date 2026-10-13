@@ -71,6 +71,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 63 | [ ] | Optional double boss HP and separate player hit cooldowns | Requested, default unchanged; native damage/weakness timer investigation in progress. Owner accepts reduced shared cooldowns if separate cooldowns are impractical. `beads-eio.9.87` |
 | 64 | [x] | LAN independent-camera Mushroom stairs stop animating for P2 | **Reproduced and fixed in source; not released.** Both supplied peer recordings match, including233 full component digests through sim8704. The original controller drives one stair animation from one camera. Each view now keeps its own native animation state; the shared checkpoint controller still runs once. Native two-peer checks pass both seats on both green/purple staircases, with peer state matching through sim9061. Separate from item51's missing controller input and item36's reported floating feet. `beads-eio.9.88` |
 | 65 | [x] | Independent netplay shows unified HUD during arrival; Nova Strike disturbs cameras | **Reproduced and fixed in source; not released.** Supplied `Nova strike netplay individual camera bugs.zip` and [video](https://youtu.be/GXLj0-7lkZw). Native attack34 uses PLAY+1C, also used by scene locks. Distinguish Nova from shared scenes and render private views during ordinary concurrent arrivals. Native LAN checks pass with X in either seat: idle partner camera stays fixed, both private renderers keep advancing, and peers retain matching state through sim5154/4672. `beads-eio.9.89` |
+| 66 | [ ] | Intro dragon appears on both distant independent views; shots only in progressing player's view | `IMG_0890.mov` (5.33s) confirms the dragon at matching screen edges while Zero waits at the start and X advances. The new Opening stage dragon camera and web spider camera wrap around ZIP supplies the matching paired intro recording: X reaches3237 while Zero remains224. Investigate screen-relative effects and far-coordinate wrapping separately; no dragon fix claimed yet. `beads-eio.9.90` |
+| 67 | [ ] | Product-focused co-op README, fresh screenshots and MIT license | **Final action after the next release is published**, per owner. Lead with co-op, show all shipped alpha two-player features, use more actual screenshots and less developer prose, keep download/play instructions brief. Change the project's license to MIT while preserving third-party notices. Queued until release. `beads-eio.9.91` |
+| 68 | [x] | Distant player wraps onto the other Web Spider view | **Reproduced and fixed in source; not released.** Paired Jungle logs from Opening stage dragon camera and web spider camera wrap around ZIP match. Native GPU sprite positions wrap every2048px. Per-view bounds now reject distant world sprites and armor before emission without changing actor visibility/lifetime. Actual composed before/after captures verify both views with either player ahead; all32 checks pass, peer state matches through sim5891, and private rendering preserves RAM/VRAM/devices. `beads-eio.9.92` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -512,3 +515,27 @@ room-offer queries verify distinct agreed settings and preserve offline
 preferences. All32 Windows checks pass. Private receipts are under
 `build-pr23/feedback-qol-20261013/`. None of this follow-up is released yet;
 items62/63 remain open.
+
+2026-10-13 wraparound follow-up (item68): the supplied paired Jungle inputs
+are byte-identical (SHA256
+`6ce411a9a44db635b23db33f537a56aca76a1f0f4c24a57e5763b89327be79fa`).
+At F6236 the players are exactly2048px apart: X1917,1467 and Zero3965,1333.
+The old renderer keeps actors drawable if either view sees them, then submits
+their far screen coordinates to the GPU's signed11-bit position decoder.
+Thus the distant body, weapon effects and enemies can wrap into the other view.
+
+`wrap-before-3` uses native Jungle checkpoint2 and synchronized development
+teleports to observed safe positions1917,1467 and3965,1338. Real composed
+`present_shot` captures show the duplicate characters on both panes.
+`wrap-fixed` repeats those positions and swaps the leading seat: each pane
+shows its own player and nearby enemies without the distant duplicates.
+Both characters retain their world positions and health; peer CRCs match
+through sim5889 before and5891 after, and render isolation checks pass.
+All32 Windows checks pass, including signed offsets, vertical wrapping,
+per-layer cameras, the armor filter, projection and screen-relative exclusions.
+The failed earlier checkpoint0 setup clamped P2 before the lower route loaded
+and is excluded. Hidden-window QA now disables host controller shortcuts only
+in its private settings because development packets can otherwise open F7.
+No player preferences changed. Receipts remain under
+`build-pr23/feedback-qol-20261013/`. The intro dragon remains item66; this
+player-wrap reproduction does not qualify that separate scripted encounter.

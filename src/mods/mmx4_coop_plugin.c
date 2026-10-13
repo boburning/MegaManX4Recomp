@@ -991,6 +991,7 @@ static int coop_hud(CPUState *cpu,uint32_t address) {
     hud_call=0;return mmx4_coop_finish(cpu,result);
 }
 static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned character) {
+    if(mmx4_coop_split_sprite_outside(actor))return;
     uint32_t start=psx_mod_read_word(SCRATCH+0x100),mode=psx_mod_read_word(SCRATCH+0x104);
     /* Native800244D0/8002452C selects static artwork with flags40/20.
      * A reused shot can retain its previous weapon's +38: buster init
@@ -1104,6 +1105,10 @@ static int render(CPUState *cpu,uint32_t address) {
 }
 static int render_owned_effect(CPUState *cpu,uint32_t address) {
     (void)address;
+    if(mmx4_coop_split_sprite_outside(cpu->gpr[4])) {
+        psx_mod_counter_add("mmx4.coop.split-distant-sprite-culled",1);
+        return mmx4_coop_finish(cpu,0);
+    }
     if(rendering || projected || !mmx4_coop_ready() || !world_draw_visible())return 0;
     uint32_t actor=cpu->gpr[4],assembly=psx_mod_read_word(actor+0x3C);
     unsigned vehicle_owner=mmx4_coop_vehicle_effect_owner(actor);

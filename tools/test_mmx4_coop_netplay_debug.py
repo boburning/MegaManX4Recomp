@@ -20,13 +20,21 @@ def tolerate_loading_reads(peer):
     """
     original=peer._request
     def request(cmd, *, allow_error=False, **fields):
-        deadline=time.monotonic()+12
+        deadline=time.monotonic()+45
         while True:
             try:
                 return original(cmd,allow_error=allow_error,**fields)
             except ValidationError as error:
                 if cmd not in ('netplay_status','read_ram','mod_counters') or \
                         'emu busy or frozen' not in str(error) or \
+                        not peer.running() or time.monotonic()>=deadline:
+                    raise
+                time.sleep(.05)
+            except TimeoutError:
+                # A read can also miss the socket deadline during native
+                # loading. Retrying read-only queries cannot double-apply a
+                # developer command; retain the same bounded overall deadline.
+                if cmd not in ('netplay_status','read_ram','mod_counters') or \
                         not peer.running() or time.monotonic()>=deadline:
                     raise
                 time.sleep(.05)
@@ -48,6 +56,10 @@ def main():
     parser.add_argument('--latch-only',action='store_true',help='Qualify the native Mushroom latch and matching peer state')
     parser.add_argument('--stairs-only',action='store_true',help='Qualify independent Mushroom stair animation with the partner ahead')
     parser.add_argument('--nova-only',action='store_true',help='Qualify native Nova Strike camera independence')
+    parser.add_argument('--dragon-only',action='store_true',help='Inspect intro dragon placement in two independent views')
+    parser.add_argument('--wrap-only',action='store_true',help='Inspect distant player sprites around the 2048px GPU boundary')
+    parser.add_argument('--expect-sprite-wrap',action='store_true',help='Capture the old build without the distant-sprite correction')
+    parser.add_argument('--frontend',choices=('headless-opengl','hidden-window'),default='headless-opengl')
     parser.add_argument('--expect-camera-fallback',action='store_true',help='Require the unfixed Nova camera failure in an A/B baseline')
     parser.set_defaults(latency=0, jitter=0, seed=714, delay=2,
                         frontend='headless-opengl', boot_timeout=100, phase_timeout=35)
@@ -71,6 +83,12 @@ def main():
             peer.environment['SDL_AUDIODRIVER'] = 'dummy'
             config=peer.directory/'game.toml'
             config.write_text(change_config(config.read_text(),'video','internal_resolution','native'))
+            # Development packets deliberately use controller chords. In a
+            # hidden SDL window the host save-menu chord otherwise consumes
+            # a packet and pauses the match. Change only these private peers.
+            (peer.directory/'settings.toml').write_text(
+                '[hotkeys]\nrewind_pad = 0\nsave_state_menu_pad = 0\n'
+                'fast_forward_pad = 0\nfast_forward_toggle_pad = 0\n')
         for reservation in reservations:
             reservation.close()
         reservations = []
@@ -80,6 +98,70 @@ def main():
         exercise = Exercise(args, peers, report)
         exercise.boot(args.campaign)
         debug = NetplayDevelopment(ports[2], ports[3])
+        if args.wrap_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            runtime=NetplayRuntime(debug)
+            runtime.fixture(5,3)
+            runtime.fixture(1,1,0,args.campaign)
+            runtime.wait_playable(45,advance_dialogue=True)
+            # The recording is on the lower route after the waterfall. The
+            # original checkpoint loads those camera bounds; teleporting
+            # directly from checkpoint0 is clamped before the room loads.
+            runtime.fixture(3,2)
+            runtime.wait_playable(45,advance_dialogue=True)
+            report['wrap_samples']=samples=[]
+            for reverse in (0,1):
+                runtime.teleport(reverse,1917,1467)
+                runtime.teleport(reverse^1,3965,1338)
+                exercise.wait_ticks(520)
+                row=exercise.split_world_observation('wrap-'+str(reverse));samples.append(row)
+                for peer in peers:
+                    if args.frontend=='hidden-window':
+                        peer.request('present_shot',path=str(args.output/f'wrap-{reverse}-peer{peer.seat}.png'))
+                assert all(s['players'][p]['hp']>0 for s in row['peers'] for p in ('p1','p2')),row
+                assert all(abs(s['cameras'][0]['x']-s['cameras'][1]['x'])>1800 for s in row['peers']),row
+                for s in row['peers']:
+                    culled=s['counters'].get('mmx4.coop.split-distant-sprite-culled',0)
+                    assert bool(culled)!=args.expect_sprite_wrap,('Unexpected distant-sprite guard',culled)
+                exercise.wait_ticks(10)
+                if args.frontend=='hidden-window':
+                    for peer in peers:
+                        assert peer.request('present_shot_seq')['wrote'], 'Composed capture failed'
+                        assert (args.output/f'wrap-{reverse}-peer{peer.seat}.png').is_file()
+                tick=min(peer.status()['tick'] for peer in peers)
+                exercise.checkpoint('Distant player wrap '+str(reverse),tick,min_digests=2)
+            exercise.split_presentation_probe()
+            report.update(status='passed')
+            return
+        if args.dragon_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            runtime=NetplayRuntime(debug)
+            runtime.fixture(5,3)
+            runtime.teleport(0,2850,363)
+            report['dragon_samples']=samples=[]
+            runtime.input(0xffdf,0)
+            try:
+                for i in range(36):
+                    row=exercise.split_world_observation('dragon-'+str(i))
+                    row['pools']=[]
+                    for base,stride,count in ((0x8013bed0,0x9c,48),(0x8013e510,0x70,32),
+                                               (0x8013f328,0x9c,32),(0x80173ca0,0x60,64),
+                                               (0x80169cb8,0x30,4)):
+                        data=runtime.read(base,stride*count)
+                        for j in range(count):
+                            body=data[j*stride:(j+1)*stride]
+                            if body[0] and body[3]:row['pools'].append(dict(address=hex(base+j*stride),body=body.hex()))
+                    samples.append(row)
+                    if args.frontend=='hidden-window' and i%3==0:
+                        for peer in peers:
+                            peer.request('present_shot',path=str(args.output/f'dragon-{i}-peer{peer.seat}.png'))
+                    exercise.wait_ticks(16)
+            finally:runtime.release()
+            exercise.split_presentation_probe()
+            tick=min(peer.status()['tick'] for peer in peers)
+            exercise.checkpoint('Intro dragon separated cameras',tick,min_digests=2)
+            report.update(status='passed')
+            return
         if args.nova_only:
             from mmx4_netplay_runtime import NetplayRuntime
             runtime=NetplayRuntime(debug)

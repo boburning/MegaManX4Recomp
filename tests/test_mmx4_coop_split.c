@@ -16,7 +16,7 @@ int mmx4_coop_lifecycle_nova_active(void) {return (int)nova_active;}
 static unsigned room_entries,room_owner;
 void mmx4_coop_lifecycle_room_entry(unsigned owner) {++room_entries;room_owner=owner;}
 typedef struct {uint32_t address;PSXModFunctionFilterCallback callback;} Filter;
-static Filter filters[16];static unsigned filter_count;
+static Filter filters[17];static unsigned filter_count;
 static PSXModFunctionEntryCallback spawned;
 uint8_t psx_mod_read_byte(uint32_t address) {return ram[address&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t address,uint8_t value) {ram[address&0x1FFFFFu]=value;}
@@ -36,7 +36,7 @@ uint32_t psx_mod_memory_alloc(uint32_t size,uint32_t alignment) {
     CHECK(size<4096 && alignment==4);return 0x801F0000u;
 }
 int psx_mod_register_function_filter_plugin(const char *id,uint32_t address,PSXModFunctionFilterCallback callback) {
-    CHECK(!strcmp(id,"mmx4.coop") && filter_count<16);
+    CHECK(!strcmp(id,"mmx4.coop") && filter_count<17);
     filters[filter_count++]=(Filter){address,callback};return 1;
 }
 int psx_mod_register_function_entry_plugin(const char *id,uint32_t address,PSXModFunctionEntryCallback callback) {
@@ -468,6 +468,25 @@ static void train_backgrounds(CPUState *cpu) {
 int main(void) {
     CPUState cpu={0};cpu.gpr[29]=0x801FF000u;
     psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAYER,1);
+    /* Far world sprites alias into a view after 11-bit GPU truncation.
+     * Cull using the camera currently being drawn, not both live regions. */
+    actor_position(CAMERA,1900,1200);actor_position(ACTOR,1900+160+2048,1200+120);
+    psx_mod_write_byte(ACTOR+3,1);
+    CHECK(mmx4_coop_split_sprite_outside(ACTOR));
+    cpu.gpr[4]=ACTOR;CHECK(invoke(&cpu,0x800257BCu)==0);
+    CHECK(psx_mod_read_byte(ACTOR+3)==1); /* Still alive/visible to the other seat. */
+    actor_position(CAMERA,3948,1200);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    actor_position(ACTOR,3948+160,1200+120-2048);CHECK(mmx4_coop_split_sprite_outside(ACTOR));
+    actor_position(ACTOR,3948-144,1200-144);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    actor_position(ACTOR,3948+320+144,1200+240+144);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    actor_position(ACTOR,3948+4096,1200);CHECK(mmx4_coop_split_sprite_outside(ACTOR));
+    psx_mod_write_byte(ACTOR+0x14,1);actor_position(CAMERA+0x54,3948+4096,1200);
+    CHECK(!mmx4_coop_split_sprite_outside(ACTOR)); /* Native per-layer camera. */
+    psx_mod_write_byte(ACTOR+0x14,255);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    psx_mod_write_byte(ACTOR+0x14,0);split=0;CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    split=1;local_scope=1;projected=1;CHECK(mmx4_coop_split_sprite_outside(ACTOR));
+    local_scope=projected=0;actor_position(CAMERA,0,0);
+    actor_position(CAMERA+0x54,0,0);
     psx_mod_write_byte(MMX4_PLAYER+4,1);second[0]=second[4]=1;
     psx_mod_write_byte(CAMERA+0x44,1);actor_position(MMX4_PLAYER,100,140);
     second_position(1200,2000);

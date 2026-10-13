@@ -41,6 +41,7 @@ int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]);
 void mmx4_coop_split_scene_camera_end(unsigned owner,const uint8_t canonical[0xFC],int committed);
 void mmx4_coop_split_actors(Mmx4CoopViewActor actors[2]);
 int mmx4_coop_split_camera_copy(unsigned seat,uint8_t layers[0xFC]);
+int mmx4_coop_split_sprite_outside(uint32_t actor);
 void mmx4_coop_split_flip_cameras(void);
 void mmx4_coop_flip_second(void);
 unsigned mmx4_coop_split_view_seat(unsigned seat);
