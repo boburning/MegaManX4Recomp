@@ -36,7 +36,7 @@ static unsigned flip_queries[2],flip_hits[2],flip_world_calls,flip_second_calls,
 static uint8_t p2_solid_bits;
 static uint16_t inputs[2];
 typedef struct { uint32_t address;PSXModFunctionFilterCallback filter; } Filter;
-static Filter filters[32];static unsigned filter_count;
+static Filter filters[64];static unsigned filter_count;
 uint8_t psx_mod_read_byte(uint32_t a) {return ram[a&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t a,uint8_t v) {ram[a&0x1FFFFFu]=v;}
 uint16_t psx_mod_read_half(uint32_t a) {
@@ -52,7 +52,7 @@ void psx_mod_write_word(uint32_t a,uint32_t v) {
     psx_mod_write_half(a,(uint16_t)v);psx_mod_write_half(a+2,(uint16_t)(v>>16));
 }
 int psx_mod_register_function_filter_plugin(const char *id,uint32_t a,PSXModFunctionFilterCallback f) {
-    (void)id;assert(filter_count<32);filters[filter_count++]=(Filter){a,f};return 1;
+    (void)id;assert(filter_count<64);filters[filter_count++]=(Filter){a,f};return 1;
 }
 int psx_mod_register_function_entry_plugin(const char *id,uint32_t a,PSXModFunctionEntryCallback f) {
     (void)id;(void)a;(void)f;return 1;
@@ -306,6 +306,16 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         if(psx_mod_read_word(MMX4_PLAYER+8)>=0x1000000u) {
             mmx4_coop_call(cpu,0x80036AE4u,0x15,0x40);
             psx_mod_write_byte(MMX4_PLAY+0x1D,8);
+        }
+        break;
+    case 0x800C165C:
+        mmx4_coop_call(cpu,0x80036AE4u,0x15,0x40);
+        psx_mod_write_byte(a0+4,4);break;
+    case 0x800C169C:
+        /* Original Jungle variant0 finishes after X6336. */
+        if((int16_t)psx_mod_read_half(MMX4_PLAYER+10)>6336) {
+            psx_mod_write_byte(MMX4_PLAY+0x0F,0x40);
+            psx_mod_write_byte(a0,0);
         }
         break;
     case 0x80036AE4:
@@ -1305,6 +1315,26 @@ int main(void) {
     mmx4_coop_call(&cpu,0x800BD654u,actor,0);
     CHECK(scene_calls==1 && observed_campaign==0 && psx_mod_read_byte(PLAY+0x1D)==8);
     CHECK(p2[0x5C]==12 && psx_mod_read_byte(PLAYER+4)==3 && !projected);
+
+    /* Waterfall exit completion belongs to the body sent on the outgoing
+     * walk. A dead P1 must not block it, and a subsequently leading partner
+     * must not steal an already committed exit. */
+    for(unsigned owner=0;owner<2;++owner) {
+        reset();psx_mod_write_byte(actor,0x41);psx_mod_write_byte(actor+4,3);
+        psx_mod_write_word(PLAYER+8,(owner?5039u:6320u)<<16);
+        mmx4_coop_enter_second();psx_mod_write_word(PLAYER+8,(owner?6320u:5039u)<<16);mmx4_coop_leave_second();
+        if(owner) {psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);}
+        mmx4_coop_call(&cpu,0x800C165Cu,actor,0);
+        CHECK(script_active && script_owner==owner && psx_mod_read_byte(actor+4)==4);
+        mmx4_coop_call(&cpu,0x800C169Cu,actor,0);
+        CHECK(!psx_mod_read_byte(PLAY+0x0F) && psx_mod_read_byte(actor));
+        if(!owner)psx_mod_write_word(PLAYER+8,6360u<<16);
+        mmx4_coop_enter_second();psx_mod_write_word(PLAYER+8,(owner?6360u:6400u)<<16);mmx4_coop_leave_second();
+        mmx4_coop_call(&cpu,0x800C169Cu,actor,0);
+        CHECK(psx_mod_read_byte(PLAY+0x0F)==0x40 && !psx_mod_read_byte(actor));
+        CHECK(!projected && psx_mod_read_byte(PLAY+0x43)==0);
+        if(owner)CHECK(psx_mod_read_byte(PLAYER+4)==3 && !psx_mod_read_byte(PLAYER+0x5C));
+    }
 
     /* Boss doors use C4 directly, not the general C0 script command pair.
      * Independent P2 entry must serialize the native auto-walk once. */

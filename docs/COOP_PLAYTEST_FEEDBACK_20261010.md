@@ -57,7 +57,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 49 | [ ] | X's charge/release shows no travelling shot on the Mushroom staircase | **Bounded native attempt complete; exact report unreproduced and deferred.** IMG_0786.mov shows a charge effect ending around00:07.02 and a right-facing buster pose without a clear travelling shot; both bodies/HUD groups remain. QA113 visibly produces ordinary and three charged X/P1 shots on green and purple stairs. QA114 produces ordinary and three charged X/P2 shots on purple second-section stairs; its development-induced first-section hurt lock is excluded. No damage claim or exact-recording replay is possible from the empty ZIPs. Keep separate from floating stairs/elevator reports and leave unchecked. `beads-nbnc` |
 | 50 | [x] | Special weapons still have glitched graphics in Playtest 9 | **Fixed in source; not yet published.** `Boss weapons glitched.zip` reproduces invisible/malformed special-weapon sprites. Compressed private textures were sampled using the native VRAM allocation's row offset. Emitting those sprites with a temporary local tile origin fixes their appearance, preserving all 5,755 original input/state checks. The P2 native weapon-cycle regression passes18 attacks; all31 Windows title checks pass. Remaining charge-glow, Aiming Laser and charged wind/gravity shapes also occur with co-op disabled; do not classify them as this co-op regression. Item31's prior fix covered the reused buster failure. `beads-eio.9.72` |
 | 51 | [ ] | Zero stops moving near the top of Mushroom's second rotating staircase | **Gameplay lock not reproduced; input delivery remains open.** `Frozen Zero.zip` replays all 14,704 input/state checks on the published executable. The [video](https://youtu.be/y5omzTrBHLE) and trace agree: the final 1,135 boundaries contain 1,129 neutral P2 inputs and six Start inputs, with no movement buttons reaching the recorded controller state. In a separate development replay retaining every original hash check, Zero ends alive with31HP and immediately walks/jumps when P2 inputs are injected. This does not establish why the tester's controller stopped delivering movement. Separate from item36's reported stair-height issue. `beads-eio.9.73` |
-| 52 | [ ] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **Intro and capsule fixed in source; waterfall transition lock reproduced and open.** Intro exhausts the 4,096-entry sprite cache, disabling co-op while X/P2 has27HP. Capsule effects use shared CLUT78C0, which the compressed-sprite path rejected. The fixes safely recycle unused texture IDs and read shared animation palettes. Both recordings reach their original failure boundaries with P2 retained; follow-up movement and save/load checks pass. At the waterfall P1 is dead and living P2 stalls in the scripted section-exit walk; this is separate from renderer shutdown. `beads-eio.9.74` |
+| 52 | [x] | Supplemental Playtest8 intro/capsule/waterfall disappearance reports | **All three reproduced and fixed in source; not yet published.** Intro exhausted the 4,096-entry sprite cache; capsule effects used a rejected shared palette. Safe texture-ID reuse and shared-palette support preserve P2 through both failures, with follow-up movement and save/load checks passing (`c5ba8de`). The waterfall exit commanded surviving P2 but checked dead P1's position. Binding both phases to the same player lets P2 enter area2 at32HP and move/jump, while P1 stays dead. All30 Windows title checks pass. `beads-eio.9.74` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -264,7 +264,7 @@ contains P2 Select withdrawal input.
 | --- | --- | --- |
 | `2026-10-12 17-31-15.mp4` (43.37s) | X/P2 and its HUD disappear around23-24s during the intro Eregion fight; Zero/P1 remains through the post-fight dialogue. | Reproduced cache exhaustion:4,096 sprite banks, failure8 at frame11796. Fixed in source; P2 remains active and moves after this boundary. |
 | `2026-10-12 17-34-40.mp4` (32.43s) | Jungle capsule sequence in Zero's campaign leaves only Zero/P1 and its HUD after the room restarts. | Reproduced rejected shared palette78C0 at2,911 banks, independently of exhaustion. Fixed in source; both sprites remain after the upgrade sequence. |
-| `2026-10-12 17-39-37.mp4` (16.79s) | At the waterfall passage, neither body remains visible while both HUD groups persist; P1's health is empty. | Reproduced: P1 HP0, P2 HP11, enrollment1/failure0. P2 stalls atX6360.5/Y427 in scripted action21 at the section0 exit, with cameraX6048. Camera/lifecycle cause under investigation. |
+| `2026-10-12 17-39-37.mp4` (16.79s) | At the waterfall passage, neither body remains visible while both HUD groups persist; P1's health is empty. | Reproduced: P1 HP0, P2 HP11, enrollment1/failure0. P2 stalls atX6360.5/Y427 because the exit checks dead P1's position. Fixed native replay advances to area2; an immediate survivor-control probe passes. |
 
 `metadata.zip` passes all CRC checks and contains15 local sessions with cards,
 settings and input traces, including12 save-state baselines. Its three empty
@@ -285,4 +285,22 @@ both bodies, exercise P2 movement/jump, and successfully save/load. Intro
 observes404 cache reuses; inspected before/jump/restored captures retain both
 sprites. All30 title checks in this debug configuration pass, including20,000
 safe replacements across the four texture pools and restored-packet retention.
-The fixes are not yet in a public release. The waterfall lock remains open.
+The fixes are not yet in a public release.
+
+The waterfall is a separate scene-ownership defect. At the recorded end,
+destructible exit actor80165F1C (kind6/variant0) is in native state4. C165C
+redirects its outgoing-walk command to surviving P2, but C169C still tests
+the singleton P1's X against6336. Dead P1 is atX5039; P2 has already reached
+X6360. The new filters bind those two phases to the same scene owner while
+leaving the intact obstacle's collision/update path unchanged. Both game
+configurations include the emitted callbacks; regeneration changes one shard.
+
+Fixed native replay first differs at input6052/frame9333 when the exit now
+completes, and reaches section1. The generic two-living-player probe initially
+waited through the survivor's later death before testing a team respawn, so
+that run does not qualify immediate survivor control. A separate hidden probe
+restores the previously verified stuck state, crosses the unchanged native
+exit, and immediately checks X/P2 arriving at32HP, moving and jumping in area2.
+Zero/P1 remains dead throughout; no camera-clamp bypass or forced resurrection
+is applied. Inspected arrival/jump captures show the surviving X. All30 Windows
+title checks pass, including the new exit ownership/commitment regression.

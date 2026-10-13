@@ -1259,7 +1259,8 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
             if(second_hit)owner=1;
         }
     }
-    else if(address==0x800BD654u && mmx4_coop_alive(1) &&
+    else if((address==0x800BD654u || address==0x800C165Cu || address==0x800C169Cu) &&
+            mmx4_coop_alive(1) &&
             (int32_t)psx_mod_read_word(PLAYER+8)<
             (int32_t)((uint32_t)mmx4_coop_second_body()[8]|
                 (uint32_t)mmx4_coop_second_body()[9]<<8|
@@ -1499,6 +1500,12 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C2BE0u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1994u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800BD654u,scene_actor);
+    /* Destructible section exits (Jungle waterfall): bind the outgoing walk
+     * and its completion query to one body. Otherwise C165C redirects the
+     * command to a surviving P2 but C169C waits forever for dead P1's X.
+     * Keep C1390's intact obstacle/contact update outside this projection. */
+    psx_mod_register_function_filter_plugin(ID,0x800C165Cu,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800C169Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C4EC8u,cyber_flip_query);
     psx_mod_register_function_filter_plugin(ID,0x800C4F40u,cyber_flip_world);
     psx_mod_register_function_filter_plugin(ID,0x80036AE4u,script_command);
