@@ -779,3 +779,19 @@ covering either roster, both finished-passenger phases, true owner departures
 and existing team-death behavior. All34 Windows title tests, the focused Linux
 lifecycle test and Python syntax checks pass. Private evidence:
 `build-pr23/feedback-metadata5-20261013/`. This follow-up does not publish a release.
+
+### Playtest 16 release qualification
+
+[Playtest16](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.16)
+packages item73's `6b3f7c2` fix for P1's catch-up teleport incorrectly restarting
+the team at a checkpoint. Production source is `0799cd8`, with debug controls
+disabled. All34 Windows and28 Linux title checks pass. Windows ZIP and Linux
+AppImage hidden launchers pass, all eight native room offers match, and both
+platforms share the same execution identity and co-op profile.
+
+Both fresh packages record181 native inputs with metadata and both cards,
+without overriding the default Diagnostics setting. Portable startup logs
+pass, including Windows launches without a console. Package layout excludes
+game discs and player saves. Uploaded-asset checksums and publication receipts
+are retained privately under `build-pr23/release16-qa/`. Release issue:
+`beads-eio.9.102`. The Gameplay qualification above remains unchanged.
