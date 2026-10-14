@@ -10,13 +10,15 @@
 
 static uint8_t ram[0x200000],second[0xE4],backup[0xE4];
 static unsigned split=1,projected,local_scope,ready=1,capacity=16,allocations,scans;
+static unsigned native_directional_scans,scan_direction;
+static uint32_t native_table=TABLE;
 static int script_owner=-1;
 static unsigned nova_active;
 int mmx4_coop_lifecycle_nova_active(void) {return (int)nova_active;}
 static unsigned room_entries,room_owner;
 void mmx4_coop_lifecycle_room_entry(unsigned owner) {++room_entries;room_owner=owner;}
 typedef struct {uint32_t address;PSXModFunctionFilterCallback callback;} Filter;
-static Filter filters[17];static unsigned filter_count;
+static Filter filters[19];static unsigned filter_count;
 static PSXModFunctionEntryCallback spawned;
 uint8_t psx_mod_read_byte(uint32_t address) {return ram[address&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t address,uint8_t value) {ram[address&0x1FFFFFu]=value;}
@@ -36,7 +38,7 @@ uint32_t psx_mod_memory_alloc(uint32_t size,uint32_t alignment) {
     CHECK(size<4096 && alignment==4);return 0x801F0000u;
 }
 int psx_mod_register_function_filter_plugin(const char *id,uint32_t address,PSXModFunctionFilterCallback callback) {
-    CHECK(!strcmp(id,"mmx4.coop") && filter_count<17);
+    CHECK(!strcmp(id,"mmx4.coop") && filter_count<19);
     filters[filter_count++]=(Filter){address,callback};return 1;
 }
 int psx_mod_register_function_entry_plugin(const char *id,uint32_t address,PSXModFunctionEntryCallback callback) {
@@ -60,6 +62,8 @@ static unsigned mushroom_calls;
 static unsigned stair_calls;
 static int mushroom_x,mushroom_y;
 static unsigned train_calls,train_foreground_calls;
+static unsigned destructible_calls;
+static unsigned jungle_calls,jungle_private_calls;
 int mmx4_coop_combat_actor_context(void) {return (int)actor_context;}
 int mmx4_coop_lifecycle_script_owner(void) {return script_owner;}
 void mmx4_coop_lifecycle_camera_bounds(CPUState *cpu,unsigned owner) {
@@ -101,6 +105,27 @@ static uint32_t invoke(CPUState *cpu,uint32_t address) {
     if(address==0x80028E24u) {
         CPUState saved=*cpu;++scans;
         int x=(int16_t)psx_mod_read_half(CAMERA+10),y=(int16_t)psx_mod_read_half(CAMERA+14);
+        if(native_directional_scans) {
+            /* Original 28E24 scans only the 32px moving edges; 28FEC
+             * applies each record's offset in that movement direction. */
+            int old_x=(int16_t)psx_mod_read_half(CAMERA+0x16);
+            int old_y=(int16_t)psx_mod_read_half(CAMERA+0x1A);
+            if(x!=old_x) {
+                scan_direction=x>old_x?1u:2u;
+                cpu->gpr[4]=(uint32_t)(x+(x>old_x?336:-48));
+                cpu->gpr[5]=(uint32_t)(x+(x>old_x?368:-16));
+                cpu->gpr[6]=(uint32_t)(y-48);cpu->gpr[7]=(uint32_t)(y+288);
+                native_scan(cpu);
+            }
+            if(y!=old_y) {
+                *cpu=saved;scan_direction=y>old_y?3u:4u;
+                cpu->gpr[4]=(uint32_t)(x-48);cpu->gpr[5]=(uint32_t)(x+368);
+                cpu->gpr[6]=(uint32_t)(y+(y>old_y?256:-48));
+                cpu->gpr[7]=(uint32_t)(y+(y>old_y?288:-16));
+                native_scan(cpu);
+            }
+            scan_direction=0;*cpu=saved;return 0;
+        }
         cpu->gpr[4]=(uint32_t)(x-48);cpu->gpr[5]=(uint32_t)(x+368);
         cpu->gpr[6]=(uint32_t)(y-48);cpu->gpr[7]=(uint32_t)(y+288);
         native_scan(cpu);*cpu=saved;return 0;
@@ -116,14 +141,62 @@ static uint32_t invoke(CPUState *cpu,uint32_t address) {
             psx_mod_write_half(MMX4_PLAYER+10,(uint16_t)(minimum+8));
         psx_mod_write_half(CAMERA+10,(uint16_t)x);psx_mod_write_half(CAMERA+14,(uint16_t)y);return 0;
     }
+    if(address==0x800C0D98u) {
+        ++destructible_calls;
+        /* Original finalizer's subtype0 branch releases both maximum-X
+         * halfwords before the shared actor is retired once. */
+        if(!psx_mod_read_byte(actor+2)) {
+            psx_mod_write_half(CAMERA+0x1C,4544);
+            psx_mod_write_half(CAMERA+0x24,4544);
+        }
+        psx_mod_write_byte(actor,0);psx_mod_write_byte(actor+3,0);
+        return 0xABCD1234u;
+    }
     if(address==0x80027D40u || address==0x800281E8u) {
         unsigned layer=address==0x80027D40u?1:2;
         uint32_t background=CAMERA+layer*0x54u;
         psx_mod_write_word(background+20,psx_mod_read_word(background+8));
         psx_mod_write_word(background+24,psx_mod_read_word(background+12));
         if(psx_mod_read_byte(background+4)==5)return 0; /* Native train helpers are no-ops. */
+        if(psx_mod_read_byte(background+4)==2) {
+            psx_mod_write_half(background+10,psx_mod_read_half(CAMERA+10)+psx_mod_read_half(background+0x40));
+            psx_mod_write_half(background+14,psx_mod_read_half(CAMERA+14)+psx_mod_read_half(background+0x42));return 0;
+        }
         psx_mod_write_half(CAMERA+layer*0x54u+10,psx_mod_read_half(CAMERA+10)/2);
         psx_mod_write_half(CAMERA+layer*0x54u+14,psx_mod_read_half(CAMERA+14)/4);return 0;
+    }
+    if(address==0x800D8ED4u) {
+        if(actor>=0x80169CB8u && actor<0x80169D78u)++jungle_calls;
+        else ++jungle_private_calls;
+        if(psx_mod_read_byte(actor+4)>1)return 0;
+        /* Retail D8F10/D8F48/D91A8 and their three phase callbacks. Mode 5
+         * has no ordinary follow update; each phase's initialization takes
+         * one tick before its origin mapping or mode-2 follow takes effect. */
+        if(!psx_mod_read_byte(actor+4)) {
+            psx_mod_write_byte(actor+4,1);psx_mod_write_byte(actor+5,2);
+            psx_mod_write_byte(actor+0x14,3);
+        }
+        unsigned old=psx_mod_read_byte(actor+0x14);psx_mod_write_byte(actor+0x15,(uint8_t)old);
+        int x=(int16_t)psx_mod_read_half(MMX4_PLAYER+10),y=(int16_t)psx_mod_read_half(MMX4_PLAYER+14);
+        unsigned phase=y<=512?(x>=1104):x>=2560?2u:1u;
+        psx_mod_write_byte(actor+0x14,(uint8_t)phase);
+        if(phase!=old){psx_mod_write_byte(actor+5,(uint8_t)phase);psx_mod_write_byte(actor+6,0);}
+        unsigned callback=psx_mod_read_byte(actor+5);
+        uint32_t background=CAMERA+0x54u;
+        if(callback==3)return 0xB8ED4u;
+        if(!psx_mod_read_byte(actor+6)) {
+            psx_mod_write_byte(background+4,(uint8_t)(callback==1?2:5));
+            psx_mod_write_half(background+0x40,(uint16_t)(callback==0?40:callback==1?512:2912));
+            psx_mod_write_byte(actor+6,1);return 0xB8ED4u;
+        }
+        if(callback==1){psx_mod_write_byte(actor+5,3);psx_mod_write_byte(actor+6,0);return 0xB8ED4u;}
+        int cx=(int16_t)psx_mod_read_half(CAMERA+10),cy=(int16_t)psx_mod_read_half(CAMERA+14);
+        int half=callback==0?cx>>1:(int16_t)(cx-2400)>>1;
+        int bx=callback==0?cx+half:half+(half>>1);
+        int by=callback==0?cy:cy-((int16_t)(cy-1280)>>2);
+        psx_mod_write_half(background+10,(uint16_t)(bx+psx_mod_read_half(background+0x40)));
+        psx_mod_write_half(background+14,(uint16_t)(by+(callback==2?psx_mod_read_half(background+0x42):0)));
+        return 0xB8ED4u;
     }
     if(address==0x800D964Cu) {
         ++train_foreground_calls;
@@ -234,12 +307,21 @@ void psx_dispatch_call(CPUState *cpu,uint32_t address,uint32_t caller) {
 static void native_scan(CPUState *cpu) {
     CPUState saved=*cpu;
     for(unsigned index=0;index<8;++index) {
-        uint32_t record=TABLE+index*8u;
+        uint32_t record=native_table+index*8u;
         if(psx_mod_read_byte(record+3)==255)break;
         if(psx_mod_read_byte(record)&0x81u)continue;
         int x=(int16_t)psx_mod_read_half(record+4),y=(int16_t)psx_mod_read_half(record+6);
-        if(x<=(int32_t)saved.gpr[4] || x>=(int32_t)saved.gpr[5] ||
-           y<=(int32_t)saved.gpr[6] || y>=(int32_t)saved.gpr[7])continue;
+        int left=(int32_t)saved.gpr[4],right=(int32_t)saved.gpr[5];
+        int top=(int32_t)saved.gpr[6],bottom=(int32_t)saved.gpr[7];
+        if(native_directional_scans && scan_direction) {
+            unsigned flag=psx_mod_read_byte(record)&0x70u;
+            int offset=flag?psx_mod_read_half(0x800F4332u+(flag>>4)*2u):0;
+            if(scan_direction==1) {left+=offset;right+=offset;}
+            else if(scan_direction==2) {left-=offset;right-=offset;}
+            else if(scan_direction==3) {top+=offset;bottom+=offset;}
+            else if(scan_direction==4) {top-=offset;bottom-=offset;}
+        }
+        if(x<=left || x>=right || y<=top || y>=bottom)continue;
         *cpu=saved;cpu->gpr[19]=record;cpu->gpr[18]=record+3u;
         cpu->gpr[31]=0x8002916Cu;cpu->gpr[4]=psx_mod_read_byte(record+3u);
         cpu->gpr[17]=invoke(cpu,0x800293E8u);
@@ -257,12 +339,274 @@ static void second_position(int x,int y) {
     second[14]=(uint8_t)y;second[15]=(uint8_t)(y>>8);
 }
 static void placement(unsigned index,int x,int y,unsigned category) {
-    uint32_t record=TABLE+index*8u;
+    uint32_t record=native_table+index*8u;
     psx_mod_write_half(record+4,(uint16_t)x);psx_mod_write_half(record+6,(uint16_t)y);
     psx_mod_write_byte(record+3,(uint8_t)category);
 }
 static uint32_t saved_camera(unsigned seat,unsigned layer) {
     return 0x801F0000u+16u+seat*0xFCu+layer*0x54u;
+}
+static void jungle_frame(CPUState *cpu,unsigned owner,uint32_t actor) {
+    mmx4_coop_split_camera_prepare(owner);
+    if(owner)mmx4_coop_enter_second();
+    invoke(cpu,0x80027850u);
+    if(owner)mmx4_coop_leave_second();
+    mmx4_coop_split_camera(cpu,owner);
+    invoke(cpu,0x80027D40u);
+    cpu->gpr[4]=actor;invoke(cpu,0x800D8ED4u);
+}
+static void jungle_backgrounds(CPUState *cpu) {
+    const uint32_t actor=0x80169CB8u,background=CAMERA+0x54u;
+    script_owner=-1;split=ready=1;local_scope=projected=0;
+    psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+1,0);
+    psx_mod_write_byte(MMX4_PLAY+12,1);psx_mod_write_byte(MMX4_PLAY+13,1);
+    psx_mod_write_byte(MMX4_PLAY+0x10,0);psx_mod_write_byte(MMX4_PLAY+0x1C,0);
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);second[0]=second[4]=1;
+    psx_mod_write_half(CAMERA+0x26,0);psx_mod_write_half(CAMERA+0x42,0);
+    psx_mod_write_byte(background+4,5);psx_mod_write_half(background+0x40,40);
+    psx_mod_write_half(background+0x42,0);psx_mod_write_word(background+8,40u<<16);
+    psx_mod_write_word(background+12,256u<<16);
+    actor_position(MMX4_PLAYER,769,843);second_position(1094,954);
+    psx_mod_write_half(CAMERA+10,609);psx_mod_write_half(CAMERA+14,651);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    psx_mod_write_half(saved_camera(1,0)+10,915);psx_mod_write_half(saved_camera(1,0)+14,762);
+    psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,1);psx_mod_write_byte(actor+4,0);
+    cpu->gpr[4]=actor;unsigned calls=jungle_calls,private_calls=jungle_private_calls;
+    CHECK(invoke(cpu,0x800D8ED4u)==0xB8ED4u);
+    CHECK(jungle_calls==calls+1 && jungle_private_calls==private_calls+2);
+    for(unsigned seat=0;seat<2;++seat) {
+        CHECK(psx_mod_read_byte(saved_camera(seat,1)+4)==2);
+        CHECK(psx_mod_read_half(saved_camera(seat,1)+0x40)==512);
+    }
+    /* The actual failing room: P2's native mode-2 follow now draws its
+     * own terrain instead of retaining the opening forest at 40/256. */
+    mmx4_coop_split_camera(cpu,0);invoke(cpu,0x80027D40u);invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+10)==psx_mod_read_half(saved_camera(1,0)+10)+512);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+14)==psx_mod_read_half(saved_camera(1,0)+14));
+    CHECK(psx_mod_read_half(background+10)==psx_mod_read_half(saved_camera(0,1)+10));
+    CHECK(jungle_calls==calls+2 && !projected && mmx4_coop_split_snapshot_ready());
+    /* Separated authored regions keep independent phase/offset state. */
+    actor_position(MMX4_PLAYER,56,139);second_position(3001,1419);
+    psx_mod_write_half(CAMERA+10,0);psx_mod_write_half(CAMERA+14,0);
+    psx_mod_write_half(saved_camera(0,0)+10,0);psx_mod_write_half(saved_camera(0,0)+14,0);
+    psx_mod_write_half(saved_camera(1,0)+10,2841);psx_mod_write_half(saved_camera(1,0)+14,1227);
+    invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(saved_camera(0,1)+0x40)==40);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+0x40)==2912);
+    invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(saved_camera(0,1)+10)==40 && !psx_mod_read_half(saved_camera(0,1)+14));
+    CHECK(psx_mod_read_half(saved_camera(1,1)+10)==3242 && psx_mod_read_half(saved_camera(1,1)+14)==1241);
+    /* Exchange which player leads. Only that view changes controller phase. */
+    actor_position(MMX4_PLAYER,3100,1419);second_position(56,139);
+    psx_mod_write_half(CAMERA+10,2940);psx_mod_write_half(CAMERA+14,1227);
+    psx_mod_write_half(saved_camera(0,0)+10,2940);psx_mod_write_half(saved_camera(0,0)+14,1227);
+    psx_mod_write_half(saved_camera(1,0)+10,0);psx_mod_write_half(saved_camera(1,0)+14,0);
+    invoke(cpu,0x800D8ED4u);invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(saved_camera(0,1)+10)==3317 && psx_mod_read_half(saved_camera(0,1)+14)==1241);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+10)==40 && !psx_mod_read_half(saved_camera(1,1)+14));
+    /* Every native pool slot gets its own pair of phase records. */
+    uint32_t last=actor+3u*0x30u;psx_mod_write_byte(last,1);psx_mod_write_byte(last+1,1);
+    psx_mod_write_byte(last+4,0);cpu->gpr[4]=last;calls=jungle_calls;
+    invoke(cpu,0x800D8ED4u);CHECK(jungle_calls==calls+1);
+    CHECK(psx_mod_read_half(saved_camera(0,1)+0x40)==2912 && psx_mod_read_half(saved_camera(1,1)+0x40)==40);
+    cpu->gpr[4]=actor;
+    /* A surviving P2 owns the canonical selection too; dead P1's distant
+     * position cannot change P2's authored scenery phase. */
+    psx_mod_write_byte(MMX4_PLAYER+4,2);mmx4_coop_split_camera_prepare(1);
+    psx_mod_write_byte(actor+4,0);calls=jungle_calls;private_calls=jungle_private_calls;
+    invoke(cpu,0x800D8ED4u);jungle_frame(cpu,1,actor);jungle_frame(cpu,1,actor);
+    CHECK(jungle_calls==calls+3 && jungle_private_calls==private_calls+3);
+    CHECK(psx_mod_read_half(background+0x40)==40 && psx_mod_read_half(background+10)==40);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+10)==40);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+14)==psx_mod_read_half(saved_camera(1,0)+14));
+    CHECK(psx_mod_read_half(MMX4_PLAYER+10)==3100 && (second[10]|(unsigned)second[11]<<8)==56);
+    psx_mod_write_byte(MMX4_PLAYER+4,1);second[4]=2;mmx4_coop_split_camera_prepare(0);
+    psx_mod_write_byte(actor+4,0);calls=jungle_calls;private_calls=jungle_private_calls;
+    invoke(cpu,0x800D8ED4u);jungle_frame(cpu,0,actor);jungle_frame(cpu,0,actor);
+    CHECK(jungle_calls==calls+3 && jungle_private_calls==private_calls+3);
+    CHECK(psx_mod_read_half(background+0x40)==2912 && psx_mod_read_half(background+10)==3317);
+    CHECK(psx_mod_read_half(saved_camera(0,1)+10)==3317);
+    second[4]=1;
+    /* Dead P2 inherited the far camera, but revives in its original opening
+     * region. Its old phase cannot retain the survivor's offset. */
+    psx_mod_write_half(saved_camera(1,0)+10,0);psx_mod_write_half(saved_camera(1,0)+14,0);
+    invoke(cpu,0x800D8ED4u);invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+0x40)==40 && psx_mod_read_half(saved_camera(1,1)+10)==40);
+    /* Render transactions and unrelated sections leave all cached state
+     * alone. Native shared scenes remain one call and preserve the cameras. */
+    uint32_t digest=mmx4_coop_split_digest(2166136261u);calls=jungle_calls;private_calls=jungle_private_calls;
+    local_scope=1;invoke(cpu,0x800D8ED4u);local_scope=0;
+    CHECK(mmx4_coop_split_digest(2166136261u)==digest && jungle_private_calls==private_calls);
+    psx_mod_write_byte(MMX4_PLAY+13,0);invoke(cpu,0x800D8ED4u);psx_mod_write_byte(MMX4_PLAY+13,1);
+    CHECK(mmx4_coop_split_digest(2166136261u)==digest && jungle_private_calls==private_calls);
+    uint8_t before[2][0xFC],after[0xFC];
+    for(unsigned seat=0;seat<2;++seat)CHECK(mmx4_coop_split_camera_copy(seat,before[seat]));
+    script_owner=0;invoke(cpu,0x800D8ED4u);script_owner=-1;
+    CHECK(jungle_private_calls==private_calls && jungle_calls==calls+3);
+    for(unsigned seat=0;seat<2;++seat) {
+        CHECK(mmx4_coop_split_camera_copy(seat,after));CHECK(!memcmp(before[seat],after,sizeof after));
+    }
+    /* Scene synchronization can copy P1's far-region mode/offset into P2's
+     * opening view. Its phase must initialize again after the scene ends. */
+    psx_mod_write_half(saved_camera(1,0)+10,0);psx_mod_write_half(saved_camera(1,0)+14,0);
+    psx_mod_write_byte(saved_camera(1,1)+4,5);psx_mod_write_half(saved_camera(1,1)+0x40,2912);
+    invoke(cpu,0x800D8ED4u);invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+0x40)==40 && psx_mod_read_half(saved_camera(1,1)+10)==40);
+    /* Checkpoint/section reset discards the prior phases. A late first
+     * encounter at native state1 still initializes this view's mode. */
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    psx_mod_write_byte(saved_camera(1,1)+4,5);psx_mod_write_half(saved_camera(1,1)+0x40,40);
+    psx_mod_write_byte(actor+4,1);psx_mod_write_byte(actor+5,3);psx_mod_write_byte(actor+0x14,2);
+    second_position(1094,954);calls=jungle_calls;
+    invoke(cpu,0x800D8ED4u);
+    CHECK(jungle_calls==calls+1 && psx_mod_read_byte(saved_camera(1,1)+4)==2);
+    CHECK(psx_mod_read_half(saved_camera(1,1)+0x40)==512 && mmx4_coop_split_snapshot_ready());
+}
+static void destructible_camera_unlocks(CPUState *cpu) {
+    uint32_t actor=0x80165A30u+3u*0x8Cu;
+    uint8_t before[2][0xFC];
+    script_owner=-1;split=ready=1;local_scope=projected=0;
+    psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,0);
+    psx_mod_write_byte(MMX4_PLAY+13,0);psx_mod_write_byte(MMX4_PLAY+0x10,0);
+    psx_mod_write_byte(MMX4_PLAY+0x1C,0);
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+    second[0]=second[4]=1;
+    actor_position(MMX4_PLAYER,1367,427);second_position(3288,426);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t shadow=saved_camera(seat,0);
+        psx_mod_write_half(shadow+0x1C,2976);psx_mod_write_half(shadow+0x24,2976);
+        psx_mod_write_half(shadow+0x1E,(uint16_t)(seat*512));
+        psx_mod_write_half(shadow+0x26,(uint16_t)(seat*768));
+        psx_mod_write_half(shadow+10,(uint16_t)(seat?2976:1207));
+        CHECK(mmx4_coop_split_camera_copy(seat,before[seat]));
+    }
+    psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,4);
+    psx_mod_write_byte(actor+2,0);psx_mod_write_byte(actor+3,1);psx_mod_write_byte(actor+4,3);
+    cpu->gpr[4]=actor;unsigned calls=destructible_calls;
+    CHECK(invoke(cpu,0x800C0D98u)==0xABCD1234u);
+    CHECK(destructible_calls==calls+1 && !psx_mod_read_byte(actor));
+    CHECK(psx_mod_read_half(CAMERA+0x1C)==4544 && psx_mod_read_half(CAMERA+0x24)==4544);
+    for(unsigned seat=0;seat<2;++seat) {
+        uint8_t after[0xFC];CHECK(mmx4_coop_split_camera_copy(seat,after));
+        CHECK(psx_mod_read_half(saved_camera(seat,0)+0x1C)==4544);
+        CHECK(psx_mod_read_half(saved_camera(seat,0)+0x24)==4544);
+        for(unsigned offset=0;offset<sizeof after;++offset)
+            if(offset!=0x1C && offset!=0x1D && offset!=0x24 && offset!=0x25)
+                CHECK(after[offset]==before[seat][offset]);
+    }
+    CHECK(psx_mod_read_half(MMX4_PLAYER+10)==1367 && second[10]==(3288&255) && second[11]==(3288>>8));
+    /* 21158 dispatches the door pool before its 27850 camera tick. Saving
+     * P1's ordinary camera and ticking P2 must retain the published release. */
+    invoke(cpu,0x80027850u);mmx4_coop_split_camera(cpu,0);
+    CHECK(psx_mod_read_half(saved_camera(0,0)+0x24)==4544);
+    CHECK(psx_mod_read_half(saved_camera(1,0)+0x24)==4544);
+    mmx4_coop_split_camera_prepare(1);
+    CHECK(psx_mod_read_half(CAMERA+0x1C)==4544 && psx_mod_read_half(CAMERA+0x24)==4544);
+    /* A surviving P2 still receives the shared opening. Other subtypes
+     * finalize without importing canonical limits into either saved view. */
+    psx_mod_write_byte(MMX4_PLAYER+4,2);psx_mod_write_byte(actor,1);
+    psx_mod_write_half(saved_camera(1,0)+0x1C,2976);
+    psx_mod_write_half(saved_camera(1,0)+0x24,2976);
+    CHECK(invoke(cpu,0x800C0D98u)==0xABCD1234u);
+    CHECK(destructible_calls==calls+2 && psx_mod_read_half(saved_camera(1,0)+0x24)==4544);
+    psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+2,3);
+    psx_mod_write_half(saved_camera(1,0)+0x1C,1024);
+    psx_mod_write_half(saved_camera(1,0)+0x24,1024);
+    CHECK(invoke(cpu,0x800C0D98u)==0xABCD1234u);
+    CHECK(destructible_calls==calls+3 && psx_mod_read_half(saved_camera(1,0)+0x24)==1024);
+    CHECK(mmx4_coop_split_snapshot_ready());
+}
+static void four_aligned_placements(CPUState *cpu) {
+    uint32_t table=native_table=0x800F848Cu;
+    split=ready=1;local_scope=projected=0;script_owner=-1;
+    psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,11);
+    psx_mod_write_byte(MMX4_PLAY+13,0);
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+    second[0]=second[4]=1;
+    actor_position(MMX4_PLAYER,360,459);second_position(1000,400);
+    memset(ram+(CAMERA&0x1FFFFFu),0,0xFCu);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t view=saved_camera(seat,0);
+        psx_mod_write_half(view+10,(uint16_t)(seat?840:40));
+        psx_mod_write_half(view+0x16,(uint16_t)(seat?840:40));
+        psx_mod_write_half(view+14,256);psx_mod_write_half(view+0x1A,256);
+    }
+    memset(ram+(table&0x1FFFFFu),0,9u*8u);
+    psx_mod_write_word(0x800F43C8u+11u*8u,table);
+    for(unsigned offset=1;offset<=4;++offset)
+        psx_mod_write_half(0x800F4332u+offset*2u,(uint16_t)(offset*32u));
+    /* The real table is four-byte aligned. First use ordinary unflagged
+     * records to prove table admission independently of scan offsets. */
+    placement(0,944,398,0);placement(1,944,338,0);placement(2,1108,410,0);
+    for(unsigned index=0;index<3;++index) {
+        psx_mod_write_byte(table+index*8u+1,index==2?51:58);
+    }
+    /* Other offsets and script/destructible categories keep native admission. */
+    placement(3,1024,400,0);psx_mod_write_byte(table+24,0x10);
+    placement(4,1024,400,0);psx_mod_write_byte(table+32,0x30);
+    /* Keep this negative inside the supplemental view, outside the native
+     * first strip shifted by128px: (998,1030). */
+    placement(5,992,400,0);psx_mod_write_byte(table+40,0x40);
+    placement(6,1024,400,3);psx_mod_write_byte(table+48,0x20);
+    placement(7,1024,400,4);psx_mod_write_byte(table+56,0x20);
+    psx_mod_write_byte(table+57,4);
+    psx_mod_write_byte(table+8u*8u+3u,255);
+    native_directional_scans=1;allocations=0;capacity=16;
+    invoke(cpu,0x80028E24u);CHECK(allocations==3);
+    /* Actual records from800F84CC/84D4/8514 carry20, a 64px scan offset.
+     * A stationary P1 cannot reach them; only P2's native moving strips do.
+     * Keep the full-view ban on all offset records and scripted categories. */
+    for(unsigned index=0;index<3;++index)psx_mod_write_byte(table+index*8u,0x20);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    psx_mod_write_half(saved_camera(0,0)+10,40);
+    psx_mod_write_half(saved_camera(0,0)+0x16,40);
+    psx_mod_write_half(saved_camera(1,0)+10,534);
+    psx_mod_write_half(saved_camera(1,0)+0x16,526);
+    for(unsigned seat=0;seat<2;++seat) {
+        psx_mod_write_half(saved_camera(seat,0)+14,256);
+        psx_mod_write_half(saved_camera(seat,0)+0x1A,256);
+    }
+    native_directional_scans=1;allocations=0;capacity=0;
+    invoke(cpu,0x80028E24u);CHECK(!allocations);
+    for(unsigned index=0;index<8;++index)
+        CHECK(!(psx_mod_read_byte(table+index*8u)&1u));
+    capacity=16;invoke(cpu,0x80028E24u);CHECK(allocations==2);
+    psx_mod_write_half(saved_camera(1,0)+10,698);
+    psx_mod_write_half(saved_camera(1,0)+0x16,690);
+    invoke(cpu,0x80028E24u);CHECK(allocations==3);
+    for(unsigned index=0;index<8;++index)
+        CHECK((psx_mod_read_byte(table+index*8u)&1u)==(index<3));
+    invoke(cpu,0x80028E24u);CHECK(allocations==3);
+    /* Native retirement clears the live placement flag. The shared visit
+     * latch prevents a second copy when P1 reaches the partner's region. */
+    actor_position(MMX4_PLAYER,1000,400);
+    for(unsigned seat=0;seat<2;++seat) {
+        psx_mod_write_half(saved_camera(seat,0)+10,840);
+        psx_mod_write_half(saved_camera(seat,0)+0x16,832);
+    }
+    invoke(cpu,0x80028E24u);CHECK(allocations==3);
+    for(unsigned index=0;index<3;++index)psx_mod_write_byte(table+index*8u,0x20);
+    invoke(cpu,0x80028E24u);CHECK(allocations==3);
+    for(unsigned seat=0;seat<2;++seat) {
+        psx_mod_write_half(saved_camera(seat,0)+10,3000);
+        psx_mod_write_half(saved_camera(seat,0)+0x16,3000);
+    }
+    invoke(cpu,0x80028E24u);CHECK(allocations==3);
+    psx_mod_write_half(saved_camera(1,0)+10,534);
+    psx_mod_write_half(saved_camera(1,0)+0x16,526);
+    invoke(cpu,0x80028E24u);CHECK(allocations==5);
+    psx_mod_write_half(saved_camera(1,0)+10,698);
+    psx_mod_write_half(saved_camera(1,0)+0x16,690);
+    invoke(cpu,0x80028E24u);CHECK(allocations==6);
+    /* A subsequent native movement strip still admits the unchanged10
+     * offset normally. It is excluded only from the supplemental scan. */
+    psx_mod_write_half(saved_camera(1,0)+10,640);
+    psx_mod_write_half(saved_camera(1,0)+0x16,632);
+    invoke(cpu,0x80028E24u);CHECK(allocations==7);
+    CHECK(psx_mod_read_byte(table+24)==0x11 && !scan_direction);
+    native_directional_scans=0;native_table=TABLE;
 }
 static uint32_t train_pool_tick(CPUState *cpu) {
     /* QA87 observed D9218 with a0=80169CB8, ra=80021BDC. Original21B34
@@ -713,5 +1057,8 @@ int main(void) {
     unsigned before=stair_calls;
     psx_mod_write_byte(MMX4_PLAY+0x10,1);invoke(&cpu,0x800B7078u);CHECK(stair_calls==before);
     CHECK(mmx4_coop_split_snapshot_ready());
+    destructible_camera_unlocks(&cpu);
+    four_aligned_placements(&cpu);
+    jungle_backgrounds(&cpu);
     puts("mmx4_coop_split_test: PASS");return 0;
 }

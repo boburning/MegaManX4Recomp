@@ -38,6 +38,8 @@ def snapshot(runtime):
 
 
 def run_case(runtime, campaign, owner, survivor, output, both=False):
+    if both and not survivor:
+        return run_paired_case(runtime, campaign, owner, output)
     name = f'campaign-{campaign}-owner-{owner}-survivor-{int(survivor)}'
     record = dict(name=name, owner=owner, survivor=survivor,
                   method='native checkpoint fixture; controller-only traversal')
@@ -143,6 +145,138 @@ def run_case(runtime, campaign, owner, survivor, output, both=False):
         try:
             record['failure_state'] = snapshot(runtime)
             runtime.screenshot(output / (name + '-failed.png'))
+        except Exception as diagnostic_error:
+            record['diagnostic_error'] = str(diagnostic_error)
+    finally:
+        runtime.release()
+        (output / (name + '-events.json')).write_text(json.dumps(events, indent=2))
+    return record
+
+
+def run_paired_case(runtime, campaign, first, output):
+    """Both-player admission must lead to a physical crossing, without beams."""
+    name = f'campaign-{campaign}-owner-{first}-survivor-0'
+    record = dict(name=name, owner=first, survivor=False,
+                  method='native checkpoint; both-player physical door traversal')
+    events = []
+
+    def counters():
+        return {c['name']: c['count'] for c in runtime.request('mod_counters')['counters']}
+
+    def transport_count(counts):
+        return sum(counts.get('mmx4.coop.' + key, 0)
+                   for key in ('script-departures', 'room-departures'))
+
+    def door_open():
+        pool = runtime.read(0x80165a30, 32 * 0x8c)
+        return any(pool[i + 1] == 8 and pool[i + 4] == 1 and pool[i + 5] == 3
+                   for i in range(0, len(pool), 0x8c) if pool[i])
+
+    def observe():
+        state = snapshot(runtime)
+        events.append(state)
+        if any(not p['hp'] or not p['active'] or not p['visible']
+               or p['state'] != 1 for p in state['players']):
+            raise AssertionError('A paired-door participant vanished or died')
+        if transport_count(counters()) != before_transport:
+            raise AssertionError('Both-player door scheduled a partner teleport')
+        if state['campaign'] != campaign or state['lives'] != before_lives:
+            raise AssertionError('Paired door altered campaign or shared lives')
+        return state
+
+    try:
+        runtime.release()
+        runtime.fixture(1, 1, 1, campaign)
+        runtime.wait_playable(60, advance_dialogue=True)
+        runtime.fixture(3, 5)
+        runtime.wait_playable(60, advance_dialogue=True)
+        runtime.fixture(5, 3)
+        record['before'] = snapshot(runtime)
+        before_lives = record['before']['lives']
+        before_counts = counters()
+        before_transport = transport_count(before_counts)
+        before_wait = before_counts.get('mmx4.coop.boss-door-waits', 0)
+        runtime.input(0xffdf, first)
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            state = observe()
+            if state['blocked'] or any(p['door'] or p['script'] for p in state['players']):
+                raise AssertionError('Paired door opened before the second player touched it')
+            if counters().get('mmx4.coop.boss-door-waits', 0) >= before_wait + 20:
+                break
+            time.sleep(.05)
+        else:
+            raise TimeoutError('First player did not reach the waiting door')
+        record['waiting'] = state
+        for seat in (0, 1):
+            runtime.input(0xffdf, seat)
+        deadline = time.monotonic() + 30
+        entered = False
+        controlled = False
+        while time.monotonic() < deadline:
+            state = observe()
+            entered |= any(p['door'] for p in state['players'])
+            if not controlled and door_open():
+                runtime.release()
+                stopped = observe()
+                runtime.input(0xffdf, 1)  # P2 walks while P1 waits.
+                end_frame = stopped['frame'] + 12
+                while state['frame'] < end_frame:
+                    state = observe()
+                    time.sleep(.02)
+                if abs(state['players'][0]['x'] - stopped['players'][0]['x']) > 2:
+                    raise AssertionError('Open door moved P1 without input')
+                if state['players'][1]['x'] <= stopped['players'][1]['x']:
+                    raise AssertionError('Open door did not allow independent P2 movement')
+                record['independent_controls'] = state
+                runtime.input(0x7fff, 1)
+                time.sleep(.1)
+                record['attack_controls'] = observe()
+                controlled = True
+                for seat in (0, 1):
+                    runtime.input(0xffdf, seat)
+            crossed = counters().get('mmx4.coop.both-door-crossings', 0) > \
+                before_counts.get('mmx4.coop.both-door-crossings', 0)
+            if crossed and not any(p['door'] for p in state['players']):
+                break
+            time.sleep(.05)
+        else:
+            raise TimeoutError(f'Both players did not physically cross (entered={entered})')
+        if not controlled:
+            raise AssertionError('Native open-door control phase was not observed')
+        runtime.release()
+        record['after'] = observe()
+        # Complete the native conversation and keep checking for a delayed
+        # passenger departure after the actual door has finished.
+        runtime.input(0xffdf, 0)
+        runtime.input(0xffdf, 1)
+        deadline = time.monotonic() + 45
+        conversation = False
+        while time.monotonic() < deadline:
+            state = observe()
+            locked = state['blocked'] or any(p['script'] for p in state['players'])
+            if locked:
+                conversation = True
+                runtime.input(0xbfff, 0)
+                time.sleep(.1)
+                runtime.release()
+                time.sleep(.1)
+            elif conversation:
+                break
+            else:
+                time.sleep(.05)
+        else:
+            raise TimeoutError('Native paired boss conversation did not enter and finish')
+        record['after_conversation'] = observe()
+        record['status'] = 'passed'
+        runtime.screenshot(output / (name + '.png'))
+    except Exception as error:
+        record.update(status='failed', error=str(error))
+        try:
+            record['failure_state'] = snapshot(runtime)
+            record['failure_players'] = [p.hex() for p in runtime.players()]
+            record['failure_doors'] = runtime.read(0x80165a30, 32 * 0x8c).hex()
+            record['failure_camera'] = runtime.read(0x801419b0, 0xfc).hex()
         except Exception as diagnostic_error:
             record['diagnostic_error'] = str(diagnostic_error)
     finally:

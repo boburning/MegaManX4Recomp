@@ -83,6 +83,12 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 74 | [x] | Only P2 arrives in Web Spider part 2 after a distant P2-led exit | **Fixed after Playtest16.** Archive peers match all10,520 shared native rows. Reproduced hidden P1 being killed by the higher exit camera during the outgoing fade. Retain the committed scene's camera owner through that fade and the leader's finished walk. Native two-peer reproduction now delivers both players alive with32HP and unchanged lives, with matching core/mod CRCs through6466. A deliberately dead P1 stays dead in the separate control; P2 still arrives safely (matching CRCs through6377). The [user's video at2:55](https://youtu.be/E601p79mDoQ?t=175) shows X's HUD emptying during the fade and only Zero arriving, matching the log failure. All34 Windows checks pass. `beads-eio.9.103` |
 | 75 | [ ] | P2's Jet Stingray entrance animation is wrong in netplay | Native two-peer Split checks confirm both original bike entrance controllers animate, share one READY actor and release controls, with matching CRCs through4358. Actual composed captures and the [user's video at0:45](https://youtu.be/E601p79mDoQ?t=45) show the shared view/HUD during the entrance before P2's individual view takes over. P2 enters later than P1. Visual presentation remains open; passing native state checks alone does not establish correct appearance. No Jet fix claimed. `beads-eio.9.104` |
 | 76 | [x] | Local Mods page makes co-op boss/door and character settings hard to find | Enabling Co-op now opens its settings panel. Descriptions and player instructions clarify local/online support. Hidden local UI selects Both boss doors, both story bosses, scaling and both character codes; actual PLAY commit persists every choice. Existing defaults unchanged. Shared launcher commit248c347, all34 Windows checks pass. `beads-eio.9.105` |
+| 77 | [x] | P2 passes the opening stage's breakable miniboss door and the camera sticks | Reproduced and fixed after Playtest17. Destroying the native barrier released only P1's saved camera bounds; P2 remained clamped at X3288. Publish the finalizer's two bounds writes to living views. The fixed two-peer probe advances P2 to X3411 while P1 stays at X1367, both alive, with matching peer CRCs. `beads-eio.9.107` |
+| 78 | [x] | Web Spider part 2 scenery disappears or freezes for P2 | Reproduced and fixed after Playtest17. The section's background controller never advanced P2's region state, leaving its opening forest over later terrain. Keep per-view controller state while preserving shared script ownership. Actual composed before/after frames at P2 X1094/Y954 show restored terrain; 17 recorded-position probes complete with matching peer CRCs. `beads-eio.9.108` |
+| 79 | [x] | Both-player boss doors still teleport the partner | Fixed after Playtest17. Both-player admission now retains independent controls through the open doorway, waits for physical clearance and suppresses the ensuing conversation's partner warp. Native two-peer test waits for the second contact, walks/slashes P2 while P1 stands still, then crosses and finishes the boss conversation with both players at32HP and no departure. Peer CRCs match through5794. Either-player mode and dead/withdrawn exemptions remain covered. `beads-eio.9.109` |
+| 80 | [x] | Sigma stage 1 enemies wait for P1 when P2 advances ahead | Reproduced and fixed after Playtest17. Accept the actual placement table's valid4-byte base alignment while retaining8-byte records and native directional flags. The fixed two-peer probe spawns the enemies at X944,1108 and1223 as P2 advances while P1 stays at X683; peer CRCs match through4672. `beads-eio.9.110` |
+| 81 | [x] | Colonel's lightning whites out the screen after P1 dies | Reproduced and fixed after Playtest17. Preserve the shared palette rebuild request across P2 survivor projection. The unfixed native lightning leaves1,920 white palette entries after its RGB additions clear; the fixed probe restores19, and the inspected P2 frame shows the normal stage and HUD. Peer CRCs match through10338. `beads-eio.9.111` |
+| 82 | [x] | Zero cannot damage Double | Reproduced and fixed after Playtest17. Eight native Zero combo attempts leave the unfixed boss at48HP despite reaching follow-up cuts. Admit the existing nonzero Zero damage entries only during Double's normal damage window. The fixed two-peer probe reduces him from48 to45HP and enters his original cooldown, with matching peer CRCs through7554. His invulnerable phases, first cut's native zero damage and X's reactions remain covered. `beads-eio.9.112` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -812,3 +818,99 @@ Windows detached/no-window startup logging and Linux portable logs pass.
 Development controls are disabled; packages exclude game discs and player saves.
 Jet Stingray entrance presentation remains open (item75). Private receipts:
 `build-pr23/release17-qa/`. Release issue: `beads-eio.9.106`.
+
+### Playtest 17 follow-up: independent scenery and paired doors (77–79)
+
+The supplied opening-door/Web Spider ZIP contains paired native recordings,
+metadata and nonempty startup logs, but no video. All shared input/state rows
+match in its three netplay runs: 12,932 and 4,235 intro rows, and 19,043 Web
+Spider rows. Settings are Split cameras and Both-player boss doors. Archive
+SHA256: `e65f0e12b429102c532fe514a6570b72195b9562707819f252fbab9703827837`.
+
+The hidden intro reproduction uses native Zero attacks to destroy the actual
+barrier. Its HP falls to zero, its original explosion finishes, and the actor
+retires. P1's saved maximum X becomes 4544, but P2's remains 2976; P2 is clamped
+at X3288 despite continued movement. The barrier uses the original category4
+pool's 32 slots of 0x8C bytes. Its finalizer releases two camera halfwords;
+the fix propagates those exact writes to the living independent views.
+
+The hidden Web Spider probe follows coordinates from the recording. At
+P2 X1094/Y954, the actual composed frame shows the opening forest over missing
+terrain while Zero remains grounded and healthy. P2's foreground camera is
+915/762, but its background remains in mode5 at40/256. The section's original
+kind1 background controller updates the canonical view without advancing
+P2's saved region/scroll state. The probe preserves matching peer core/mod
+CRCs through6594. This is rendering evidence, not a simulation desync claim.
+
+Both-door admission already waited for both players, then ran the ordinary
+partner departure. The new traversal needs to preserve both bodies and their
+controls through the opening, defer closure until they physically clear it,
+and avoid a delayed partner warp at the ensuing boss conversation. Independent
+review checks native controller ordering, preemption, death and actor reuse;
+unit checks alone do not qualify the visible crossing.
+
+Fixed native probes qualify items77 and78. P2 passes the destroyed intro barrier
+to X3411.5 while P1 remains at X1367, with32HP each. The Web Spider probe now
+shows the correct platform and background at the previously corrupted position;
+all17 positions complete. Peer CRCs match through4706 and8000 respectively.
+Both-door validation caught the original sealed terrain still blocking the
+players despite the open animation. The final correction makes only class38
+terrain inside the fully open door's rectangle passable. Its floor boundary,
+adjacent terrain and lethal classes remain native. The two-peer test now waits
+for both contacts, lets P2 walk and slash while P1 remains stationary, then
+physically crosses and completes the actual boss conversation with both at32HP,
+unchanged lives and no partner departures. Peer CRCs match through5794. Windows
+checks and focused Linux lifecycle/split checks pass; validation artifacts are
+`doors-fixed5`, `all-fixed` and the retained failing baselines.
+
+Native before/after evidence and review notes are retained privately under
+`build-pr23/feedback17-20261014/`.
+
+### Split netplay boss follow-up (80–82)
+
+The Sigma/Colonel/Double ZIP adds two paired Playtest17 recordings to the
+previous intake. Their45,315 and76,153 shared native input/state rows match
+exactly. The shorter run includes Space Port Colonel with P1 dead and P2 alive
+at sequences35510–40988. The longer run reaches Sigma stage1 at sequence61705;
+its initial corridor shows P2 ahead of P1. These rows establish encounters,
+positions and peer agreement, but do not record rendered flash duration or
+enemy allocation times. No video is included in this archive.
+The reporter later supplied [companion footage](https://youtu.be/vfe7GBgFGZg).
+The investigation uses the paired recordings and separate native reproductions;
+it does not claim a frame-by-frame review of that video.
+
+Archive SHA256:
+`05db2b34d51dd74895035a0f3faded9aa10f7efaf0c47edfa279fcf73d417c1a`.
+Private intake: `build-pr23/feedback17-bosses-20261014/`.
+
+Hidden native before/after runs qualify all three reports. Sigma's actual
+placement table starts at800F848C: its records are8 bytes apart but its base
+is only4-byte aligned. The former8-byte base check disabled P2 scans entirely.
+The narrow fix accepts that table without changing native directional flags.
+The unfixed run admits the missing enemies only when P1 follows. The fixed run
+admits the X944 pair, X1108 enemy and X1223 group while P1 remains at X683;
+both peer core/mod CRCs match through4672.
+
+Colonel's native stage flash clears its shared RGB additions and requests a
+palette rebuild. Returning from P2's survivor projection discarded that request,
+leaving the bright working palette resident. Preserve only its shared rebuild
+bit after restoring the campaign's palette source. The unfixed native run leaves
+1,920 white entries after the flash, compared with18 beforehand. The fixed run
+returns to19, and its composed P2 frame shows the ordinary stage, boss and HUD.
+P1 remains dead and P2 remains alive; peer CRCs match through10338. Regression
+checks cover both character rosters and retain private character-upload isolation.
+
+Double's normal hit table contains damage for Zero's follow-up cuts but rejects
+them as deflections. Eight unfixed native combo attempts reach attack classes25
+and26 yet leave him at48HP. The fix admits only existing nonzero Zero entries
+in that exact normal table, after native duplicate-hit rejection. The fixed
+controller-driven combo reduces him from48 to45HP and enters his original
+cooldown table; peer CRCs match through7554. His native zero-damage first cut,
+invulnerable phases, X's hit behavior and native boss scaling are preserved.
+
+The final combined build passes all34 Windows checks and focused Linux
+lifecycle, combat and split regressions. Native evidence is in `bosses-fixed`,
+with `sigma-before`, `colonel-before` and `double-combo-before` retained for
+comparison. The combined co-op snapshot layout is now X4P6 for private scenery
+and physical door state; older co-op save states are incompatible. Campaign
+memory-card saves are unchanged. This follow-up does not publish a release.

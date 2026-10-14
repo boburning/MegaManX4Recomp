@@ -18,12 +18,24 @@
 #define START 0x0800u
 #define SELECT 0x0100u
 #define PICKUP_CAPACITY 128u
+static int door_pool_actor(uint32_t actor) {
+    return actor>=0x80165A30u && actor<0x80166BB0u && (actor-0x80165A30u)%0x8Cu==0;
+}
 
 typedef struct {
     uint8_t character, hp, ammo[16], weapon;
 } Inventory;
 typedef struct { uint32_t actor; uint8_t owner; } PickupOwner;
 typedef struct { uint32_t actor,serial; uint8_t owner,recovered; } SceneOwner;
+typedef struct {
+    uint32_t actor,serial;
+    uint16_t old_min,target_min,right;
+    uint8_t phase,owner,stage,section;
+} BothDoor;
+/* 1 opening, 2 physical traversal, 3 camera commitment, 4 next boss
+ * admission, 5 its conversation. C4 remains the retail boss admission gate
+ * until everyone clears; only the player's control pass temporarily masks it. */
+static BothDoor both_door;
 /* Exposes the combat module's independent previous-frame solid history. */
 uint8_t mmx4_coop_solid_contact_bits(uint32_t actor,unsigned seat);
 static Inventory second_inventory, saved_inventory;
@@ -47,6 +59,7 @@ static unsigned normal_guard, menu_guard, world_guard, pickup_guard;
 static unsigned collect_guard, save_guard, reward_guard, death_guard, death_check_guard, capsule_guard;
 static unsigned scene_guard, script_pool_guard, command_guard, control_guard,text_guard,text_init_guard;
 static unsigned door_wait;
+static unsigned door_terrain_guard;
 static uint32_t projected_portal_solid;
 static unsigned flip_guard;
 static unsigned script_active, script_owner, script_serial;
@@ -64,7 +77,7 @@ int mmx4_coop_lifecycle_snapshot_ready(void) {
     return !(inventory_projected || menu_projecting || normal_guard || menu_guard || world_guard ||
         pickup_guard || collect_guard || save_guard || reward_guard || death_guard || death_check_guard ||
         capsule_guard || scene_guard || script_pool_guard || command_guard || control_guard || text_guard ||
-        text_init_guard || flip_guard || warp_guard || door_wait);
+        text_init_guard || flip_guard || warp_guard || door_wait || door_terrain_guard);
 }
 static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
     MMX4_SNAPSHOT_BOOL(s,inventory->character);MMX4_SNAPSHOT_U8(s,inventory->hp);
@@ -111,6 +124,17 @@ int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
     MMX4_SNAPSHOT_U8(s,warp_vehicle_active);MMX4_SNAPSHOT_U8(s,warp_vehicle_visible);
     MMX4_SNAPSHOT_U32(s,warp_origin_x);MMX4_SNAPSHOT_U32(s,warp_origin_y);
     MMX4_SNAPSHOT_BOOL(s,initial_arrival);MMX4_SNAPSHOT_BOOL(s,direct_initial_spawn);
+    uint32_t door_actor=mmx4_snapshot_integer(s,both_door.actor,4,UINT32_MAX);
+    if(!mmx4_snapshot_guest(door_actor))s->ok=0;
+    if(s->mode==MMX4_SNAPSHOT_READ)both_door.actor=door_actor;
+    MMX4_SNAPSHOT_U32(s,both_door.serial);
+    MMX4_SNAPSHOT_U16(s,both_door.old_min);MMX4_SNAPSHOT_U16(s,both_door.target_min);
+    MMX4_SNAPSHOT_U16(s,both_door.right);
+    uint32_t door_phase=mmx4_snapshot_integer(s,both_door.phase,1,5);
+    if(door_phase && !door_pool_actor(door_actor))s->ok=0;
+    if(s->mode==MMX4_SNAPSHOT_READ)both_door.phase=(uint8_t)door_phase;
+    MMX4_SNAPSHOT_BOOL(s,both_door.owner);
+    MMX4_SNAPSHOT_U8(s,both_door.stage);MMX4_SNAPSHOT_U8(s,both_door.section);
     if(s->mode==MMX4_SNAPSHOT_READ) {
         memset(&view_second_inventory,0,sizeof view_second_inventory);
         memset(&view_saved_inventory,0,sizeof view_saved_inventory);
@@ -185,6 +209,7 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     memset(&saved_inventory,0,sizeof saved_inventory);
     memset(pickups,0,sizeof pickups);
     memset(scenes,0,sizeof scenes);
+    memset(&both_door,0,sizeof both_door);
     memset(menu_previous,0,sizeof menu_previous);
     memset(story_pad,0,sizeof story_pad);
     inventory_initialized=inventory_projected=stage_known=0;
@@ -212,6 +237,7 @@ void mmx4_coop_lifecycle_activate(void) {
     collect_guard=save_guard=reward_guard=death_guard=death_check_guard=capsule_guard=0;
     scene_guard=script_pool_guard=command_guard=control_guard=text_guard=text_init_guard=0;
     door_wait=0;
+    door_terrain_guard=0;
     projected_portal_solid=0;
     memset(&view_second_inventory,0,sizeof view_second_inventory);
     memset(&view_saved_inventory,0,sizeof view_saved_inventory);
@@ -232,6 +258,7 @@ static void stage_selection(CPUState *cpu,uint32_t address) {
     stage_known=0;first_before_clear_valid=0;
     carry_resources=carry_dead=carry_first_dead=carry_departure=carry_refill=0;
     direct_initial_spawn=0;
+    memset(&both_door,0,sizeof both_door);
 }
 static unsigned seat_was_dead(unsigned seat) {
     const uint8_t *body=mmx4_coop_second_body();
@@ -261,6 +288,7 @@ static void stage_initialization(CPUState *cpu,uint32_t address) {
     mmx4_coop_bosses_stage_initialization();
     mmx4_coop_balance_reset();
     direct_initial_spawn=0;
+    memset(&both_door,0,sizeof both_door);
     /* Native 8001FC20 calls 8002A7D0/8002A728 to clear PLAYER before
      * 80035240 initializes it. Capture the prior survivor status here;
      * zeroed initialization storage is not evidence of a player death. */
@@ -312,6 +340,7 @@ void mmx4_coop_lifecycle_reset(void) {
     reward_committed=0;
     memset(pickups,0,sizeof pickups);
     memset(scenes,0,sizeof scenes);script_active=0;
+    memset(&both_door,0,sizeof both_door);
     warp_pending=warp_phase=warp_unlocked_ticks=0;
     initial_arrival=direct_initial_spawn=0;
     menu_active=0;menu_owner=0;
@@ -540,6 +569,7 @@ void mmx4_coop_lifecycle_room_entry(unsigned owner) {
     if(owner>1 || !mmx4_coop_ready() || mmx4_coop_projected() ||
        script_active || warp_pending || warp_phase || departed ||
        !mmx4_coop_alive(owner) || !mmx4_coop_alive(owner^1u))return;
+    memset(&both_door,0,sizeof both_door);
     /* A committed shared-room boundary may precede the boss's dialogue.
      * Carry the excluded partner through the same native outgoing/incoming
      * sequence; arrival waits for the leading player to reach the floor. */
@@ -549,6 +579,57 @@ void mmx4_coop_lifecycle_room_entry(unsigned owner) {
 static uint32_t body_word(const uint8_t *body,unsigned at) {
     return (uint32_t)body[at]|(uint32_t)body[at+1]<<8|
         (uint32_t)body[at+2]<<16|(uint32_t)body[at+3]<<24;
+}
+static int both_door_scope(void) {
+    return both_door.phase && both_door.stage==psx_mod_read_byte(PLAY+0x0C) &&
+        both_door.section==psx_mod_read_byte(PLAY+0x0D);
+}
+static void both_door_gate(unsigned seat,uint8_t value) {
+    if(seat==(unsigned)(mmx4_coop_projected()!=0))psx_mod_write_byte(PLAYER+0xC4,value);
+    else {
+        uint8_t *body=seat?mmx4_coop_second_body():mmx4_coop_first_body();
+        body[0xC4]=value;
+    }
+}
+static int both_door_cleared(void) {
+    for(unsigned seat=0;seat<2;++seat) {
+        if(!mmx4_coop_alive(seat) || (seat && departed))continue;
+        unsigned current=seat==(unsigned)(mmx4_coop_projected()!=0);
+        const uint8_t *body=seat?mmx4_coop_second_body():mmx4_coop_first_body();
+        int x=(int16_t)(current?psx_mod_read_half(PLAYER+10):(body_word(body,8)>>16));
+        uint32_t box=current?psx_mod_read_word(PLAYER+0x68):body_word(body,0x68);
+        if(!box || x+(int8_t)psx_mod_read_byte(box)-psx_mod_read_byte(box+2)<=
+            (int16_t)both_door.right || x<(int16_t)both_door.target_min+8)return 0;
+    }
+    return 1;
+}
+static void both_door_abort(CPUState *cpu) {
+    if(both_door.phase<=3 && both_door.phase &&
+       script_active && script_serial==both_door.serial) {
+        unsigned owner=both_door.owner;
+        both_door_gate(0,0);both_door_gate(1,0);
+        if(mmx4_coop_alive(owner)) {
+            unsigned current=(unsigned)(mmx4_coop_projected()!=0);
+            uint8_t campaign=psx_mod_read_byte(PLAY+0x43);
+            if(owner!=current) {if(owner)mmx4_coop_enter_second();else mmx4_coop_leave_second();}
+            mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+            if(owner!=current) {if(current)mmx4_coop_enter_second();else mmx4_coop_leave_second();}
+            psx_mod_write_byte(PLAY+0x43,campaign);
+        }
+        script_active=0;
+        for(unsigned i=0;i<sizeof scenes/sizeof scenes[0];++i)
+            if(scenes[i].actor==both_door.actor)memset(&scenes[i],0,sizeof scenes[i]);
+    }
+    memset(&both_door,0,sizeof both_door);
+}
+static void both_door_tick(CPUState *cpu) {
+    if(!both_door.phase)return;
+    if(!both_door_scope() || psx_mod_read_byte(PLAY)!=6 ||
+       (!mmx4_coop_alive(0) && !mmx4_coop_alive(1)) ||
+       (both_door.phase<=3 && (!door_pool_actor(both_door.actor) ||
+        !psx_mod_read_byte(both_door.actor) || psx_mod_read_byte(both_door.actor+1)!=8 ||
+        psx_mod_read_byte(both_door.actor+4)!=1 || !psx_mod_read_byte(both_door.actor+5))))
+        both_door_abort(cpu);
 }
 static void start_outgoing(CPUState *cpu,unsigned seat) {
     if(seat)mmx4_coop_enter_second();
@@ -748,6 +829,8 @@ static void rescue_dead_scene_owner(CPUState *cpu) {
     uint8_t command=psx_mod_read_byte(PLAYER+0xC0);
     uint8_t action=psx_mod_read_byte(PLAYER+0xC1),argument=psx_mod_read_byte(PLAYER+0xC2);
     uint8_t door=psx_mod_read_byte(PLAYER+0xC4),hold=psx_mod_read_byte(PLAYER+0xC3);
+    unsigned paired=door && both_door_scope() && both_door.phase<=3 &&
+        both_door.serial==script_serial;
     uint32_t scene_x=psx_mod_read_word(PLAYER+8),scene_y=psx_mod_read_word(PLAYER+12);
     psx_mod_write_byte(PLAYER+0xC0,0);psx_mod_write_byte(PLAYER+0xC3,0);
     psx_mod_write_byte(PLAYER+0xC4,0);psx_mod_write_byte(PLAYER+0x67,0);
@@ -760,7 +843,7 @@ static void rescue_dead_scene_owner(CPUState *cpu) {
     }
     if(dead)mmx4_coop_leave_second();
     script_owner=survivor;
-    if(door) {
+    if(door && !paired) {
         /* The camera is already moving through the doorway. Continuing
          * from the passenger's old position lets it overtake/crush them. */
         const uint8_t *body=mmx4_coop_second_body();
@@ -775,15 +858,16 @@ static void rescue_dead_scene_owner(CPUState *cpu) {
     if(door) {
         /* Native 800338CC consumes C4=1 to initialize action19, then
          * marks it FF. The survivor must initialize its own pose. */
-        psx_mod_write_byte(PLAYER+0xC4,1);
+        psx_mod_write_byte(PLAYER+0xC4,(uint8_t)(paired && both_door.phase>=2?255u:1u));
         psx_mod_write_byte(PLAYER+0xC3,hold);
     }
     if(survivor)mmx4_coop_leave_second();
     for(unsigned i=0;i<sizeof scenes/sizeof scenes[0];++i)
         if(scenes[i].actor && scenes[i].owner==dead) {
             scenes[i].owner=(uint8_t)survivor;scenes[i].serial=script_serial;
-            scenes[i].recovered=(uint8_t)(door!=0);
+            scenes[i].recovered=(uint8_t)(door!=0 && !paired);
         }
+    if(paired)both_door.owner=(uint8_t)survivor;
     psx_mod_counter_add("mmx4.coop.dead-scene-owner-handoffs",1);
 }
 void mmx4_coop_lifecycle_tick(CPUState *cpu) {
@@ -815,6 +899,7 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
     trace_previous.valid=1;trace_previous.stage=stage;trace_previous.section=section;
     memcpy(trace_previous.hp,hp,sizeof hp);
     trace_previous.second_active=second[0];trace_previous.second_hidden=hidden;
+    both_door_tick(cpu);
     warp_tick(cpu);
     rescue_dead_scene_owner(cpu);
     if(warp_pending || warp_phase) {
@@ -1174,10 +1259,20 @@ static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t act
     psx_mod_write_byte(PLAY+0x43,campaign);
     for(unsigned i=0;i<3;++i)psx_mod_write_half(PAD+i*2,story_pad[i]);
     uint32_t result=mmx4_coop_call(cpu,address,actor,arg);
+    /* Native stage flash BD5CC clears the shared RGB additions and requests
+     * palette bit4. 2A484 otherwise skips the zero-addition rebuild, leaving
+     * the bright working palette resident after a P2 survivor projection.
+     * Publish only that shared rebuild request after restoring P1's palette
+     * source; private character upload requests still belong to the view. */
+    uint8_t shared_palette_refresh=address==0x8002166Cu?
+        (uint8_t)(psx_mod_read_byte(0x80166BB0u)&4u):0;
     /* Projected inventory reads on leave must see the counterpart identity,
      * even though shared story selection remained canonical throughout. */
     psx_mod_write_byte(PLAY+0x43,character);
-    mmx4_coop_leave_second();write_bytes(PAD,pad,sizeof pad);return result;
+    mmx4_coop_leave_second();
+    if(shared_palette_refresh)psx_mod_write_byte(0x80166BB0u,
+        (uint8_t)(psx_mod_read_byte(0x80166BB0u)|shared_palette_refresh));
+    write_bytes(PAD,pad,sizeof pad);return result;
 }
 static int gameplay_scene(void) {
     unsigned mode=psx_mod_read_byte(PLAY);
@@ -1303,6 +1398,55 @@ static int waiting_door_query(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.boss-door-waits",1);
     return mmx4_coop_finish(cpu,0);
 }
+static int both_door_traversal(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!scene_guard || !both_door_scope() || both_door.actor!=cpu->gpr[4] ||
+       both_door.phase<2 || both_door.phase>3)return 0;
+    /* Retail C1D90 moves the singleton by A400 fixed units every tick. Both
+     * mode instead waits for actual movement and the full collision boxes
+     * to clear. Keeping C4 outside the control pass also keeps bosses waiting. */
+    if(!both_door_cleared())return mmx4_coop_finish(cpu,0);
+    psx_mod_write_half(0x801419D6u,both_door.target_min);
+    both_door.phase=3;
+    if(psx_mod_read_half(0x801419BAu)!=both_door.target_min)
+        return mmx4_coop_finish(cpu,0);
+    both_door_gate(0,0);both_door_gate(1,0);
+    mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+    psx_mod_write_byte(both_door.actor+5,4);
+    mmx4_coop_call(cpu,0x80015D60u,both_door.actor,1);
+    uint32_t old_a2=cpu->gpr[6];cpu->gpr[6]=both_door.actor;
+    mmx4_coop_call(cpu,0x8001540Cu,0,0x11);cpu->gpr[6]=old_a2;
+    both_door.phase=4;
+    psx_mod_counter_add("mmx4.coop.both-door-crossings",1);
+    return mmx4_coop_finish(cpu,0);
+}
+static int both_door_map(CPUState *cpu,uint32_t address) {
+    if(door_terrain_guard || !mmx4_coop_ready() || !both_door_scope() ||
+       both_door.phase<2 || both_door.phase>3 || cpu->gpr[4]!=PLAYER ||
+       !door_pool_actor(both_door.actor) || psx_mod_read_byte(both_door.actor+1)!=8 ||
+       psx_mod_read_byte(both_door.actor+4)!=1 || psx_mod_read_byte(both_door.actor+5)!=3)return 0;
+    uint32_t box=psx_mod_read_word(both_door.actor+0x68);
+    if(!box || !mmx4_snapshot_guest(box))return 0;
+    int x=(int16_t)cpu->gpr[5],y=(int16_t)cpu->gpr[6];
+    int center_x=(int16_t)psx_mod_read_half(both_door.actor+10)+(int8_t)psx_mod_read_byte(box);
+    int center_y=(int16_t)psx_mod_read_half(both_door.actor+14)+(int8_t)psx_mod_read_byte(box+1);
+    int width=psx_mod_read_byte(box+2),height=psx_mod_read_byte(box+3);
+    if(x<center_x-width || x>=center_x+width || y<center_y-height || y>=center_y+height)return 0;
+    /* Retail door auto-walk disables the body's whole terrain box to cross
+     * the sealed map cells. Normal Both controls keep their real box and
+     * floor collision: only the observed 38 wall samples inside the fully
+     * opened aperture become passable. This includes interior ceiling tests
+     * that would otherwise crush a body against the floor. The aperture's
+     * bottom edge is excluded, preserving its native floor; other tiles and
+     * lethal classes retain the original query and its side effects. */
+    door_terrain_guard=1;
+    uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
+    door_terrain_guard=0;
+    if(result==0x38u) {
+        result=0;psx_mod_counter_add("mmx4.coop.both-door-map-passages",1);
+    }
+    return mmx4_coop_finish(cpu,result);
+}
 static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(scene_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected())return 0;
     uint32_t actor=cpu->gpr[4];unsigned owner=0;
@@ -1328,7 +1472,7 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
             uint32_t second_hit=mmx4_coop_call(cpu,0x800C1E7Cu,actor,0);
             mmx4_coop_leave_second();
             if(!first_hit && second_hit)owner=1;
-            if(mmx4_coop_both_door_players() && mmx4_coop_alive(0) &&
+            if(mmx4_coop_both_door_players() && !departed && mmx4_coop_alive(0) &&
                (first_hit || second_hit) && (!first_hit || !second_hit))door_wait=1;
         }
     }
@@ -1345,6 +1489,14 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
         mmx4_coop_second_body()[0xC4]:psx_mod_read_byte(PLAYER+0xC4)):0;
     uint8_t canonical_camera[0xFC];
     int own_camera=owner && mmx4_coop_split_scene_camera_begin(owner,canonical_camera);
+    unsigned pair_candidate=address==0x800C1994u && !old_door && !door_wait &&
+        door_pool_actor(actor) && psx_mod_read_byte(actor+1)==8 &&
+        mmx4_coop_both_door_players() && !departed &&
+        mmx4_coop_alive(0) && mmx4_coop_alive(1);
+    uint16_t old_min=psx_mod_read_half(0x801419D6u);
+    uint32_t door_box=pair_candidate?psx_mod_read_word(actor+0x68):0;
+    int door_right=(int16_t)psx_mod_read_half(actor+10);
+    if(door_box)door_right+=(int8_t)psx_mod_read_byte(door_box)+psx_mod_read_byte(door_box+2);
     scene_guard=1;uint32_t result;
     if(owner) {
         uint8_t contact[4];static const unsigned at[]={0x72,0x74,0x76,0x78};
@@ -1371,10 +1523,29 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(address==0x800C1994u && !old_door && new_door) {
         /* Boss doors use personal C4, not 80036AE4/C0 script commands. */
         script_active=1;script_owner=owner;++script_serial;
-        request_script_departure(owner);
+        if(pair_candidate) {
+            both_door=(BothDoor){actor,script_serial,old_min,old_min,(uint16_t)door_right,
+                1,(uint8_t)owner,psx_mod_read_byte(PLAY+0x0C),psx_mod_read_byte(PLAY+0x0D)};
+            /* The partner also belongs to this doorway's admission gate.
+             * Signed FF takes 338CC's blez return, preserving its normal
+             * action and box; only the native owner consumes positive C4=1. */
+            both_door_gate(owner^1u,255);
+        }else request_script_departure(owner);
     }else if(address==0x800C1994u && old_door && !new_door &&
              script_active && script_owner==owner && record && record->serial==script_serial) {
         script_active=0;
+    }
+    if(address==0x800C1994u && both_door.actor==actor && both_door.phase==1 &&
+       psx_mod_read_byte(actor+5)==3) {
+        /* Native C1C88 supplies the new room bounds and ends the opening
+         * animation. Retain its max X, but defer its min X until everyone is
+         * through so 27BE4 cannot push a waiting player into the doorway. */
+        both_door.target_min=psx_mod_read_half(0x801419D6u);
+        psx_mod_write_half(0x801419D6u,both_door.old_min);
+        if(owner)mmx4_coop_enter_second();
+        mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+        if(owner)mmx4_coop_leave_second();
+        both_door.phase=2;
     }
     if(serial!=script_serial) {
         record=scene_record(actor,1);
@@ -1425,13 +1596,24 @@ static int script_command(CPUState *cpu,uint32_t address) {
     unsigned owner=mmx4_coop_projected()?1u:0u;
     unsigned redirect=!owner && !mmx4_coop_alive(0) && mmx4_coop_alive(1);
     if(redirect) {mmx4_coop_enter_second();owner=1;}
+    unsigned paired_boss=address==0x80036AE4u && both_door_scope() &&
+        both_door.serial==script_serial && both_door.phase>=4 &&
+        cpu->gpr[31]>=0x80048000u && cpu->gpr[31]<0x80094000u &&
+        (cpu->gpr[4]==0x14u || cpu->gpr[4]==0x15u);
+    /* Only the first retail boss admission after this physical crossing and
+     * its still-active conversation inherit the pair. A portal, stage warp,
+     * later victory, or another command must retain the existing departure. */
+    if(address==0x80036AE4u && !paired_boss)both_door_abort(cpu);
     command_guard=1;
     uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     command_guard=0;
     if(address==0x80036AE4u) {
         script_active=1;script_owner=owner;++script_serial;
-    }else script_active=0;
-    request_script_departure(owner);
+        if(paired_boss) {
+            both_door.phase=5;both_door.owner=(uint8_t)owner;both_door.serial=script_serial;
+        }
+    }else {script_active=0;memset(&both_door,0,sizeof both_door);}
+    if(!paired_boss)request_script_departure(owner);
     if(redirect)mmx4_coop_leave_second();
     return mmx4_coop_finish(cpu,result);
 }
@@ -1459,6 +1641,20 @@ static int nonowner_controls(CPUState *cpu,uint32_t address) {
     }
     if(control_guard || !mmx4_coop_ready() || !script_active)return 0;
     unsigned seat=mmx4_coop_projected()?1u:0u;
+    if(both_door_scope() && both_door.serial==script_serial &&
+       both_door.phase>=2 && both_door.phase<=3 && mmx4_coop_alive(seat)) {
+        /* Let the real controller leave action19 and retain walk, dash and
+         * attacks. C4 is restored for the enemy/door dispatchers; positions,
+         * velocities, native collision results and controller output persist. */
+        uint8_t door=psx_mod_read_byte(PLAYER+0xC4);
+        psx_mod_write_byte(PLAYER+0xC4,0);
+        control_guard=1;
+        uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
+        control_guard=0;
+        if(both_door.phase>=2 && both_door.phase<=3)
+            psx_mod_write_byte(PLAYER+0xC4,door);
+        return mmx4_coop_finish(cpu,result);
+    }
     if(seat==script_owner || !mmx4_coop_alive(seat))return 0;
     /* The scripted owner retains native auto-walk/warp. Its living partner
      * receives neutral controls until the common transition completes. */
@@ -1545,6 +1741,11 @@ uint32_t mmx4_coop_lifecycle_digest(uint32_t seed) {
         seed=hash_word(seed,scenes[i].actor);seed=hash_byte(seed,scenes[i].owner);seed=hash_byte(seed,scenes[i].recovered);
         seed=hash_word(seed,scenes[i].serial);
     }
+    seed=hash_word(seed,both_door.actor);seed=hash_word(seed,both_door.serial);
+    seed=hash_word(seed,both_door.old_min);seed=hash_word(seed,both_door.target_min);
+    seed=hash_word(seed,both_door.right);seed=hash_byte(seed,both_door.phase);
+    seed=hash_byte(seed,both_door.owner);seed=hash_byte(seed,both_door.stage);
+    seed=hash_byte(seed,both_door.section);
     return seed;
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
@@ -1574,6 +1775,9 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C2BE0u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1994u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
+    psx_mod_register_function_filter_plugin(ID,0x800C1D90u,both_door_traversal);
+    psx_mod_register_function_filter_plugin(ID,0x8002D7E4u,both_door_map);
+    psx_mod_register_function_filter_plugin(ID,0x8002D724u,both_door_map);
     psx_mod_register_function_filter_plugin(ID,0x800BD654u,scene_actor);
     /* Destructible section exits (Jungle waterfall): bind the outgoing walk
      * and its completion query to one body. Otherwise C165C redirects the

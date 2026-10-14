@@ -211,6 +211,25 @@ static int spider_web(uint32_t actor) {
     return actor>=SECONDARY_POOL && actor<SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE &&
         !((actor-SECONDARY_POOL)%SECONDARY_STRIDE) && psx_mod_read_byte(actor+1)==22;
 }
+/* Double's normal table has authored Zero damage but marks all Zero entries
+ * as deflections: retail only admits X to this encounter. Admit those existing
+ * damage entries for the actual Zero collision pass. The native duplicate-hit
+ * gate has already run. DE84 follows the admission LBU's delay slot and
+ * precedes its reaction-byte store. The all-FF cooldown table is untouched. */
+static void double_counterpart_hit(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!combat_call || !mmx4_coop_ready() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(MMX4_PLAY)!=6 || psx_mod_read_byte(MMX4_PLAY+0x0C)!=11 ||
+       psx_mod_read_byte(MMX4_PLAY+0x0D) || psx_mod_read_byte(MMX4_PLAYER+2)!=1 ||
+       cpu->gpr[2]!=0xFFu || cpu->gpr[7]!=0x80108204u)return;
+    uint32_t actor=cpu->gpr[4],type=cpu->gpr[6];
+    if(actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
+       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=73 || type<25 || type>32 ||
+       !psx_mod_read_byte(cpu->gpr[7]+type*2u+1u))return;
+    cpu->gpr[2]=0;
+}
+
 static int accepted_hit(CPUState *cpu,uint32_t address) {
     /* 8009DB9C reads/writes PLAYER immediately after CONTACT. It must see
      * the same seat that the collision tested, throughout this actor pass. */
@@ -756,6 +775,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x80040CCCu,aim_at_participant);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800419B8u,aim_at_participant);
     psx_mod_register_function_filter_plugin(COOP_ID,0x80042824u,aim_at_participant);
+    psx_mod_register_instruction_plugin(COOP_ID,0x8002DE84u,0xA0820063u,double_counterpart_hit);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021300u,0x0040F809u,redirect_actor);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021518u,0x0040F809u,redirect_actor);
     psx_mod_register_guest_function_plugin(COOP_ID,ACTOR_DISPATCH,update_actor);

@@ -33,7 +33,8 @@ uint8_t mmx4_coop_solid_contact_bits(uint32_t actor,unsigned seat);
 typedef struct { uint32_t address; PSXModFunctionFilterCallback callback; } Filter;
 static Filter filters[32];
 static unsigned filter_count;
-int psx_mod_local_view_scope(void) {return 0;}
+static unsigned local_view;
+int psx_mod_local_view_scope(void) {return (int)local_view;}
 int mmx4_coop_web_busy(void) {return 0;}
 int mmx4_coop_web_contact(CPUState *cpu,uint32_t address) {(void)cpu;(void)address;return 0;}
 void mmx4_coop_web_forget(uint32_t actor,unsigned owner) {(void)actor;(void)owner;}
@@ -54,7 +55,7 @@ static unsigned arriving;
 int mmx4_coop_lifecycle_arriving(unsigned seat) {return seat==1 && arriving;}
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {return actor==deferred_portal;}
 static unsigned target_camera_mode=1;
-static PSXModFunctionEntryCallback redirects[2],actor_dispatch;
+static PSXModFunctionEntryCallback redirects[2],actor_dispatch,double_admission;
 static unsigned pool_updates,actor_updates[2],bounds_updates,ai_contact,ai_solid;
 static unsigned ai_direct_write,ai_canonical;
 static uint8_t saved_campaign;
@@ -69,6 +70,9 @@ static unsigned armor_updates, mount_checks, mount_accept[2];
 static uint8_t observed_freeze;
 static unsigned token_model, attack_present[2];
 static uint8_t attack_token[2];
+static unsigned double_model;
+static uint8_t attack_type[2];
+static uint32_t double_tick(void);
 static unsigned particle_initializations,particle_character;
 static unsigned water_updates;
 static unsigned charge_updates;
@@ -105,7 +109,11 @@ int psx_mod_register_function_filter_plugin(const char *id,uint32_t address,
 }
 int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t word,
     PSXModFunctionEntryCallback callback) {
-    CHECK(!strcmp(id,"mmx4.coop") && word==0x0040F809u);
+    CHECK(!strcmp(id,"mmx4.coop"));
+    if(address==0x8002DE84u) {
+        CHECK(word==0xA0820063u);double_admission=callback;return 1;
+    }
+    CHECK(word==0x0040F809u);
     CHECK(address==0x80021300u || address==0x80021518u);
     redirects[address==0x80021518u]=callback;return 1;
 }
@@ -188,6 +196,30 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     }
     if (address==CONTACT || address==HIT) {
         ++native_calls[seat];
+        if(address==HIT && double_model) {
+            /* DD04 overlap and DE30's signed-byte token gate precede the
+             * admission load. A rejected repeated hit returns DD04 zero. */
+            if(!attack_present[seat]) {
+                psx_mod_write_byte(a0+0x65,0);return 0;
+            }
+            uint8_t token=attack_token[seat],type=attack_type[seat];
+            if(token && token==psx_mod_read_byte(a0+0x65))return 0;
+            psx_mod_write_byte(a0+0x65,token);
+            uint32_t table=psx_mod_read_word(a0+0x58);
+            /* DE7C loads admission; DE80 is its load-delay slot. Only the
+             * DE84 hook before SB observes the committed admission byte. */
+            CPUState admission={.gpr={[2]=psx_mod_read_byte(table+type*2u),
+                [4]=a0,[6]=type,[7]=table}};
+            double_admission(&admission,0x8002DE84u);
+            psx_mod_write_byte(a0+0x63,(uint8_t)admission.gpr[2]);
+            if(type>=26 && type<36)psx_mod_write_byte(MMX4_PLAYER+0xBD,1);
+            if(admission.gpr[2]==0xFFu)return 0x7F;
+            uint8_t hp=psx_mod_read_byte(a0+0x5C);
+            uint8_t amount=psx_mod_read_byte(table+type*2u+1u);
+            psx_mod_write_byte(a0+0x5C,(uint8_t)(hp>amount?hp-amount:0));
+            ++consumed;
+            return hp>amount?type+1u:UINT32_MAX;
+        }
         if (address==HIT && token_model) {
             /* Native DD04 clears +65 for no accepted overlap/blocked target;
              * DE30 rejects equal nonzero signed-byte tokens before damage. */
@@ -339,6 +371,11 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         CHECK(mmx4_coop_combat_actor_context());
         ++actor_updates[seat];
         ai_target_x[seat]=psx_mod_read_word(MMX4_PLAYER+8);
+        if(double_model) {
+            uint32_t result=double_tick();
+            CHECK(projected==seat && mmx4_coop_combat_actor_context());
+            return result;
+        }
         CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==0);
         if(psx_mod_read_byte(a0+1)==22) {
             if(psx_mod_read_byte(a0+4)==2) {
@@ -384,7 +421,8 @@ static void setup(void) {
     hit_result[0]=hit_result[1]=0;
     allocated_actor=ACTOR;
     mount_accept[0]=mount_accept[1]=0;
-    token_model=0;attack_present[0]=attack_present[1]=0;
+    token_model=double_model=local_view=0;attack_present[0]=attack_present[1]=0;
+    attack_type[0]=attack_type[1]=0;
     attack_token[0]=attack_token[1]=0;
     psx_mod_write_byte(MMX4_PLAY,6);
     psx_mod_write_byte(MMX4_PLAYER+4,1);
@@ -828,9 +866,135 @@ static void attached_dash_slide_effects(void) {
      * No owner projection is installed for its shared native animation. */
     for(unsigned i=0;i<filter_count;++i)CHECK(filters[i].address!=0x800AF6A0u);
 }
+#define DOUBLE_ENEMY 0x8013BF6Cu
+#define DOUBLE_TABLE 0x80108204u
+#define DOUBLE_COOLDOWN 0x801060F0u
+static void double_setup(unsigned zero_seat) {
+    setup();double_model=1;
+    psx_mod_write_byte(MMX4_PLAY+0x0C,11);
+    psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)!zero_seat);
+    second[2]=(uint8_t)zero_seat;
+    psx_mod_write_byte(DOUBLE_ENEMY,1);psx_mod_write_byte(DOUBLE_ENEMY+1,73);
+    psx_mod_write_byte(DOUBLE_ENEMY+4,1);psx_mod_write_byte(DOUBLE_ENEMY+5,3);
+    psx_mod_write_byte(DOUBLE_ENEMY+0x5C,48);
+    psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_TABLE);
+    /* Original 80108204: normal charged X7=5; authored Zero25=3,
+     * Zero26..31=2 and Zero32=1 all have FF admission. Cooldown is all FF. */
+    for(unsigned type=0;type<44;++type) {
+        psx_mod_write_byte(DOUBLE_TABLE+type*2u,0xFF);
+        psx_mod_write_byte(DOUBLE_COOLDOWN+type*2u,0xFF);
+    }
+    psx_mod_write_byte(DOUBLE_TABLE+14,0);psx_mod_write_byte(DOUBLE_TABLE+15,5);
+    for(unsigned type=25;type<=32;++type)
+        psx_mod_write_byte(DOUBLE_TABLE+type*2u+1u,(uint8_t)(type==25?3:type==32?1:2));
+    attack_present[zero_seat]=1;attack_type[zero_seat]=26;attack_token[zero_seat]=3;
+}
+static uint32_t double_tick(void) {
+    unsigned target=projected;
+    CPUState hit={.gpr={[4]=DOUBLE_ENEMY}};
+    CHECK(filter(HIT)(&hit,HIT) && projected==target);
+    /* Original 8CD80 calls DD04 first, then consumes its one result and
+     * advances the +8B cooldown. Its alternate table rejects every class. */
+    uint8_t timer=psx_mod_read_byte(DOUBLE_ENEMY+0x8B);
+    if(timer) {
+        psx_mod_write_byte(DOUBLE_ENEMY+0x8B,(uint8_t)(timer-1));
+        if(timer==1)psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_TABLE);
+    }else if(hit.gpr[2]==UINT32_MAX) {
+        psx_mod_write_byte(DOUBLE_ENEMY+4,2);
+        psx_mod_write_byte(DOUBLE_ENEMY+5,0);psx_mod_write_byte(DOUBLE_ENEMY+6,0);
+    }else if(hit.gpr[2] && hit.gpr[2]!=0x7F) {
+        psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_COOLDOWN);
+        psx_mod_write_byte(DOUBLE_ENEMY+0x8B,64);
+    }
+    return hit.gpr[2];
+}
+static void double_counterpart_damage(void) {
+    for(unsigned zero=0;zero<2;++zero)for(unsigned survivor=0;survivor<2;++survivor) {
+        double_setup(zero);if(survivor)alive[zero^1u]=0;
+        uint8_t original[88];memcpy(original,address_ptr(DOUBLE_TABLE),sizeof original);
+        CHECK(double_tick()==27 && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==46);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x63)==0 && consumed==1);
+        CHECK((zero?second[0xBD]:psx_mod_read_byte(MMX4_PLAYER+0xBD))==1);
+        CHECK(psx_mod_read_word(DOUBLE_ENEMY+0x58)==DOUBLE_COOLDOWN);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x8B)==64);
+        /* A fresh slash during native invulnerability is still deflected. */
+        ++attack_token[zero];CHECK(double_tick()==0x7F);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==46 && consumed==1);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x8B)==63);
+        attack_present[zero]=0;
+        for(unsigned i=0;i<63;++i)CHECK(!double_tick());
+        CHECK(psx_mod_read_word(DOUBLE_ENEMY+0x58)==DOUBLE_TABLE);
+        attack_present[zero]=1;++attack_token[zero];
+        CHECK(double_tick()==27 && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==44 && consumed==2);
+        /* Repeated persistent attack tokens are rejected before admission. */
+        psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_TABLE);
+        CHECK(!double_tick() && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==44 && consumed==2);
+        CHECK(!memcmp(original,address_ptr(DOUBLE_TABLE),sizeof original));
+        CHECK(!projected && mmx4_coop_combat_snapshot_ready());
+    }
+    for(unsigned type=24;type<=36;++type) {
+        double_setup(1);attack_type[1]=(uint8_t)type;
+        uint32_t result=double_tick();unsigned amount=type==25?3:type>=26 && type<=31?2:type==32?1:0;
+        CHECK(result==(amount?type+1u:0x7Fu));
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==48-amount);
+    }
+    /* The shared AI target may be X or Zero. Canonical collision handling
+     * suspends that projection and binds each attack pool to its real body. */
+    for(unsigned zero=0;zero<2;++zero)for(unsigned nearest=0;nearest<2;++nearest) {
+        double_setup(zero);split=1;
+        psx_mod_write_word(MMX4_PLAYER+8,10u<<16);second[10]=80;
+        psx_mod_write_word(DOUBLE_ENEMY+8,(nearest?70u:20u)<<16);
+        psx_mod_write_word(DOUBLE_ENEMY+12,20u<<16);
+        CHECK(invoke(0x80021234u)==0x1234u);
+        CHECK(actor_updates[nearest]==1 && !actor_updates[nearest^1u]);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==46 && consumed==1);
+        CHECK(psx_mod_read_byte(MMX4_PLAYER+2)==!zero && second[2]==zero && !projected);
+        CHECK(mmx4_coop_combat_snapshot_ready());
+    }
+    /* A lethal accepted slash returns the native negative result; the
+     * original caller enters its defeat state rather than an extra hit/call. */
+    for(unsigned zero=0;zero<2;++zero)for(unsigned survivor=0;survivor<2;++survivor) {
+        double_setup(zero);if(survivor)alive[zero^1u]=0;
+        psx_mod_write_byte(DOUBLE_ENEMY+0x5C,2);
+        CHECK(double_tick()==UINT32_MAX && !psx_mod_read_byte(DOUBLE_ENEMY+0x5C));
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+4)==2 && !psx_mod_read_byte(DOUBLE_ENEMY+5));
+        CHECK(consumed==1 && native_calls[zero]==1 && !projected);
+    }
+    /* Admission stays retail for X, unrelated bosses/tables, invalid slots,
+     * solo/not-ready, other sections and private render transactions. */
+    for(unsigned excluded=0;excluded<8;++excluded) {
+        double_setup(1);
+        if(excluded==0)second[2]=0;
+        if(excluded==1)psx_mod_write_byte(DOUBLE_ENEMY+1,66);
+        if(excluded==2) {
+            psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_COOLDOWN);
+        }
+        if(excluded==3)psx_mod_write_byte(MMX4_PLAY+0x0D,1);
+        if(excluded==4)local_view=1;
+        if(excluded==5)psx_mod_write_byte(DOUBLE_ENEMY,0);
+        if(excluded==6)psx_mod_write_byte(MMX4_PLAY+0x0C,10);
+        if(excluded==7)psx_mod_write_byte(DOUBLE_TABLE+26*2u+1u,0);
+        CHECK(double_tick()==0x7F && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==48 && !consumed);
+    }
+    double_setup(1);ready=0;
+    CHECK(!filter(HIT)(&(CPUState){.gpr={[4]=DOUBLE_ENEMY}},HIT));
+    CPUState direct={.gpr={[2]=0xFF,[4]=DOUBLE_ENEMY,[6]=26,[7]=DOUBLE_TABLE}};
+    double_admission(&direct,0x8002DE84u);CHECK(direct.gpr[2]==0xFF);
+    /* Charged X's accepted value/damage and native cooldown are unchanged. */
+    double_setup(1);attack_present[1]=0;attack_present[0]=1;attack_type[0]=7;attack_token[0]=1;
+    CHECK(double_tick()==8 && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==43 && consumed==1);
+    CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x8B)==64);
+    const uint8_t rejected_x[]={0,1,8,17,21,23};
+    for(unsigned i=0;i<sizeof rejected_x;++i) {
+        double_setup(1);attack_present[1]=0;attack_present[0]=1;attack_type[0]=rejected_x[i];
+        CHECK(double_tick()==0x7F && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==48 && !consumed);
+    }
+}
+
 int main(void) {
     accepted_events();independent_solids();aim_selection();effect_ownership();armor_handoff();independent_hit_tokens();
     split_native_targets();
+    double_counterpart_damage();
     slash_intro_leader();
     vehicle_secondary_ownership();
     spider_capture_ownership();

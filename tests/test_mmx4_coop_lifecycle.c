@@ -25,10 +25,19 @@ static unsigned projected,ready=1,world_calls,observed_campaign,collect_calls[2]
 static unsigned pause_commit,pause_exit,world_draws;
 static unsigned reward_calls,save_calls,observed_menu_select;
 static uint8_t saved_palette_dirty;
+static unsigned stage_palette_phase,palette_swap_model,palette_uploads;
+static uint32_t saved_palette_resource;
+static uint16_t palette_uploaded;
+#define PALETTE_SOURCE 0x801F4000u
+#define SECOND_PALETTE_SOURCE 0x801F4100u
+#define WORKING_PALETTE_COLOR 0x80141F72u
 static int split_views;
 static int both_door_players;
 int mmx4_coop_both_door_players(void) {return both_door_players;}
 static unsigned stage_script_calls,scene_calls,observed_controls;
+static unsigned both_door_crossings;
+static unsigned door_map_queries;
+static uint32_t door_map_kind;
 static unsigned canonical_portal_solids;
 static unsigned latch_calls,latch_owner,latch_y;
 static unsigned boundary_calls[2];
@@ -70,6 +79,7 @@ int psx_mod_register_function_entry_plugin(const char *id,uint32_t a,PSXModFunct
 void psx_mod_counter_add(const char *name,uint32_t amount) {
     if(!strcmp(name,"mmx4.coop.concurrent-stage-arrivals"))natural_arrivals+=amount;
     if(!strcmp(name,"mmx4.coop.concurrent-return-arrivals"))direct_arrivals+=amount;
+    if(!strcmp(name,"mmx4.coop.both-door-crossings"))both_door_crossings+=amount;
 }
 void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat) {(void)cpu;(void)seat;}
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
@@ -114,6 +124,10 @@ int mmx4_coop_alive(unsigned seat) {
 void mmx4_coop_enter_second(void) {
     assert(!projected);
     saved_palette_dirty=psx_mod_read_byte(0x80166BB0u);
+    if(palette_swap_model) {
+        saved_palette_resource=psx_mod_read_word(0x1F800028u);
+        psx_mod_write_word(0x1F800028u,SECOND_PALETTE_SOURCE);
+    }
     for(unsigned i=0;i<sizeof p2;++i) {
         p1_backup[i]=psx_mod_read_byte(MMX4_PLAYER+i);
         psx_mod_write_byte(MMX4_PLAYER+i,p2[i]);
@@ -132,6 +146,7 @@ void mmx4_coop_leave_second(void) {
     }
     projected=0;
     psx_mod_write_byte(0x80166BB0u,saved_palette_dirty);
+    if(palette_swap_model)psx_mod_write_word(0x1F800028u,saved_palette_resource);
     for(unsigned i=0;i<sizeof p2_vehicle;++i) {
         p2_vehicle[i]=psx_mod_read_byte(MMX4_VEHICLE+i);
         psx_mod_write_byte(MMX4_VEHICLE+i,p1_vehicle_backup[i]);
@@ -188,6 +203,11 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     case 0x8002C614:
         ++terrain_calls[projected];
         psx_mod_write_byte(MMX4_PLAYER+0x70,terrain_contact);break;
+    case 0x8002D7E4:
+    case 0x8002D724:
+        ++door_map_queries;
+        if(address==0x8002D7E4u)psx_mod_write_half(MMX4_PLAYER+0x6C,(uint16_t)(a1&15u));
+        result=door_map_kind;break;
     case 0x80031540:
         if(!psx_mod_read_byte(MMX4_PLAYER+6))psx_mod_write_byte(MMX4_PLAYER+6,1);
         else {psx_mod_write_byte(MMX4_PLAYER+4,3);psx_mod_write_byte(MMX4_PLAYER+3,0);}
@@ -299,9 +319,39 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     case 0x8002166C:
         ++stage_script_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         stage_script_projected=projected;
+        if(stage_palette_phase) {
+            /* Actual type37 BD5AC/BD5CC writes: two white ticks, then zero
+             * RGB additions plus dirty |=5 to rebuild the shared palette. */
+            unsigned white=stage_palette_phase==1;
+            psx_mod_write_half(0x80175EA0u,(uint16_t)(white?31:0));
+            psx_mod_write_half(0x80141BE6u,(uint16_t)(white?0x3E0:0));
+            psx_mod_write_half(0x8013E1BEu,(uint16_t)(white?0x7C00:0));
+            if(!white)psx_mod_write_byte(0x80166BB0u,
+                (uint8_t)(psx_mod_read_byte(0x80166BB0u)|(stage_palette_phase==2?5:1)));
+            break;
+        }
         if(psx_mod_read_byte(MMX4_PLAY)==3)assert(!projected);
         mmx4_coop_call(cpu,0x80036AE4u,0x15,0x40);
         psx_mod_write_byte(MMX4_PLAY+0x1D,9);break;
+    case 0x8002A484: {
+        /* Native zero-addition early exit and dirty-bit4 rebuild gate.
+         * One representative nonzero color is enough to expose a retained
+         * white working palette; resource selection stays observable. */
+        unsigned additions=psx_mod_read_half(0x80175EA0u)|psx_mod_read_half(0x80141BE6u)|
+                           psx_mod_read_half(0x8013E1BEu);
+        if(!additions && !(psx_mod_read_byte(0x80166BB0u)&4u))break;
+        assert(!projected);
+        uint16_t base=psx_mod_read_half(psx_mod_read_word(0x1F800028u)+2);
+        psx_mod_write_half(WORKING_PALETTE_COLOR,(uint16_t)(additions?0x7FFF:base));
+        psx_mod_write_byte(0x80166BB0u,2);break;
+    }
+    case 0x80016004:
+        if(psx_mod_read_byte(0x80166BB0u)&3u) {
+            ++palette_uploads;palette_uploaded=psx_mod_read_byte(0x80166BB0u)&1u?
+                psx_mod_read_half(psx_mod_read_word(0x1F800028u)+2):
+                psx_mod_read_half(WORKING_PALETTE_COLOR);
+        }
+        psx_mod_write_byte(0x80166BB0u,0);break;
     case 0x800C2BE0:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         if(psx_mod_read_byte(a0+0x72)&8u) {
@@ -355,6 +405,23 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         psx_mod_write_byte(MMX4_PLAYER+0xC0,0);psx_mod_write_byte(MMX4_PLAY+0x1C,0);break;
     case 0x800311EC:
         observed_controls=psx_mod_read_half(MMX4_PLAYER+0x7C);
+        if(both_door_players) {
+            if(psx_mod_read_byte(MMX4_PLAYER+0xC4)==1) {
+                psx_mod_write_byte(MMX4_PLAYER+0xC4,255);
+                psx_mod_write_byte(MMX4_PLAYER+5,0x13);
+            }else if(!psx_mod_read_byte(MMX4_PLAYER+0xC4) &&
+                     psx_mod_read_byte(MMX4_PLAYER+5)==0x13)
+                psx_mod_write_byte(MMX4_PLAYER+5,2);
+            if(!psx_mod_read_byte(MMX4_PLAYER+0xC4) &&
+               !psx_mod_read_byte(MMX4_PLAYER+0xC0) &&
+               !psx_mod_read_byte(MMX4_PLAY+0x0F) && (observed_controls&0x20u)) {
+                unsigned dash=(observed_controls&0x400u)!=0;
+                psx_mod_write_byte(MMX4_PLAYER+5,(uint8_t)(dash?0x0Du:
+                    (observed_controls&0x8000u)?8u:4u));
+                psx_mod_write_word(MMX4_PLAYER+8,psx_mod_read_word(MMX4_PLAYER+8)+
+                    (dash?8u:4u)*65536u);
+            }
+        }
         if(initial_arrival_model && psx_mod_read_byte(MMX4_PLAYER+4)==1 &&
            !psx_mod_read_byte(MMX4_PLAYER+5)) {
             if(initial_arrival_model==2 && psx_mod_read_byte(MMX4_PLAYER+0xBE)) {
@@ -383,11 +450,33 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         break;
     case 0x800C1E7C:
         result=psx_mod_read_word(MMX4_PLAYER+8)==psx_mod_read_word(a0+8);break;
+    case 0x800C1D90:
+        psx_mod_write_word(MMX4_PLAYER+8,psx_mod_read_word(MMX4_PLAYER+8)+0xA400u);
+        if(psx_mod_read_half(0x801419BAu)==psx_mod_read_half(0x801419D6u)) {
+            psx_mod_write_byte(MMX4_PLAYER+0xC4,0);psx_mod_write_byte(a0+5,4);
+            mmx4_coop_call(cpu,0x80035EA4u,MMX4_PLAYER,0);
+        }
+        break;
     case 0x800C1994:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         if(!psx_mod_read_byte(a0+5) &&
            mmx4_coop_call(cpu,0x800C1E7Cu,a0,0)) {
             psx_mod_write_byte(MMX4_PLAYER+0xC4,1);psx_mod_write_byte(a0+5,1);
+        }else if(both_door_players && psx_mod_read_byte(a0+5)==1) {
+            if((int8_t)psx_mod_read_byte(MMX4_PLAYER+0xC4)<0) {
+                psx_mod_write_byte(MMX4_PLAY+0x10,1);psx_mod_write_byte(MMX4_PLAY+0x12,1);
+                psx_mod_write_word(MMX4_PLAYER+0x68,0);psx_mod_write_byte(a0+5,2);
+            }
+        }else if(both_door_players && psx_mod_read_byte(a0+5)==2) {
+            if(psx_mod_read_byte(a0+0x45)>=2) {
+                psx_mod_write_byte(MMX4_PLAY+0x10,0);psx_mod_write_byte(MMX4_PLAY+0x12,0);
+                psx_mod_write_half(0x801419D4u,(uint16_t)(psx_mod_read_half(a0+10)+0x50));
+                psx_mod_write_half(0x801419D6u,psx_mod_read_half(a0+10));
+                psx_mod_write_byte(a0+5,3);
+            }
+        }else if(both_door_players && psx_mod_read_byte(a0+5)==3) {
+            uint32_t old_a2=cpu->gpr[6];cpu->gpr[6]=MMX4_PLAYER;
+            mmx4_coop_call(cpu,0x800C1D90u,a0,MMX4_PLAY);cpu->gpr[6]=old_a2;
         }else if(psx_mod_read_byte(a0+5)==3) {
             psx_mod_write_word(MMX4_PLAYER+8,psx_mod_read_word(MMX4_PLAYER+8)+0x10000u);
             psx_mod_write_byte(MMX4_PLAYER+0xC4,0);psx_mod_write_byte(a0+5,4);
@@ -402,7 +491,10 @@ done:
 #include "../src/mods/mmx4_coop_lifecycle.c"
 #define CHECK(x) do {if(!(x)) {fprintf(stderr,"line %d: %s\n",__LINE__,#x);return 1;}}while(0)
 static void reset(void) {
+    stage_palette_phase=palette_swap_model=palette_uploads=0;palette_uploaded=0;
     both_door_players=0;
+    both_door_crossings=0;
+    door_map_queries=0;door_map_kind=0x38;
     CPUState cpu={0};memset(ram,0,sizeof ram);memset(p2,0,sizeof p2);
     memset(p2_vehicle,0,sizeof p2_vehicle);
     fresh_game(&cpu,0);projected=local_view=0;inputs[0]=inputs[1]=0;
@@ -424,6 +516,84 @@ static void reset(void) {
     psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+0x46,32);
     psx_mod_write_byte(MMX4_PLAY+0x44,2);
     mmx4_coop_enter_second();mmx4_coop_leave_second();
+}
+static int colonel_palette_refreshes(CPUState *cpu) {
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned survivor=0;survivor<3;++survivor) {
+        reset();split_views=1;palette_swap_model=1;
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        if(survivor==1){psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);}
+        if(survivor==2){p2[4]=3;p2[0x5C]=0;}
+        psx_mod_write_word(0x1F800028u,PALETTE_SOURCE);
+        uint16_t base=(uint16_t)(0x1234u+campaign*0x400u);
+        psx_mod_write_half(PALETTE_SOURCE+2,base);
+        psx_mod_write_half(SECOND_PALETTE_SOURCE+2,0x2E7);
+        stage_palette_phase=1;mmx4_coop_call(cpu,0x8002166Cu,0,0);
+        CHECK(stage_script_calls==1 && stage_script_projected==(survivor==1));
+        CHECK(!projected && psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE);
+        mmx4_coop_call(cpu,0x8002A484u,0,0);mmx4_coop_call(cpu,0x80016004u,0,0);
+        CHECK(palette_uploads==1 && palette_uploaded==0x7FFF);
+        stage_palette_phase=2;mmx4_coop_call(cpu,0x8002166Cu,0,0);
+        CHECK(stage_script_calls==2 && (psx_mod_read_byte(0x80166BB0u)&4u));
+        CHECK(!psx_mod_read_half(0x80175EA0u) && !psx_mod_read_half(0x80141BE6u) &&
+              !psx_mod_read_half(0x8013E1BEu));
+        CHECK(!projected && psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE);
+        mmx4_coop_call(cpu,0x8002A484u,0,0);mmx4_coop_call(cpu,0x80016004u,0,0);
+        CHECK(palette_uploads==2 && palette_uploaded==base);
+        CHECK(psx_mod_read_half(WORKING_PALETTE_COLOR)==base && !psx_mod_read_byte(0x80166BB0u));
+        CHECK(psx_mod_read_byte(PLAY+0x43)==campaign);
+        CHECK((survivor==1)==!mmx4_coop_alive(0) && (survivor==2)==!mmx4_coop_alive(1));
+    }
+    /* The special retention is limited to a shared rebuild. A private P2
+     * character upload and ordinary projection keep their prior ownership. */
+    reset();palette_swap_model=1;psx_mod_write_word(0x1F800028u,PALETTE_SOURCE);
+    psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
+    stage_palette_phase=3;psx_mod_write_byte(0x80166BB0u,2);
+    mmx4_coop_call(cpu,0x8002166Cu,0,0);CHECK(psx_mod_read_byte(0x80166BB0u)==2);
+    CHECK(psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE && !projected);
+    mmx4_coop_enter_second();psx_mod_write_byte(0x80166BB0u,7);mmx4_coop_leave_second();
+    CHECK(psx_mod_read_byte(0x80166BB0u)==2 && psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE);
+    return 0;
+}
+static int open_both_door(CPUState *cpu,uint32_t actor) {
+    reset();both_door_players=1;
+    psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,8);psx_mod_write_byte(actor+4,1);
+    psx_mod_write_word(actor+8,512u<<16);psx_mod_write_word(actor+0x68,0x800FCC58u);
+    psx_mod_write_byte(0x800FCC5Au,8);
+    psx_mod_write_byte(0x800FCC5Bu,32);
+    for(unsigned character=0;character<2;++character) {
+        psx_mod_write_byte(0x800F8BC4u+character*4u+2u,8);
+        psx_mod_write_byte(0x800F8BC4u+character*4u+3u,16);
+    }
+    psx_mod_write_half(0x801419D6u,128);psx_mod_write_half(0x801419BAu,128);
+    psx_mod_write_word(PLAYER+8,512u<<16);psx_mod_write_byte(PLAYER+0x89,8);
+    mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+    mmx4_coop_enter_second();psx_mod_write_word(PLAYER+8,512u<<16);
+    psx_mod_write_byte(PLAYER+0x89,8);mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+    mmx4_coop_leave_second();
+    mmx4_coop_call(cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==1 && !warp_pending && !warp_phase);
+    uint32_t partner_box=body_word(p2,0x68);
+    CHECK(p2[0xC4]==255);
+    mmx4_coop_enter_second();mmx4_coop_call(cpu,0x800311ECu,PLAYER,0);
+    mmx4_coop_leave_second();
+    CHECK(p2[5]==2 && body_word(p2,0x68)==partner_box && p2[0xC4]==255);
+    mmx4_coop_call(cpu,0x800311ECu,PLAYER,0);
+    mmx4_coop_call(cpu,0x800C1994u,actor,0);
+    CHECK(psx_mod_read_byte(actor+5)==2 && !psx_mod_read_word(PLAYER+0x68));
+    psx_mod_write_byte(actor+0x45,2);mmx4_coop_call(cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==2 && psx_mod_read_byte(actor+5)==3);
+    CHECK(psx_mod_read_half(0x801419D6u)==128 && both_door.target_min==512);
+    CHECK(psx_mod_read_word(PLAYER+0x68) && psx_mod_read_byte(PLAYER+0xC4)==255);
+    CHECK(psx_mod_read_word(PLAYER+8)==512u<<16 && body_word(p2,8)==512u<<16);
+    return 0;
+}
+static void door_control(CPUState *cpu,unsigned seat,uint16_t input) {
+    if(seat)mmx4_coop_enter_second();
+    psx_mod_write_half(PLAYER+0x7C,input);
+    psx_mod_write_half(PLAYER+0x7E,input);psx_mod_write_half(PLAYER+0x80,input);
+    mmx4_coop_call(cpu,0x800311ECu,PLAYER,0);
+    if(seat)mmx4_coop_leave_second();
 }
 static void prepare_initial_arrival(void) {
     reset();
@@ -1475,9 +1645,10 @@ int main(void) {
 
     /* Both-player admission retains the idle native pass. Contact must be
      * simultaneous, not remembered after the first player walks away. */
+    actor=0x80165A30u;
     for(unsigned leader=0;leader<2;++leader) {
         reset();both_door_players=1;
-        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,8);psx_mod_write_byte(actor+4,1);
         if(leader)p2[11]=2;else psx_mod_write_word(PLAYER+8,0x02000000u);
         psx_mod_write_word(actor+8,0x02000000u);
         mmx4_coop_call(&cpu,0x800C1994u,actor,0);
@@ -1490,16 +1661,155 @@ int main(void) {
     }
     for(unsigned absent=0;absent<2;++absent) {
         reset();both_door_players=1;
-        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,8);psx_mod_write_byte(actor+4,1);
         if(absent) {p2[4]=3;p2[0x5C]=0;}
         else {psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);}
         mmx4_coop_call(&cpu,0x800C1994u,actor,0);
         CHECK(script_active && script_owner==(absent^1u) && !door_wait);
+        CHECK(!both_door.phase);
+        if(!absent)mmx4_coop_enter_second();
+        mmx4_coop_call(&cpu,0x800311ECu,PLAYER,0);
+        if(!absent)mmx4_coop_leave_second();
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        psx_mod_write_byte(actor+0x45,2);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK(!script_active && !warp_phase && !warp_pending && !both_door_crossings);
+        CHECK((absent?body_word(p2,8):psx_mod_read_word(PLAYER+8))==0);
+        CHECK(!(absent?(p2[0x5C]&127u):(psx_mod_read_byte(PLAYER+0x5C)&127u)));
     }
     reset();both_door_players=1;departed=1;
     psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
     mmx4_coop_call(&cpu,0x800C1994u,actor,0);
     CHECK(script_active && !script_owner && !door_wait);
+
+    /* Both mode keeps both native bodies in the world. Opening releases the
+     * owner's action19 into ordinary controls; physical box clearance, then
+     * camera arrival, own closure. No controller or door pass supplies X. */
+    CHECK(!open_both_door(&cpu,actor));
+    /* Retail's open doorway remains a wall in the map. Exempt its interior
+     * wall samples in both axes, retaining the floor at the bottom edge,
+     * adjacent walls, closed phases and other tile classifications. */
+    for(unsigned seat=0;seat<2;++seat) {
+        if(seat)mmx4_coop_enter_second();
+        cpu.gpr[6]=0;cpu.gpr[31]=0x8002CB9Cu;
+        unsigned queries=door_map_queries;
+        CHECK(!mmx4_coop_call(&cpu,0x8002D7E4u,PLAYER,515));
+        CHECK(door_map_queries==queries+1 && psx_mod_read_half(PLAYER+0x6C)==3);
+        CHECK(mmx4_coop_call(&cpu,0x8002D7E4u,PLAYER,503)==0x38);
+        cpu.gpr[6]=32;CHECK(mmx4_coop_call(&cpu,0x8002D7E4u,PLAYER,512)==0x38);
+        cpu.gpr[6]=0;cpu.gpr[31]=0x8002D360u;
+        CHECK(!mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512)); /* Interior vertical sample. */
+        cpu.gpr[6]=32;
+        CHECK(mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512)==0x38); /* Aperture floor. */
+        cpu.gpr[6]=0;
+        cpu.gpr[31]=0x8002D624u;
+        CHECK(!mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512));
+        door_map_kind=0x21;CHECK(mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512)==0x21);
+        door_map_kind=0x3E;CHECK(mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512)==0x3E);
+        door_map_kind=0x3F;CHECK(mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512)==0x3F);
+        door_map_kind=0x38;both_door.phase=1;
+        CHECK(mmx4_coop_call(&cpu,0x8002D724u,PLAYER,512)==0x38);both_door.phase=2;
+        if(seat)mmx4_coop_leave_second();
+    }
+    cpu.gpr[6]=cpu.gpr[31]=0;
+    uint8_t paired_hp[2]={psx_mod_read_byte(PLAYER+0x5C),p2[0x5C]};
+    mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==2 && !both_door_crossings);
+    CHECK(psx_mod_read_word(PLAYER+8)==512u<<16 && body_word(p2,8)==512u<<16);
+    for(unsigned tick=0;tick<3;++tick)door_control(&cpu,0,0x420);
+    CHECK(observed_controls==0x420 && psx_mod_read_byte(PLAYER+5)==0x0D);
+    CHECK(psx_mod_read_byte(PLAYER+0xC4)==255 && psx_mod_read_word(PLAYER+8)==536u<<16);
+    uint32_t paired_x=psx_mod_read_word(PLAYER+8);
+    for(unsigned tick=0;tick<3;++tick)mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==2 && psx_mod_read_word(PLAYER+8)==paired_x);
+    CHECK(psx_mod_read_half(0x801419D6u)==128 && !both_door_crossings);
+    for(unsigned tick=0;tick<6;++tick)door_control(&cpu,1,0x8020);
+    CHECK(observed_controls==0x8020 && p2[5]==8 && body_word(p2,8)==536u<<16);
+    CHECK(p2[0xC4]==255 && psx_mod_read_word(PLAYER+0x68) && body_word(p2,0x68));
+    mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==3 && psx_mod_read_byte(actor+5)==3);
+    CHECK(psx_mod_read_half(0x801419D6u)==512 && !both_door_crossings);
+    psx_mod_write_half(0x801419BAu,512);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==4 && both_door_crossings==1 && psx_mod_read_byte(actor+5)==4);
+    CHECK(!script_active && !psx_mod_read_byte(PLAYER+0xC4) && !p2[0xC4]);
+    CHECK(psx_mod_read_word(PLAYER+8)==paired_x && body_word(p2,8)==paired_x);
+    mmx4_coop_call(&cpu,0x800C1994u,actor,0);mmx4_coop_lifecycle_tick(&cpu);
+    CHECK(both_door_crossings==1 && !warp_pending && !warp_phase);
+    CHECK(psx_mod_read_byte(PLAYER)==1 && psx_mod_read_byte(PLAYER+3)==1 && p2[0] && p2[3]);
+    CHECK(psx_mod_read_byte(PLAYER+0x5C)==paired_hp[0] && p2[0x5C]==paired_hp[1]);
+    CHECK(psx_mod_read_byte(PLAY+0x43)==0 && psx_mod_read_byte(PLAY+0x44)==2);
+
+    /* The next retail boss conversation freezes the shared participants and
+     * accepts its owner's text input without starting a passenger beam.
+     * Release consumes this privilege; a later boss command works normally. */
+    cpu.gpr[31]=0x80049084u;mmx4_coop_call(&cpu,0x80036AE4u,0x14,0x40);
+    CHECK(script_active && both_door.phase==5 && !warp_pending && !warp_phase);
+    door_control(&cpu,1,0x20);CHECK(!observed_controls && body_word(p2,8)==paired_x);
+    mmx4_coop_lifecycle_tick(&cpu);
+    CHECK(psx_mod_read_byte(PLAYER) && p2[0] && !mmx4_coop_lifecycle_hidden(0) && !mmx4_coop_lifecycle_hidden(1));
+    mmx4_coop_call(&cpu,0x80036B18u,0,0);
+    CHECK(!both_door.phase && !script_active && !warp_pending);
+    mmx4_coop_call(&cpu,0x80036AE4u,0x14,0x40);CHECK(warp_pending);
+    cpu.gpr[31]=0;
+
+    /* Death exempts the missing player. Even a dead door owner transfers its
+     * gate to the survivor's own position, without the Either-mode rescue. */
+    CHECK(!open_both_door(&cpu,actor));
+    psx_mod_write_word(PLAYER+8,536u<<16);
+    psx_mod_write_byte(PLAYER+0x5C,0x80);mmx4_coop_lifecycle_tick(&cpu);
+    CHECK(both_door.owner==1 && script_owner==1 && !scenes[0].recovered);
+    CHECK(body_word(p2,8)==512u<<16 && p2[0xC4]==255 && !psx_mod_read_byte(PLAYER+0xC4));
+    for(unsigned tick=0;tick<3;++tick)door_control(&cpu,1,0x420);
+    psx_mod_write_half(0x801419BAu,512);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door_crossings==1 && !warp_phase && !warp_pending && !p2[0xC4]);
+    CHECK(psx_mod_read_word(PLAYER+8)==536u<<16 && body_word(p2,8)==536u<<16);
+    CHECK(!(psx_mod_read_byte(PLAYER+0x5C)&127u));
+    for(unsigned absent=0;absent<2;++absent) {
+        CHECK(!open_both_door(&cpu,actor));
+        for(unsigned tick=0;tick<3;++tick)door_control(&cpu,0,0x420);
+        if(absent)departed=1;else {p2[4]=3;p2[0x5C]=0;}
+        psx_mod_write_half(0x801419BAu,512);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK(both_door_crossings==1 && !warp_pending && !warp_phase);
+        CHECK(body_word(p2,8)==512u<<16 && psx_mod_read_word(PLAYER+8)==536u<<16);
+    }
+
+    /* Rollback owns this entire protocol. Invalid snapshots do not mutate it;
+     * aborts, loaders and unrelated scenes cannot leave a warp exemption. */
+    CHECK(!open_both_door(&cpu,actor));
+    uint8_t paired_snapshot[4096];BothDoor saved_pair=both_door;
+    uint32_t paired_digest=mmx4_coop_lifecycle_digest(2166136261u);
+    Mmx4SnapshotIO pair_io={paired_snapshot,NULL,sizeof paired_snapshot,0,MMX4_SNAPSHOT_WRITE,1};
+    CHECK(mmx4_coop_lifecycle_snapshot(&pair_io));
+    uint32_t pair_bytes=pair_io.pos;
+    memset(&both_door,0,sizeof both_door);
+    pair_io=(Mmx4SnapshotIO){NULL,paired_snapshot,pair_bytes,0,MMX4_SNAPSHOT_READ,1};
+    CHECK(mmx4_coop_lifecycle_snapshot(&pair_io));
+    CHECK(!memcmp(&saved_pair,&both_door,sizeof saved_pair));
+    CHECK(mmx4_coop_lifecycle_digest(2166136261u)==paired_digest);
+    paired_snapshot[pair_bytes-4]=6;
+    pair_io=(Mmx4SnapshotIO){NULL,paired_snapshot,pair_bytes,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(!mmx4_coop_lifecycle_snapshot(&pair_io) && both_door.phase==2);
+    paired_snapshot[pair_bytes-4]=2;paired_snapshot[pair_bytes-18]^=1;
+    pair_io=(Mmx4SnapshotIO){NULL,paired_snapshot,pair_bytes,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(!mmx4_coop_lifecycle_snapshot(&pair_io) && both_door.phase==2);
+    psx_mod_write_byte(actor,0);mmx4_coop_lifecycle_tick(&cpu);
+    CHECK(!both_door.phase && !script_active && !psx_mod_read_byte(PLAYER+0xC4) && !p2[0xC4]);
+    CHECK(!warp_phase && !warp_pending && psx_mod_read_word(PLAYER+0x68));
+    CHECK(!open_both_door(&cpu,actor));stage_initialization(&cpu,0);
+    CHECK(!both_door.phase);
+    CHECK(!open_both_door(&cpu,actor));mmx4_coop_lifecycle_reset();CHECK(!both_door.phase);
+    CHECK(!open_both_door(&cpu,actor));stage_selection(&cpu,0);CHECK(!both_door.phase);
+    CHECK(!open_both_door(&cpu,actor));psx_mod_write_byte(actor+1,9);
+    mmx4_coop_lifecycle_tick(&cpu);
+    CHECK(!both_door.phase && !psx_mod_read_byte(PLAYER+0xC4) && !p2[0xC4]);
+    CHECK(!open_both_door(&cpu,actor));
+    mmx4_coop_enter_second();cpu.gpr[31]=0x800C1678u;
+    mmx4_coop_call(&cpu,0x80036AE4u,0x15,0x40);mmx4_coop_leave_second();
+    CHECK(!both_door.phase && !psx_mod_read_byte(PLAYER+0xC4) && !p2[0xC4] && warp_pending);
+    CHECK(!open_both_door(&cpu,actor));
+    both_door.phase=4;script_active=0;psx_mod_write_byte(PLAYER+0xC4,0);
+    cpu.gpr[31]=0x800C1678u;mmx4_coop_call(&cpu,0x80036AE4u,0x15,0x40);
+    CHECK(!both_door.phase && warp_pending);cpu.gpr[31]=0;
 
     /* P1 wins simultaneous eligibility; a corpse cannot enter or be revived. */
     reset();psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
@@ -1602,5 +1912,6 @@ int main(void) {
     p2[2]=1;CHECK(!mmx4_coop_lifecycle_nova_active());
     initial_arrival=1;CHECK(mmx4_coop_lifecycle_initial_arrival());
     initial_arrival=0;CHECK(!mmx4_coop_lifecycle_initial_arrival());
+    CHECK(!colonel_palette_refreshes(&cpu));
     puts("co-op lifecycle ownership checks passed");return 0;
 }

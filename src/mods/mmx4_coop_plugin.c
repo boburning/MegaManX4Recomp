@@ -744,6 +744,7 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
            (stage==8 && section==0 && checkpoint<3) ||
            (stage==8 && section==1 && checkpoint<4) ||
            (stage==6 && section==0 && checkpoint<6) ||
+           (stage==10 && section==0 && checkpoint<3) ||
            (stage==11 && section==0 && checkpoint<2) ||
            ((stage==5 || stage==6) && section==1 && checkpoint<2) ||
            (stage==12 && section==1 && checkpoint<7)) {
@@ -1301,7 +1302,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x35503458u); /* X4P5, optional boss balance */
+    mmx4_snapshot_fixed(s,0x36503458u); /* X4P6, paired physical boss-door state */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
