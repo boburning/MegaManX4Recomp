@@ -1,4 +1,26 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.15
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.16
+
+**Fixes Playtest 15's checkpoint restart when Player 1 teleports to catch up.**
+When P1 goes off-camera, both players now stay in the current stage and P1
+returns beside P2, preserving their health and lives. Genuine stage exits,
+including Storm Owl with only P2 alive, still advance normally.
+
+Windows ZIP and Linux AppImage. **Both netplay peers must update.**
+Includes Playtest 15's armor palette and Web Spider capture fixes.
+Unified cameras and Stacked lifebars remain the defaults; Split is experimental.
+
+Diagnostics remain enabled by default for fresh installs. Keep **Playtest
+Diagnostics → Input Display and Recording** enabled and look for **REC**.
+After reproducing a bug, quit normally and zip the complete `saves/diagnostics`
+folder beside the executable or AppImage.
+
+Keep normal memory-card saves for campaign progress; use save states made with
+this release. The reported failure was reproduced from a tester recording;
+the corrected return and both Storm Owl exit paths were checked in native
+gameplay. Windows and Linux production checks pass.
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.15
 
 Two-player X + Zero co-op for Windows and Linux. Both netplay peers must update.
 
