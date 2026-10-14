@@ -1067,3 +1067,17 @@ peer runtime logs and composed `arrival-ready-p1.png`, `arrival-ready-p2.png`,
 `survivor-moved-3-p2.png` under the private intake directory above. Item86 stays
 open: this unsuccessful reproduction attempt is not a confirmed fix. Request
 both peers' diagnostics and a video timestamp if it recurs in the next build.
+
+### Playtest 20 release qualification
+
+[Playtest20](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.20)
+packages the Colonel paired-door fix from `b527698`, Double aerial damage and
+Iris assets/admission from `2638bed`, and the Split netplay evidence in `959e15a`.
+Compiled production source is `dcabda9`; both development control modes are off.
+All 34 Windows and 28 Linux title checks pass. Hidden packaged launchers,
+eight complete native room offers, cross-platform execution/co-op identities,
+AppImage layout, startup logs and fresh default input recording checks pass.
+The Windows ZIP and Linux AppImage exclude discs and player saves. Unified and
+Stacked remain defaults, Split remains experimental, and Double/Iris stays
+optional and default off. Item86 remains open and is not claimed fixed.
+Private receipts: `build-pr23/release20-qa/`. Release issue: `beads-eio.9.118`.

@@ -18,6 +18,18 @@ Release issue: `beads-eio.9.118`. Private package qualification is retained unde
 `build-pr23/release20-qa/`. Player-facing changes are in
 [release notes](../RELEASE_NOTES.md).
 
+Compiled source `dcabda9`, framework `9bd4c20f9`, UI `248c347`.
+All 34 Windows and 28 Linux title checks pass. Packaged hidden launchers,
+eight matching option offers, execution/co-op identities, AppImage layout,
+portable startup logs and fresh default input recordings pass. Both debug
+control modes are disabled. Receipt: `release-receipt-final.json` in the
+private qualification directory above.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `c4d1800e0939571630fa6ce2be1553190a49bac7dee43d3f57fc0fc206fd23e0` |
+| Linux x86_64 AppImage | `a56dc2ad247c59dc63ce131574312c397eedf5cb167b9393bbb18f74add6234d` |
+
 ## Previous co-op playtest 19
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.19)
