@@ -13,8 +13,24 @@ Both peers must update. Fight Double and Iris remains optional and default off.
 Campaign memory-card saves carry forward.
 
 Release issue: `beads-eio.9.119`. Package qualification is recorded under
-`build-pr23/release21-qa/`; final results will be added after both packages pass.
+`build-pr23/release21-qa/release-receipt-final.json`.
 Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+Compiled source `d8153e5`, framework `9bd4c20f9`, UI `248c347`.
+All 34 Windows and 28 Linux title checks pass. Packaged hidden launchers,
+eight matching option offers, execution/co-op identities, AppImage layout,
+portable startup logs and fresh default input recordings pass. Both debug
+control modes are disabled. Each untouched package recorded 181 native inputs.
+
+The initial full suite caught duplicate armor drawing hooks. Commit `d8153e5`
+composes rider ordering through the existing split-camera culling hook; regression
+assertions cover distant, visible Split, and Unified armor dispatch. Both packages
+were rebuilt from that committed source before qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `c52dba891776bb4ad1c2439892d7d6bcc09413377e063f9b5802677c23bc66c7` |
+| Linux x86_64 AppImage | `2d778a1b26bc5d6c058e512b39194fe00e3e9189abf66560ae519ba98706dd76` |
 
 ## Previous co-op playtest 20
 
