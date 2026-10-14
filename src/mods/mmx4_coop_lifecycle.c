@@ -1420,6 +1420,19 @@ static int both_door_traversal(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.both-door-crossings",1);
     return mmx4_coop_finish(cpu,0);
 }
+static int paired_colonel_admission(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!mmx4_coop_ready() || !both_door_scope() ||
+       both_door.serial!=script_serial || both_door.phase>3)return 0;
+    /* Colonel's 80085F8C starts WARNING and action15 without waiting for
+     * C4. In Both mode the leader can reach that trigger while the partner
+     * is still in the aperture. That command aborts the crossing, restores
+     * the sealed map's collision and crushes the leader. Defer the entire
+     * admission (including its actor allocation) until physical clearance
+     * and camera arrival, then let the original introduction run once. */
+    psx_mod_counter_add("mmx4.coop.boss-admission-waits",1);
+    return mmx4_coop_finish(cpu,0);
+}
 static int both_door_map(CPUState *cpu,uint32_t address) {
     if(door_terrain_guard || !mmx4_coop_ready() || !both_door_scope() ||
        both_door.phase<2 || both_door.phase>3 || cpu->gpr[4]!=PLAYER ||
@@ -1776,6 +1789,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C1994u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
     psx_mod_register_function_filter_plugin(ID,0x800C1D90u,both_door_traversal);
+    psx_mod_register_function_filter_plugin(ID,0x80085F8Cu,paired_colonel_admission);
     psx_mod_register_function_filter_plugin(ID,0x8002D7E4u,both_door_map);
     psx_mod_register_function_filter_plugin(ID,0x8002D724u,both_door_map);
     psx_mod_register_function_filter_plugin(ID,0x800BD654u,scene_actor);

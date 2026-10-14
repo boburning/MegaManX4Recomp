@@ -399,6 +399,11 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             psx_mod_write_byte(a0+5,1);
         break;
     }
+    case 0x80085F8C:
+        psx_mod_write_byte(a0+5,(uint8_t)(psx_mod_read_byte(a0+5)+1));
+        cpu->gpr[31]=0x80085FE4u;
+        mmx4_coop_call(cpu,0x80036AE4u,0x15,0);
+        break;
     case 0x80036AE4:
         psx_mod_write_byte(MMX4_PLAYER+0xC0,1);psx_mod_write_byte(MMX4_PLAY+0x1C,1);break;
     case 0x80036B18:
@@ -1750,6 +1755,29 @@ int main(void) {
     mmx4_coop_call(&cpu,0x80036B18u,0,0);
     CHECK(!both_door.phase && !script_active && !warp_pending);
     mmx4_coop_call(&cpu,0x80036AE4u,0x14,0x40);CHECK(warp_pending);
+    cpu.gpr[31]=0;
+
+    /* Colonel's WARNING must not cancel an in-progress physical crossing.
+     * The native initializer advances its actor and starts action15 once;
+     * both projections defer all of that until the door/camera are ready. */
+    for(unsigned seat=0;seat<2;++seat) {
+        CHECK(!open_both_door(&cpu,actor));
+        uint32_t colonel=0x8013BED0u;
+        if(seat)mmx4_coop_enter_second();
+        for(unsigned phase=1;phase<=3;++phase) {
+            both_door.phase=(uint8_t)phase;
+            mmx4_coop_call(&cpu,0x80085F8Cu,colonel,0);
+            CHECK(!psx_mod_read_byte(colonel+5) && !warp_pending && !warp_phase);
+            CHECK(both_door.phase==phase && !psx_mod_read_byte(PLAYER+0xC0));
+        }
+        both_door.phase=4;
+        mmx4_coop_call(&cpu,0x80085F8Cu,colonel,0);
+        CHECK(psx_mod_read_byte(colonel+5)==1 && psx_mod_read_byte(PLAYER+0xC0));
+        CHECK(both_door.phase==5 && script_owner==seat && !warp_pending && !warp_phase);
+        if(seat)mmx4_coop_leave_second();
+    }
+    reset();mmx4_coop_call(&cpu,0x80085F8Cu,0x8013BED0u,0);
+    CHECK(psx_mod_read_byte(0x8013BED5u)==1 && warp_pending);
     cpu.gpr[31]=0;
 
     /* Death exempts the missing player. Even a dead door owner transfers its

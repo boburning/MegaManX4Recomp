@@ -89,6 +89,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 80 | [x] | Sigma stage 1 enemies wait for P1 when P2 advances ahead | Reproduced and fixed after Playtest17. Accept the actual placement table's valid4-byte base alignment while retaining8-byte records and native directional flags. The fixed two-peer probe spawns the enemies at X944,1108 and1223 as P2 advances while P1 stays at X683; peer CRCs match through4672. `beads-eio.9.110` |
 | 81 | [x] | Colonel's lightning whites out the screen after P1 dies | Reproduced and fixed after Playtest17. Preserve the shared palette rebuild request across P2 survivor projection. The unfixed native lightning leaves1,920 white palette entries after its RGB additions clear; the fixed probe restores19, and the inspected P2 frame shows the normal stage and HUD. Peer CRCs match through10338. `beads-eio.9.111` |
 | 82 | [x] | Zero cannot damage Double | Reproduced and fixed after Playtest17. Eight native Zero combo attempts leave the unfixed boss at48HP despite reaching follow-up cuts. Admit the existing nonzero Zero damage entries only during Double's normal damage window. The fixed two-peer probe reduces him from48 to45HP and enters his original cooldown, with matching peer CRCs through7554. His invulnerable phases, first cut's native zero damage and X's reactions remain covered. `beads-eio.9.112` |
+| 83 | [x] | Sigma stage 1 second boss door kills P1 and traps P2 in local Unified | Reproduced from the Playtest19 local recording with Both-player doors. Colonel starts WARNING before the physical crossing completes, cancelling the aperture exemption and crushing P1. Defer that admission until the doorway and camera finish. Native continuation reaches the fight with both visible, clear controls and unchanged40/31HP; no partner departure. Windows34 checks and Linux lifecycle check pass. `beads-eio.9.116` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -959,3 +960,39 @@ recordings pass. Both packages exclude game discs and player saves. Unified
 and Stacked defaults are unchanged, and Split remains experimental.
 Double/Iris stays optional and default off; campaign saves carry forward.
 Private receipts: `build-pr23/release19-qa/`. Release issue: `beads-eio.9.115`.
+
+### Playtest 19 Sigma doorway recording (83)
+
+`Stuck doors player 1 dies unified local.zip` contains three earlier sessions
+and the relevant local `session-1792007983262131`. Archive SHA256:
+`15a8e6cb97a8aa4cb128f7c10c72a0fd36a3f61f6497444549933b33bdd14ecd`.
+The production replay verifies all12,838 complete native input/state checks.
+Both-player doors are enabled. The saved Split preference does not activate
+independent views offline; this is local Unified as reported.
+
+At native frame10089, Colonel's80085F8C allocates WARNING and commands action15
+while the paired door remains in physical-crossing phase2. That aborts its
+terrain exemption. Native80033C14 then kills P1 through crush bits0x0C, changing
+HP40 to0 at frame10091. Recovery transfers the introduction to P2 behind the
+door, leaving the survivor stranded. The correction defers the entire native
+admission until the paired crossing and camera arrival complete. It changes no
+health, damage or collision classification and adds no new saved state.
+
+The fixed hidden run restores a snapshot from the exact original replay,
+verifies its275-input approach prefix with the current build header, then uses
+controller input to walk both players through and advance the original scene.
+Both remain at40/31HP, finish at X4528/4593 with clear C0/C4 and normal action2,
+and enter the Colonel fight. No partner departure occurs. This is a checked
+native continuation, not a claim that the corrected outcome matches the old
+recording's hashes after the fix takes effect. Unit regressions cover both
+projections, opening/crossing/camera waits, admission after closure and ordinary
+non-paired admission. Windows34 checks and the Linux lifecycle check pass.
+Private before/after evidence: `build-pr23/feedback19-sigma-door-20261014/`.
+
+The same local recording also qualifies the P2 health-refill report: the large
+pickup sets all eight native PLAY+10..17 freeze flags, raises P2 from23 to39HP,
+and holds both players still during the refill. Its small pickup and P1's
+pickup also hold both positions. No missing shared pause reproduces here.
+Split netplay intentionally keeps health refills asynchronous, per the earlier
+owner preference; the archive includes separate network sessions as well.
+This update does not publish a release.
