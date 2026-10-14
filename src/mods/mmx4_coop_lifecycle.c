@@ -915,7 +915,11 @@ static int stage_normal(CPUState *cpu,uint32_t address) {
     psx_mod_write_half(PAD+4,native_edge);
     normal_guard=1;
     uint32_t result;
-    if(psx_mod_read_byte(PLAYER+4)==3 && !(psx_mod_read_byte(PLAYER+0x5C)&127u) &&
+    /* State3 also finishes a temporary passenger beam. Keep the living
+     * leader's world running until that passenger returns; only a real
+     * stage-owner departure should reach native stage termination. */
+    if(psx_mod_read_byte(PLAYER+4)==3 &&
+       (!(psx_mod_read_byte(PLAYER+0x5C)&127u) || mmx4_coop_lifecycle_hidden(0)) &&
        mmx4_coop_alive(1)) {
         if(owner>=0) {
             psx_mod_write_byte(PLAY+1,2);result=0;

@@ -923,9 +923,23 @@ int main(void) {
     CHECK(!psx_mod_read_byte(PLAY+1) && world_calls==1);
     p2[4]=3;p2[0x5C]=0;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
     CHECK(psx_mod_read_byte(PLAY+1)==1);
-    /* A completed warp has state3 and positive HP; let native stage
-     * termination advance instead of keeping the surviving partner loop. */
+    /* A healthy P1 passenger has finished its outgoing beam while P2
+     * remains in the room. That state must not restart the whole stage. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned phase=1;phase<=3;phase+=2) {
+        reset();psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(PLAYER+4,3);warp_owner=1;warp_phase=phase;
+        mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+        CHECK(!psx_mod_read_byte(PLAY+1) && world_calls==1);
+        CHECK(psx_mod_read_byte(PLAYER+0x5C)==16 && p2[0x5C]==12);
+    }
+    /* A completed stage-owner warp has state3 and positive HP; let native
+     * stage termination advance, including with a hidden P2 passenger. */
     reset();psx_mod_write_byte(PLAYER+4,3);
+    mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+    CHECK(psx_mod_read_byte(PLAY+1)==1);
+    reset();psx_mod_write_byte(PLAYER+4,3);warp_owner=0;warp_phase=1;
+    psx_mod_write_byte(PLAY+0x0F,1);
     mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
     CHECK(psx_mod_read_byte(PLAY+1)==1);
     reset();psx_mod_write_byte(PLAY+12,7);psx_mod_write_byte(PLAYER+4,3);

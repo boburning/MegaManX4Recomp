@@ -78,6 +78,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 70 | [x] | Loading a state with Diagnostics disabled creates incomplete recording folders | Supplied gameplay sessions contain only C rows at sequence0, with Diagnostics explicitly disabled. The co-op restore observer incorrectly starts a recorder whose native input hook is absent. Offline restore now respects the committed Diagnostics package; enabled baseline recording and network behavior remain covered. Published in [Playtest 14](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.14). Fresh Windows/Linux packages each capture181 native inputs with no Diagnostics override. `beads-eio.9.95` |
 | 71 | [x] | X/P2's acquired armor uses stage colors in Zero's campaign | Reproduced and fixed after Playtest14. Private CLUT lookup used VRAM's 1024-pixel stride for a packed 256-wide palette: armor7843 read stage colors at860 instead of armor colors at260. Sprite and UI paths now share the correct mapping. Supplied Zero-campaign Cyber state shows correct armor before/after pause; boundary tests pass. `beads-eio.9.98` |
 | 72 | [x] | Web Spider's lethal web transfers the capture and damage to the surviving partner | Reproduced and fixed after Playtest14. Native hostile web22 transferred its ongoing capture to the nearest survivor after death. It now retains the actual victim, keeps contact and its continuation in that seat, and runs native cleanup on death. Both victim roles pass native capture/death checks with the distant partner unmoved, uncaptured and at unchanged HP. `beads-eio.9.99` |
+| 73 | [x] | P1's off-camera catch-up teleport restarts both players at the checkpoint | **Fixed after Playtest15.** Reproduced on unchanged15 with all4,177 retained input/state checks matching. Its stage-exit fix let a healthy P1 passenger's finished beam terminate the stage. Keep the living partner's world running during that temporary departure. The corrected continuation preserves all3,076 original prefix checks and returns both players at19/32HP, unchanged lives/checkpoint. Actual Storm Owl exits still pass with both alive and with only P2 alive. All34 Windows tests and the Linux lifecycle check pass. `beads-eio.9.101` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -744,3 +745,37 @@ Release assets contain no game discs or player saves. Package qualification and
 publication receipts are retained privately under `build-pr23/release15-qa/`.
 Release tracking: `beads-eio.9.100`. Download:
 [Playtest15](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.15).
+
+### Metadata 5 follow-up: healthy catch-up reload (item73)
+
+`Metadata 5.zip` and `Metadata 5 (1).zip` are byte-identical, SHA256
+`c034c836fe265c086b188a8c4f0a3427e8e25e3969961d1e7dca8bca5d082dd5`.
+They contain two genuine local Playtest15 recordings with11,463 and4,178 native
+input boundaries, plus nonempty startup logs. Both use Zero's campaign. The
+shorter recording has widescreen enabled; the longer has it disabled.
+
+The unchanged published15 executable verifies4,177 checks from the short run
+(the replay tool omits the incomplete final interval). At input3076/native
+frame3034, mode6/0 becomes6/1 while Zero/P1 still has19HP and X/P2 has32HP.
+It then reloads checkpoint1. This is stage termination, not two lethal hits.
+The earlier Storm Owl correction in `7ac01d6` excluded all positive-HP state3
+bodies from the survivor loop, including a P1 passenger temporarily warped out
+by the co-op lifecycle. The corrected predicate includes hidden passengers
+without preventing a genuine stage-owner departure.
+
+The fixed development run preserves all3,076 original input/state checks up to
+the failure boundary; only its private replay build header is translated. The
+rest of the old recording is deliberately omitted because the corrected game
+must diverge from the recorded checkpoint reload. Both original beams finish:
+Zero/P1 returns at3102/426 with19HP, X/P2 remains at3102/427 with32HP, both are
+visible, grounded and in normal idle, with the same three lives/checkpoint1.
+The first observation attempt continued past that return and caught an ordinary
+enemy hit on P1; it is retained separately and is not evidence of teleport damage.
+
+Native `storm_team_exit` and `storm_survivor_exit` controls reach actual stage7
+section1 without losing a life, with respectively both players alive and only
+P2 alive. The lifecycle regression fails before the fix and passes afterward,
+covering either roster, both finished-passenger phases, true owner departures
+and existing team-death behavior. All34 Windows title tests, the focused Linux
+lifecycle test and Python syntax checks pass. Private evidence:
+`build-pr23/feedback-metadata5-20261013/`. This follow-up does not publish a release.
