@@ -729,3 +729,18 @@ Playtest14; this investigation does not publish another release.
 
 Private intake and bounded native-test receipts are retained under
 `build-pr23/feedback-metadata4-20261013/`. Triage: `beads-eio.9.97`.
+
+### Playtest 15 release qualification
+
+Playtest15 packages the validated fixes for items25,71,72 from `7ac01d6`.
+Production source is `e465fa1`; debug controls are disabled. All34 Windows and
+28 Linux title checks pass. The Windows ZIP and Linux AppImage pass hidden
+launcher checks, match all eight native room offers and share the same execution
+identity and co-op profile. Both untouched packages record181 native input rows,
+metadata and both memory cards with Diagnostics enabled by default. Windows
+detached/no-console/redirected startup logs and Linux portable startup logs pass.
+
+Release assets contain no game discs or player saves. Package qualification and
+publication receipts are retained privately under `build-pr23/release15-qa/`.
+Release tracking: `beads-eio.9.100`. Download:
+[Playtest15](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.15).
