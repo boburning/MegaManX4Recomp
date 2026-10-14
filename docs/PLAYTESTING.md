@@ -33,6 +33,10 @@ through their teleport animations.
 
 ## Optional settings
 
+In the local launcher's **Mods** page, select **X + Zero Co-op** to open these
+settings in the right-hand panel. They work in local co-op as well as netplay;
+only **Netplay cameras** is online-only. Changes apply on the next fresh boot.
+
 - **Boss doors:** Either player is the default. Both players waits for both
   living, present characters to touch a door; dead or withdrawn partners are exempt.
 - **Fight Double and Iris:** off by default. Fight the campaign's usual boss,
@@ -41,8 +45,8 @@ through their teleport animations.
   shared hit cooldowns. Invulnerability timers are not separate per player.
 - **Ultimate Armor X Code / Black Zero:** off by default and compatible with
   each other. X's code makes a capsule grant Ultimate Armor; it does not grant
-  the armor immediately. Use the standalone Mods for local play, or the host's
-  options under X + Zero Co-op for netplay.
+  the armor immediately. Both codes are available under **X + Zero Co-op** for
+  local and online play. The standalone Mods also work in single-player.
 
 ## Saves and rewind
 

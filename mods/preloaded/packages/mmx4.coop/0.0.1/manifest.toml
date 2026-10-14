@@ -14,7 +14,7 @@ disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
 [[feature]]
 id = "coop"
 name = "X + Zero Co-op"
-description = "Playtest with two native characters. Requires OpenGL and a fresh boot. Enable for local co-op; the netplay profile enables it for both peers."
+description = "Play together as X and Zero. Configure boss doors, boss battles, HUD and character codes below for local co-op or netplay. Requires OpenGL and a fresh boot."
 group = "Experimental"
 default_enabled = false
 
@@ -50,7 +50,7 @@ label = "Side by side"
 feature = "coop"
 id = "boss_doors"
 label = "Boss doors"
-description = "Either player opens the door by default. Both players requires both living players to touch it; a dead or teleported-out partner does not hold it closed. The host chooses for both peers."
+description = "Either player opens the door by default. Both players requires both living players to touch it; a dead or teleported-out partner does not hold it closed. Works locally and online; the netplay host chooses for both players."
 type = "choice"
 default = "either"
 [[option.choice]]
@@ -68,7 +68,7 @@ id = "mmx4.coop"
 feature = "coop"
 id = "both_story_bosses"
 label = "Fight Double and Iris"
-description = "After your campaign's encounter, return to the boss door for the other fight before continuing the story. Co-op only. The host chooses for both peers."
+description = "After your campaign's encounter, return to the boss door for the other fight before continuing the story. Works in local and online co-op; the netplay host chooses for both players."
 type = "boolean"
 default = false
 
@@ -76,7 +76,7 @@ default = false
 feature = "coop"
 id = "boss_scaling"
 label = "Co-op boss scaling"
-description = "Double effective boss health and shorten shared hit cooldowns. Keeps native boss phases and weakness reactions. Off preserves the original balance. The host chooses for both peers."
+description = "Double effective boss health and shorten shared hit cooldowns. Keeps native boss phases and weakness reactions. Works in local and online co-op. Off preserves the original balance."
 type = "boolean"
 default = false
 
@@ -84,7 +84,7 @@ default = false
 feature = "coop"
 id = "ultimate_armor_x"
 label = "Ultimate Armor X code"
-description = "Automatically enable X's native Ultimate Armor code for either player. A capsule still grants the armor. The host chooses for both peers. Works together with Black Zero."
+description = "Automatically enable X's native Ultimate Armor code for either player. A capsule still grants the armor. Works in local and online co-op, together with Black Zero."
 type = "boolean"
 default = false
 
@@ -92,6 +92,6 @@ default = false
 feature = "coop"
 id = "black_zero"
 label = "Black Zero"
-description = "Automatically use Zero's native black palette for either player. The host chooses for both peers. Works together with Ultimate Armor X."
+description = "Automatically use Zero's native black palette for either player. Works in local and online co-op, together with Ultimate Armor X."
 type = "boolean"
 default = false
