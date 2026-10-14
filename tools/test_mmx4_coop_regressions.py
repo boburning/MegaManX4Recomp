@@ -392,28 +392,28 @@ class Scenarios:
             cases.append(result)
         return dict(native_shared_flip_switches=cases)
 
-    def storm_warp(self):
+    def snow_base_survivor(self):
         self.watch_enemy=18
         self.r.request('wtrace_range',lo='0x0014192f',hi='0x00141930')
         self.r.request('wtrace_add',lo='0x001721dc',hi='0x001721dd')
         self.r.request('wtrace_clear')
         self.load(2,0,4)
-        self.wait('storm-last-platform',lambda s:all(p['grounded'] and p['hp']>0 for p in s['players']),10)
+        self.wait('snow-base-last-platform',lambda s:all(p['grounded'] and p['hp']>0 for p in s['players']),10)
         self.r.fixture(2,0,0x80)
-        before=self.wait('storm-p1-dead-p2-alive',lambda s:s['players'][0]['state']==3 and
+        before=self.wait('snow-base-p1-dead-p2-alive',lambda s:s['players'][0]['state']==3 and
             not s['players'][0]['hp'] and s['players'][1]['hp']>0,10)
-        self.sample('storm-surviving-p2-before-door',True)
-        (self.output/'storm-before-door-writes.json').write_text(json.dumps(
+        self.sample('snow-base-surviving-p2-before-door',True)
+        (self.output/'snow-base-before-door-writes.json').write_text(json.dumps(
             self.r.request('wtrace_dump',count=4096),indent=2),encoding='utf-8')
         self.r.input(0xffdf,1)
         try:
-            self.wait('storm-p2-miniboss-entry',lambda s:any(e['type']==18 and e['hp']>1
+            self.wait('snow-base-p2-miniboss-entry',lambda s:any(e['type']==18 and e['hp']>1
                 for e in self.enemies()),25,True)
         finally:self.r.release()
-        self.wait('storm-miniboss-controls-ready',lambda s:not s['blocked'] and not s['warning'] and
+        self.wait('snow-base-miniboss-controls-ready',lambda s:not s['blocked'] and not s['warning'] and
             s['players'][1]['action']>=2 and not s['players'][1]['script'] and not s['players'][1]['door'],25,True)
         boss=next(e for e in self.enemies() if e['type']==18 and e['hp']>1)
-        self.sample('storm-miniboss-before-native-death',True)
+        self.sample('snow-base-miniboss-before-native-death',True)
         self.r.fixture(6,boss['slot'],1)
         for attempt in range(8):
             target=next((e for e in self.enemies() if e['type']==18 and e['hp']>0),None)
@@ -425,16 +425,16 @@ class Scenarios:
         # the forward transition.
         self.r.input(0xffdf,1)
         try:
-            after=self.wait('storm-p2-forward-section',lambda s:s['stage']==2 and s['section']==1 and
+            after=self.wait('snow-base-p2-forward-section',lambda s:s['stage']==2 and s['section']==1 and
                 s['mode'][:2]==[6,0] and s['players'][1]['active'] and s['players'][1]['visible'] and
                 s['players'][1]['state']==1 and s['players'][1]['action']>=2 and not s['blocked'],35,True)
         finally:self.r.release()
-        after=self.wait('storm-p2-section2-grounded',lambda s:s['stage']==2 and s['section']==1 and
+        after=self.wait('snow-base-p2-section2-grounded',lambda s:s['stage']==2 and s['section']==1 and
             not s['blocked'] and s['players'][1]['grounded'] and s['players'][1]['action']==2 and
             not s['personal_locks'][1][0],8)
         assert after['players'][0]['hp']==0 and after['players'][1]['hp']>0,after
         assert after['lives']==before['lives'],after
-        self.sample('storm-surviving-p2-section2',True)
+        self.sample('snow-base-surviving-p2-section2',True)
         self.watch_enemy=None
         return dict(native_p2_section_transfer=True,before=before['players'],after=after['players'],lives=after['lives'])
 
@@ -1682,7 +1682,7 @@ def main():
     parser.add_argument('--boss-doors',choices=('either','both'),default='either')
     parser.add_argument('--both-story-bosses',action='store_true')
     parser.add_argument('--boss-scaling',action='store_true')
-    parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','storm_warp', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
+    parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()

@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Owner approved items1-18 after all ten unique clips were reviewed, then added items19-28 through further tester feedback. Those 28 entries are qualified. Split Mushroom elevator item29 is qualified in both rosters; the owner confirmed its later overhead-panel crush is authentic. Numbers remain stable. A checkmark means the fix is validated; reported and observed symptoms remain distinguished below. The diagnostic review is beads-eio.9.41; implementation lives in the linked central issues.
+Owner approved items1-18 after all ten unique clips were reviewed, then added items19-28 through further tester feedback. Their original qualifications remain recorded; item25 is reopened for newer Playtest13 feedback. Split Mushroom elevator item29 is qualified in both rosters; the owner confirmed its later overhead-panel crush is authentic. Numbers remain stable. A checkmark means the fix is validated; reported and observed symptoms remain distinguished below. The diagnostic review is beads-eio.9.41; implementation lives in the linked central issues.
 
 | # | Done | Symptom | Evidence and owning issue |
 |---|---|---|---|
@@ -28,7 +28,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 22 | [x] | Zero should wall jump from X's Lightning Web shots | Allow the other Zero body to use the original contact helpers with an isolated body mirror and per-owner/shot history; private shot pools and original web updates stay intact. Native QA76/77 fire real X webs in each roster, then Zero contacts them and enters original wall-jump action10 with upward/away motion. Native jump/fall/slide controls, fields, slot reuse and all17 title tests pass. Boss damaging webs retain their original behavior. `beads-eio.9.49` |
 | 23 | [x] | P1 dashing causes severe slowdown and graphics corruption after P2 opens a boss door | QA83/84 qualify P2-owned Intro entry in both rosters and native Dash by either seat after the return, with actual P2 Dash during the partner beam. Inspected separated-body images stay healthy. Bounded idle/Dash comparisons show no severe frame collapse or stall; QA83 measured75â†’70 for P1 and82â†’79 for P2 debug frames/s. These are diagnostic windows rather than production/display FPS, and broader Split performance remains experimental. `beads-eio.9.50`, `beads-eio.9.27` |
 | 24 | [x] | Cyber Peacock part2 flip switches ignore P2 and hide P2 when used by P1 | Native General20 checks only PLAYER and reflects only canonical bodies. Allow either living seat to activate the switch; mirror P2 body/active shots and both saved Split cameras once with the native world, preserving fractional coordinates and arrival anchor. QA60 P2/Zero and QA61 either activator with Zero/P1-X/P2 finish visible, healthy and grounded after a real flip. Shared-world/eligibility and double-reflection tests pass. `beads-eio.9.51` |
-| 25 | [x] | Surviving P2 cannot trigger Storm Owl's part1-to-part2 warp | Reproduced a global death lock at80033C7C before the animation wrapper. Preserve the pre-death scene lock while a real partner lives, including hidden warp passengers; native team-wipe locks remain intact. QA63 manual / QA64 each roster: P1 dies, P2 enters the original miniboss fight, kills it with native Jump/attack after HP1 setup, and reaches part2 with HP32/lives2 while P1 remains dead. QA64 also passes arrival-owner death and either fatal door entrant, exactly one death sequence each. All16 title CTests pass. `beads-eio.9.52` |
+| 25 | [ ] | Surviving P2 cannot trigger Storm Owl's part1-to-part2 warp | **Reopened; earlier stage qualification was mislabeled.** QA63/64 and the old `storm_warp` helper load native stage2, Frost Walrus, not Storm Owl7. The generic death-lock fix remains, but those runs never proved Storm Owl's exit. Metadata4 contains four actual Storm Owl baselines with dead P1/living P2, but no replayable input trajectory. See follow-up below. `beads-eio.9.52` |
 | 26 | [x] | P2 weakness weapons do not trigger boss weakness reaction or damage | Native QA74/75: X/P2 Soul Body and Zero/P2 Ryuuenjin each reduce Cyber HP48->44 and enter the original weakness phase5. The native accepted-hit wrapper retains attack identity and original damage. Also fixed a reproduced X/P2 Ground Hunter selection freeze: deferred graphics loader27 must use its allocating X resources instead of Zero/P1. Protocol and ownership tests pass. `beads-eio.9.53` |
 | 27 | [x] | Zero fire and ice techniques corrupt graphics | Reproduced malformed fragments: deferred particle47/48 initialization bound X/P1's assembly for Zero/P2. Initialize them with the allocating character and origin, preserving ordinary shared update order. QA68 replaces brown/yellow rectangles with blue ice shards; flame/ice images in both rosters QA68/69 match healthy native Zero/P1 rendering. Both original techniques execute (actions57/54). Allocation/reuse/dead-or-moved-owner tests and all16 title CTests pass. `beads-eio.9.54` |
 | 28 | [x] | Slash Beast boss background remains stuck | Native QA87 identifies the actual four-slot scenery controller at80169CB8 and its post-camera8/4px writes. Propagate those original writes once to both saved Split views. QA88 real two-peer netplay passes each leading seat: both panes advance equally (496/248 and464/232px) while foreground X stays fixed; both peer images show moving scenery and core/mod CRCs match through tick8672. Exact native dispatch/allocator, callback order and boundary/parallax models plus all18 title checks pass. `beads-eio.9.55` |
@@ -76,6 +76,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 68 | [x] | Distant player wraps onto the other Web Spider view | **Published in [Playtest 13](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.13).** Paired Jungle logs from Opening stage dragon camera and web spider camera wrap around ZIP match. Native GPU sprite positions wrap every2048px. Per-view bounds now reject distant world sprites and armor before emission without changing actor visibility/lifetime. Actual composed before/after captures verify both views with either player ahead; all32 checks pass, peer state matches through sim5891, and private rendering preserves RAM/VRAM/devices. `beads-eio.9.92` |
 | 69 | [x] | P1 cannot continue after P2 defeats Magma Dragoon | Reproduced from the reported setup on Playtest13 source. Mode7 incorrectly retains P2 gameplay text/actor ownership. The fix keeps this reward frontend under P1. Hidden native tests pass both campaigns: dead P1, P2's actual boss kill, P1 reward/save input, correct campaign and cleared boss in the native card/Continue cache, grey portrait on the selector. Published in [Playtest 14](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.14); separate from intro rescue item54. `beads-eio.9.94` |
 | 70 | [x] | Loading a state with Diagnostics disabled creates incomplete recording folders | Supplied gameplay sessions contain only C rows at sequence0, with Diagnostics explicitly disabled. The co-op restore observer incorrectly starts a recorder whose native input hook is absent. Offline restore now respects the committed Diagnostics package; enabled baseline recording and network behavior remain covered. Published in [Playtest 14](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.14). Fresh Windows/Linux packages each capture181 native inputs with no Diagnostics override. `beads-eio.9.95` |
+| 71 | [ ] | X/P2's acquired armor uses stage colors in Zero's campaign | New Playtest13 palette report. Item55 fixed missing armor artwork, not this reported stage-dependent color corruption. Metadata4 preserves Zero campaign and armor flags8 or14/arms2, but has no videos or native input rows. No specific palette fix in Playtest14. `beads-eio.9.98` |
+| 72 | [ ] | Web Spider's lethal web transfers the capture and damage to the surviving partner | New Playtest13 hostile-capture report. Distinct from item56's friendly Lightning Web contact. Metadata4 includes a Jungle part2 baseline with both players alive; no replayable trajectory or video establishes the capture/death sequence yet. No specific fix in Playtest14. `beads-eio.9.99` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -635,3 +637,50 @@ Diagnostics left at its enabled default. An older explicit disabled preference
 is preserved; re-enable Input Display and Recording before sending new reports.
 Linux's writable player guide includes the screenshots and dependency notices.
 Release receipts: `build-pr23/release14-qa/`; tracking: `beads-eio.9.96`.
+
+## Metadata 4: Playtest13 follow-up
+
+The tester reports a surviving P2 unable to leave Storm Owl part1, acquired
+X armor taking stage colors in Zero's campaign, and Web Spider's lethal web
+moving the surviving player into the trap and damaging them. Items25,71,72
+track these separately. Playtest14 changes reward-frontend ownership and the
+disabled-diagnostics restore observer; it does not establish a fix for any
+of these three reports. The earlier generic death-lock fix and missing-armor fix
+remain valid for their recorded cases, with this newer evidence kept open.
+
+The supplied ZIP contains seven local-co-op Playtest13 session folders,
+each with a complete baseline snapshot, two starting cards, settings and
+mod choices. Diagnostics is explicitly disabled in all seven. Across the
+input files there are475,112 co-op reads but zero native frame/hash rows.
+They cannot be verified as input replays. This is the incomplete-segment
+problem fixed as item70 in Playtest14, not evidence that logging regressed
+in Playtest14. The ZIP contains no videos or startup logs.
+
+Read-only snapshot inspection finds Zero's campaign in all seven states:
+one at Jungle stage1/section1/checkpoint5, four at Storm Owl stage7/section0
+(three restore the same checkpoint2 state), and two at Cyber Peacock
+stage6/section0. The stage7
+states have dead P1 and living P2; the Jungle and stage6 states have both
+players alive. Armor flags are8 in five states and
+14 with arm variant2 in the stage6 pair.
+These snapshots remain useful starting points even though the intervening
+play is not recorded. Their contents and the original archive are unchanged.
+
+The saved co-op choices enable Both players boss doors, boss scaling and
+sequential Double/Iris fights. The tester confirms the new door policy and
+double boss health work well; record that positive feedback for items61/63.
+They did not explicitly confirm the sequential story-boss option.
+
+The old `storm_warp` helper was found to load Snow Base/Frost Walrus's native
+stage2, not Storm Owl's stage7. Its earlier qualification was therefore
+incorrectly attributed. The helper is now named `snow_base_survivor`, and
+the combat evidence document is corrected. The two new runs of that old
+fixture are not Storm Owl evidence; both lose P2 during scripted miniboss
+combat and retry. Neither establishes the reported living-survivor lock.
+A separate attempt to load the actual supplied Owl checkpoint into the
+current development executable times out before restoring gameplay. No
+successful native reproduction is claimed from that attempt. The complete
+snapshots remain available for a build-matched investigation.
+
+Private intake and bounded native-test receipts are retained under
+`build-pr23/feedback-metadata4-20261013/`. Triage: `beads-eio.9.97`.

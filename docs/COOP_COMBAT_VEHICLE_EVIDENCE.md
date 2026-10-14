@@ -514,9 +514,15 @@ healthy and unlocked. Uncapped hidden frame progression stays around113-131fps
 for idle/dashing windows; no severe slowdown is reproduced in those paths.
 Other equivalent events and netplay timing remain separate qualification.
 
-## Surviving-player death lock and Storm Owl section handoff (2026-10-10)
+## Surviving-player death lock and Snow Base section handoff (2026-10-10)
 
-QA62 reproduces the survivor lock after P1 dies at Storm Owl checkpoint4:
+**Correction, 2026-10-13:** these runs were incorrectly labeled Storm Owl.
+The fixture loads native stage2 (Snow Base / Frost Walrus), with miniboss18.
+Storm Owl is stage7. This evidence qualifies the generic death-lock fix and
+Snow Base transfer only; Storm Owl item25 is reopened. The helper is renamed
+`snow_base_survivor` to prevent repeating the incorrect qualification.
+
+QA62 reproduces the survivor lock after P1 dies at Snow Base checkpoint4:
 P2 stays HP32/lives2, but PLAY+1C remains1. Native write tracing identifies
 80033C7C in80033BC8, before the death animation guard. Preserve the lock
 present before fatal detection when the other player has a living body;
@@ -532,7 +538,7 @@ survivor HP32, clear C0/C4 gates, exactly one native death sequence each.
 All16 title CTests pass, including ordinary/hidden living partners in both
 death orders and preservation of actual preexisting scene locks.
 
-The private checkpoint fixture now allows Storm Owl's verified original
+The private checkpoint fixture now allows Snow Base's verified original
 section0 entries0-4 and section1 entries0-1. Section0 entry5 actually starts
 section1's record list and is excluded. Original authored checkpoint4 is
 X5856/Y2048, camera5696/2048, and lands at2235/2234.
