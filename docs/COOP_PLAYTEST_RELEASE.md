@@ -1,16 +1,29 @@
 # Co-op playtest 18
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.18)
-for Windows ZIP and Linux x86_64 AppImage. Includes checklist77-82:
+with Windows ZIP and Linux x86_64 AppImage. Includes checklist77-82:
 independent intro camera and Web Spider scenery, physical Both-player door
 crossing, Sigma P2 enemy spawning, Colonel's survivor palette and Zero damage
-against Double. Native gameplay qualification is recorded in the feedback
-checklist. Production package qualification is recorded separately below when
-complete. Release issue: `beads-eio.9.113`.
+against Double. Jet Stingray entrance presentation remains open (item75).
 
 Unified cameras and Stacked lifebars remain defaults; Split is experimental.
 Both peers must update. Older co-op save states are incompatible with X4P6;
 campaign memory-card saves are unchanged.
+
+Compiled source `5853d58`, framework `9bd4c20f9`, UI `248c347`.
+All34 Windows and28 Linux title checks pass. Packaged hidden launchers,
+all eight complete option offers, execution/co-op identities, AppImage layout
+and portable startup logs pass. Fresh packages record native inputs with
+diagnostics enabled by default. Development controls are disabled.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `1fd8e8f31f84a497246d36167ec0308ee3d174ab94e635ec6dfc4bce18156aab` |
+| Linux x86_64 AppImage | `c6e5326bfeaa4f15719881d30e618bf90901bb266d67a40928104cc8704a5c95` |
+
+Private package qualification: `build-pr23/release18-qa/release-receipt-final.json`.
+Release issue: `beads-eio.9.113`. Player-facing changes are in
+[release notes](../RELEASE_NOTES.md).
 
 ## Previous co-op playtest 17
 

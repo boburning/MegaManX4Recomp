@@ -914,3 +914,15 @@ with `sigma-before`, `colonel-before` and `double-combo-before` retained for
 comparison. The combined co-op snapshot layout is now X4P6 for private scenery
 and physical door state; older co-op save states are incompatible. Campaign
 memory-card saves are unchanged. This follow-up does not publish a release.
+
+### Playtest 18 release qualification
+
+[Playtest18](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.18)
+packages items77-82 from `bcf62c6`. Production source is `5853d58`, with
+development controls disabled. All34 Windows and28 Linux title checks
+pass. Packaged hidden launchers, all eight native room offers, cross-platform
+execution/co-op identities, portable startup logs and fresh default input
+recordings pass. Both packages exclude game discs and player saves. Unified
+and Stacked defaults are unchanged, and Split remains experimental. X4P6
+requires new co-op save states; campaign memory-card saves carry forward.
+Private receipts: `build-pr23/release18-qa/`. Release issue: `beads-eio.9.113`.
