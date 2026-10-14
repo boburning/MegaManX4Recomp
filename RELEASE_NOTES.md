@@ -1,4 +1,27 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.16
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.17
+
+**Both players now survive Web Spider's part 1-to-2 transition when P2 leads far ahead.**
+The outgoing fade could incorrectly kill the hidden P1, leaving only P2 in
+the next area. This is fixed; a player who was already dead stays dead.
+
+**Local co-op settings are easier to find.** In Mods, enabling **X + Zero Co-op**
+now opens its settings panel: boss-door policy, boss scaling, Double and Iris,
+Ultimate Armor X Code, and Black Zero. These options work locally and online;
+their existing defaults are unchanged.
+
+Windows ZIP and Linux x86_64 AppImage. **Both netplay peers must update.**
+Includes the earlier Playtest 16 fixes. Unified cameras and Stacked lifebars
+remain the defaults; Split cameras are experimental. Jet Stingray's reported
+P2 entrance presentation remains an open issue.
+
+Diagnostics default on in fresh installs. Keep **Input Display and Recording**
+enabled and look for **REC**. After reproducing a bug, quit normally and zip the
+complete `saves/diagnostics` folder beside the executable or AppImage.
+
+Keep normal memory-card saves for campaign progress. Use save states made with
+this release. [Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.16
 
 **Fixes Playtest 15's checkpoint restart when Player 1 teleports to catch up.**
 When P1 goes off-camera, both players now stay in the current stage and P1
