@@ -1,4 +1,30 @@
-# Co-op playtest 13
+# Co-op playtest 17
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.17)
+with Windows ZIP and Linux x86_64 AppImage. Includes checklist74 and76:
+living P1 survives the outgoing Web Spider section fade when P2 leads, and
+enabling local Co-op opens its boss-door, boss and character settings.
+Jet Stingray entrance presentation remains open (item75).
+
+Unified cameras and Stacked lifebars remain defaults; Split is experimental.
+All optional gameplay defaults are unchanged. Both netplay peers must update.
+
+Compiled source `baeef9a`, framework `9bd4c20f9`, UI `248c347`.
+All34 Windows and28 Linux title checks pass. Packaged hidden launchers,
+all eight complete option offers, execution/co-op identities, AppImage layout
+and portable startup logs pass. Fresh packages record native inputs with
+diagnostics enabled by default. Development controls are disabled.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `a2bf3510af0a91cef552f4441fd021f33c4cf929ad1d889a1c89a8dcd0078a1e` |
+| Linux x86_64 AppImage | `d34f5d7e4bb480a2ad7879c0e956436d051a94b5ea75d321cb75b06c5db68c92` |
+
+Private package qualification: `build-pr23/release17-qa/release-receipt-final.json`.
+Release issue: `beads-eio.9.106`. Player-facing changes are in
+[release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 13
 
 [Published release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.13)
 with Windows ZIP and Linux x86_64 AppImage. Includes checklist57-66 and68:

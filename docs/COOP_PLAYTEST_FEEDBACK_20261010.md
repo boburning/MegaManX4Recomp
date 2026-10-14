@@ -799,3 +799,16 @@ pass, including Windows launches without a console. Package layout excludes
 game discs and player saves. Uploaded-asset checksums and publication receipts
 are retained privately under `build-pr23/release16-qa/`. Release issue:
 `beads-eio.9.102`. The Gameplay qualification above remains unchanged.
+
+### Playtest 17 release qualification
+
+[Playtest17](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.17)
+packages item74's `f054a9e` scene-camera fix and item76's `e784244` local Mods
+improvement, including shared UI `248c347`. Production source is `baeef9a`.
+All34 Windows and28 Linux title checks pass; packaged launchers, eight option
+offers and cross-platform execution/co-op identities pass. Fresh packages
+record real native inputs, session metadata and cards with default Diagnostics.
+Windows detached/no-window startup logging and Linux portable logs pass.
+Development controls are disabled; packages exclude game discs and player saves.
+Jet Stingray entrance presentation remains open (item75). Private receipts:
+`build-pr23/release17-qa/`. Release issue: `beads-eio.9.106`.
