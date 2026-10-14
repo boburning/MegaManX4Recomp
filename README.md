@@ -5,7 +5,7 @@
 Mega Man X4 on Windows and Linux, with **two-player co-op in alpha**.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Download Playtest 14](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.14)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Download Playtest 15](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.15)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -65,8 +65,8 @@ automatic playtest recordings. [Controls, saves and reporting guide →](docs/PL
 
 ## Help improve the alpha
 
-Expect bugs; independent cameras can still slow down. Playtest 13 does not
-claim a fix for the outstanding online sign-in/startup reports.
+Expect bugs; independent cameras can still slow down. Online sign-in/startup
+reports remain under investigation.
 [Check the burndown](docs/COOP_PLAYTEST_FEEDBACK_20261010.md) or
 [report a bug](https://github.com/mstan/MegaManX4Recomp/issues).
 

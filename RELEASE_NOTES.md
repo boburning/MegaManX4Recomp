@@ -1,4 +1,28 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.14
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.15
+
+Two-player X + Zero co-op for Windows and Linux. Both netplay peers must update.
+
+- **Storm Owl progression:** P2 can now reach the second part of the stage while
+  P1 is dead. The normal transition with both players alive also works.
+- **X's armor colors:** collecting armor in Zero's campaign keeps X's correct
+  palette, including after opening and closing the pause menu.
+- **Web Spider capture:** a web that kills one player now releases instead of
+  pulling in and damaging the surviving partner.
+
+Unified cameras and Stacked lifebars remain the defaults; Split is experimental.
+The co-op door options and optional doubled boss health remain available in Mods.
+
+Diagnostics remain enabled by default for fresh installs. If you previously
+disabled them, enable **Mods → Playtest Diagnostics → Input Display and Recording**.
+Look for **REC** while playing. After reproducing a bug, quit normally and zip
+the complete `saves/diagnostics` folder beside the executable or AppImage.
+
+Keep normal memory-card saves for campaign progress; use save states made with
+this release. Windows and Linux production checks pass. These fixes were
+reproduced and checked in native gameplay; outstanding reports retain their
+status in the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.14
 
 Two-player X + Zero co-op for Windows and Linux. Both netplay peers must update.
 Unified cameras and Stacked lifebars remain the defaults; Split is experimental.
