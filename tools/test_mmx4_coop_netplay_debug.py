@@ -58,6 +58,8 @@ def main():
     parser.add_argument('--nova-only',action='store_true',help='Qualify native Nova Strike camera independence')
     parser.add_argument('--dragon-only',action='store_true',help='Inspect intro dragon placement in two independent views')
     parser.add_argument('--wrap-only',action='store_true',help='Inspect distant player sprites around the 2048px GPU boundary')
+    parser.add_argument('--jungle-exit-only',action='store_true',help='Check a distant P2-led Jungle section exit')
+    parser.add_argument('--jungle-first-dead',action='store_true',help='With --jungle-exit-only, keep genuinely dead P1 dead')
     parser.add_argument('--expect-sprite-wrap',action='store_true',help='Capture the old build without the distant-sprite correction')
     parser.add_argument('--expect-duplicated-dragon',action='store_true',help='Capture the old screen-relative intro boss')
     parser.add_argument('--frontend',choices=('headless-opengl','hidden-window'),default='headless-opengl')
@@ -99,6 +101,19 @@ def main():
         exercise = Exercise(args, peers, report)
         exercise.boot(args.campaign)
         debug = NetplayDevelopment(ports[2], ports[3])
+        if args.jungle_exit_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            from test_mmx4_coop_regressions import Scenarios
+            from coop_jungle_exit_scenario import jungle_exit
+            scenario=Scenarios(NetplayRuntime(debug),args.output,args.campaign)
+            try:
+                report['jungle_exit']=jungle_exit(scenario,args.jungle_first_dead)
+                tick=min(peer.status()['tick'] for peer in peers)
+                exercise.checkpoint('Jungle part2 arrival',tick,min_digests=2)
+                report['status']='passed'
+            finally:
+                (args.output/'scenario-events.json').write_text(json.dumps(scenario.events,indent=2))
+            return
         if args.wrap_only:
             from mmx4_netplay_runtime import NetplayRuntime
             runtime=NetplayRuntime(debug)

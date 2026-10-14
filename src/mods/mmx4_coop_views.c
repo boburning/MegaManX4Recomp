@@ -1,10 +1,12 @@
 #include "mmx4_coop_views.h"
 #include <string.h>
 
-int mmx4_coop_camera_world_ready(unsigned mode,unsigned phase,unsigned primary_state) {
+int mmx4_coop_camera_world_ready(unsigned mode,unsigned phase,unsigned primary_state,int scene_owner) {
     /* Native room setup replaces camera limits before initializing PLAYER.
      * A retained partner still belongs to the outgoing world at that point. */
-    return mode==6 && phase==0 && primary_state!=0;
+    /* Phase1 is the outgoing fade: native camera updates still run against
+     * the outgoing world. Keep their committed owner until the loader starts. */
+    return mode==6 && (phase==0 || (phase==1 && scene_owner>=0)) && primary_state!=0;
 }
 
 int mmx4_coop_views_requested(int online,const char *cameras) {
@@ -15,8 +17,11 @@ int mmx4_coop_view_death_bottom(int camera_y,int room_maximum_y) {
      * riders arrive. Falling boss entries instead need the deeper room floor. */
     return (camera_y>room_maximum_y?camera_y:room_maximum_y)+256;
 }
-int mmx4_coop_camera_scope_requested(int split,int ready,int first_alive,int second_alive) {
-    return ready && (second_alive || (split && first_alive));
+int mmx4_coop_camera_scope_requested(int split,int ready,int first_alive,int second_alive,int scene_owner) {
+    /* An exit's leader can finish its native walk while the passenger is
+     * still hidden. Neither then counts as alive for ordinary gameplay, but
+     * the committed scene still owns the camera and its body-bound checks. */
+    return ready && (second_alive || (split && first_alive) || scene_owner>=0);
 }
 
 static int32_t clamp(int32_t value,int32_t minimum,int32_t maximum) {

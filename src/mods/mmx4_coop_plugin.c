@@ -554,7 +554,7 @@ static void second_tick(CPUState *cpu,uint32_t address) {
 
 static int camera_world_ready(void) {
     return mmx4_coop_camera_world_ready(psx_mod_read_byte(PLAY),
-        psx_mod_read_byte(PLAY+1),psx_mod_read_byte(PLAYER+4));
+        psx_mod_read_byte(PLAY+1),psx_mod_read_byte(PLAYER+4),mmx4_coop_lifecycle_script_owner());
 }
 static int camera_target(CPUState *cpu,uint32_t address) {
     if(!camera_world_ready())return 0;
@@ -618,9 +618,10 @@ static int camera_update(CPUState *cpu,uint32_t address) {
         return mmx4_coop_finish(cpu,0);
     if(!camera_world_ready())return 0;
     constrain_team(cpu,address);
+    int scene_owner=mmx4_coop_lifecycle_script_owner();
     if(!mmx4_coop_camera_scope_requested((int)split_views,mmx4_coop_ready(),
-        mmx4_coop_alive(0),mmx4_coop_alive(1)))return 0;
-    unsigned owner=mmx4_coop_lifecycle_script_owner()==1 || !mmx4_coop_alive(0);
+        mmx4_coop_alive(0),mmx4_coop_alive(1),scene_owner))return 0;
+    unsigned owner=scene_owner>=0?(unsigned)scene_owner:!mmx4_coop_alive(0);
     if(split_views)mmx4_coop_split_camera_prepare(owner);
     /* 80027850 also checks player A4 and clamps the canonical body against
      * scrolling bounds at 80027BE4. Changing only its target XY can crush a
