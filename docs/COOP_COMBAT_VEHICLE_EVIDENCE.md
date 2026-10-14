@@ -494,6 +494,38 @@ emission only, keeping each bundle together while restoring simulation fields.
 QA57/58 both-roster native bikes Dash with healthy draw captures; ownership
 tests include a nearer other rider, dead owner and slot reuse.
 
+**Correction, 2026-10-14 (item16):** Playtest20 feedback confirms the intro
+animation is correct, but rider/bike overlap remains wrong. The earlier
+priority offset did not keep the complete bundles together. Native800241E8
+initializes four layers with eight buckets each; native80024260 merges those
+buckets into the ordering table. P2 rider/bike/exhaust priorities2/4/6 plus4
+became6/8/10. Bike and exhaust spilled into the next layer while the rider
+stayed in the original one. This is visible in native local intro captures,
+and the emitted bucket heads confirm the overflow.
+
+Reserve four buckets per rider within the original layer: native
+wind/rider/bike/exhaust0/2/4/6 become0/1/2/3 for P1 and4/5/6/7 for P2. Apply
+this during packet emission, including the separately emitted P1 X armor,
+P2's private wind shot and owned following effects. Restore actor priorities
+immediately, retaining native simulation and the approved entrance animation.
+The regression test covers all four layers, complete cross-rider ordering,
+within-rider ordering and unsupported priorities/owners.
+
+Local Unified X-campaign A/B captures show the complete P1 rider/bike in
+front of P2. At matching control positions1517/1521, native actor priorities
+remain2/2/4/4; used buckets change from2/4/6/8/10 to1/2/3/5/6/7.
+Private evidence: `build-pr23/feedback20-jet-layer-20261014/`, including
+`trace2-x` (old priorities) and `fixed-local-x`. The earlier failed local
+save-load attempt used an incompatible netplay-debug build, and the first
+probe's post-intro teleport setup failed; neither is gameplay qualification.
+
+Two hidden native loopback runs (`fixed-split-x`, `fixed-split-zero`) also
+pass the existing entrance-pose, shared READY and control-release checks.
+Both peers' composed phase3/4 frames show the complete P1 bundle in front,
+including when Zero is P1 and X is P2. Core/mod CRCs match through4097 and3650
+respectively. This qualifies Split netplay separately from the local A/B;
+it does not claim remote-network coverage. The fix is after Playtest20.
+
 Cyber General20 update800C4EC8 queries only PLAYER through the read-only
 8002BB80 collision test. Allow P2's query when P1 does not activate it.
 Native800C4F40 reflects PLAYER Y/previousY about2048, primary camera Y/targetY

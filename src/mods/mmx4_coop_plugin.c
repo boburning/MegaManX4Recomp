@@ -1087,14 +1087,24 @@ static void render_actor(CPUState *cpu,uint32_t actor,uint32_t base,unsigned cha
         if(psx_mod_read_word(tail)==at)psx_mod_write_word(tail,expanded+40);
     }
 }
-static void render_rider_component(CPUState *cpu,uint32_t actor,uint32_t base,unsigned character,int behind) {
+static void render_rider_component(CPUState *cpu,uint32_t actor,uint32_t base,unsigned character,unsigned owner) {
     uint8_t priority=psx_mod_read_byte(actor+0x16);
-    /* Keep P1's rider/exhaust/bike in front of the complete P2 bundle.
-     * Offset only while emitting packets; simulation actor priorities stay
-     * native and each rider remains in front of their own bike/exhaust. */
-    if(behind)psx_mod_write_byte(actor+0x16,(uint8_t)(priority+4));
+    psx_mod_write_byte(actor+0x16,mmx4_coop_ride_draw_priority(priority,owner));
     render_actor(cpu,actor,base,character);
-    if(behind)psx_mod_write_byte(actor+0x16,priority);
+    psx_mod_write_byte(actor+0x16,priority);
+}
+static int render_native_rider_component(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];uint8_t priority=psx_mod_read_byte(actor+0x16);
+    rendering=1;
+    psx_mod_write_byte(actor+0x16,mmx4_coop_ride_draw_priority(priority,1));
+    uint32_t result=guest(cpu,address,actor,cpu->gpr[5]);
+    psx_mod_write_byte(actor+0x16,priority);rendering=0;
+    return mmx4_coop_finish(cpu,result);
+}
+static int render_rider_armor(CPUState *cpu,uint32_t address) {
+    if(rendering || projected || !mmx4_coop_ready() || cpu->gpr[4]!=PLAYER ||
+       psx_mod_read_byte(PLAYER+0xC5)!=0xFF)return 0;
+    return render_native_rider_component(cpu,address);
 }
 static int render(CPUState *cpu,uint32_t address) {
     if(rendering || inside || projected || failed || !enrolled || !world_draw_visible())return 0;
@@ -1104,7 +1114,7 @@ static int render(CPUState *cpu,uint32_t address) {
     enter_second();
     uint32_t original=psx_mod_read_word(SCRATCH+0x100),base=arena+(psx_mod_read_word(SCRATCH)&1u)*FRAME_ARENA;
     psx_mod_write_word(SCRATCH+0x100,base);
-    int chaser=second.body[0xC5]==0xFF;
+    unsigned chaser=second.body[0xC5]==0xFF?2u:0u;
     if(second.body[3])render_rider_component(cpu,PLAYER,base,counterpart,chaser);
     if(psx_mod_read_byte(0x80175D58u+3))render_actor(cpu,0x80175D58u,base,counterpart);
     if(!second.body[2])for(unsigned i=0;i<2 && !failed;++i)
@@ -1113,13 +1123,16 @@ static int render(CPUState *cpu,uint32_t address) {
     for(unsigned i=3;i && !failed;--i)
         if(psx_mod_read_byte(TRAILS+(i-1)*0x60+3))render_actor(cpu,TRAILS+(i-1)*0x60,base,counterpart);
     if(psx_mod_read_byte(MMX4_VEHICLE+3))render_rider_component(cpu,MMX4_VEHICLE,base,counterpart,chaser);
-    for(unsigned i=0;i<16 && !failed;++i)if(psx_mod_read_byte(SHOTS+i*0x9C+3))render_actor(cpu,SHOTS+i*0x9C,base,counterpart);
+    for(unsigned i=0;i<16 && !failed;++i)if(psx_mod_read_byte(SHOTS+i*0x9C+3)) {
+        uint32_t shot=SHOTS+i*0x9C;
+        render_rider_component(cpu,shot,base,counterpart,
+            chaser && psx_mod_read_byte(shot+1)==57?chaser:0u);
+    }
     world_packet_used=psx_mod_read_word(SCRATCH+0x100)-base;
     psx_mod_write_word(SCRATCH+0x100,original);leave_second();rendering=0;
     return mmx4_coop_finish(cpu,result);
 }
 static int render_owned_effect(CPUState *cpu,uint32_t address) {
-    (void)address;
     if(mmx4_coop_split_sprite_outside(cpu->gpr[4])) {
         psx_mod_counter_add("mmx4.coop.split-distant-sprite-culled",1);
         return mmx4_coop_finish(cpu,0);
@@ -1127,6 +1140,11 @@ static int render_owned_effect(CPUState *cpu,uint32_t address) {
     if(rendering || projected || !mmx4_coop_ready() || !world_draw_visible())return 0;
     uint32_t actor=cpu->gpr[4],assembly=psx_mod_read_word(actor+0x3C);
     unsigned vehicle_owner=mmx4_coop_vehicle_effect_owner(actor);
+    unsigned ride_owner=vehicle_owner;
+    if(psx_mod_read_byte(PLAYER+0xC5)==0xFF &&
+       (actor==PLAYER || actor==MMX4_VEHICLE ||
+        (actor>=SHOTS && actor<SHOTS+sizeof first.shots && (actor-SHOTS)%0x9C==0 &&
+         psx_mod_read_byte(actor+1)==57)))ride_owner=1;
     unsigned character=counterpart;
     if(assembly<assets[counterpart].assembly || assembly-assets[counterpart].assembly>=0xC000) {
         uint32_t primary_assembly=psx_mod_read_word(SCRATCH+0x1C);
@@ -1135,7 +1153,7 @@ static int render_owned_effect(CPUState *cpu,uint32_t address) {
             (actor>=TRAILS && actor<TRAILS+sizeof first.trails && (actor-TRAILS)%0x60==0) ||
             (actor>=CHARGE_GLOWS && actor<CHARGE_GLOWS+sizeof first.charge_glows && (actor-CHARGE_GLOWS)%0x50==0);
         if(!primary_actor || assembly<primary_assembly || assembly-primary_assembly>=0xC000) {
-            if(vehicle_owner!=2)return 0;
+            if(vehicle_owner!=2)return ride_owner==1?render_native_rider_component(cpu,address):0;
         }else {
             character=counterpart^1u;
             psx_mod_counter_add("mmx4.coop.primary-private-character-draws",1);
@@ -1144,7 +1162,7 @@ static int render_owned_effect(CPUState *cpu,uint32_t address) {
     rendering=1;
     uint32_t original=psx_mod_read_word(SCRATCH+0x100),base=arena+(psx_mod_read_word(SCRATCH)&1u)*FRAME_ARENA;
     psx_mod_write_word(SCRATCH+0x100,base+world_packet_used);
-    render_rider_component(cpu,actor,base,character,vehicle_owner==2);
+    render_rider_component(cpu,actor,base,character,ride_owner);
     world_packet_used=psx_mod_read_word(SCRATCH+0x100)-base;
     psx_mod_write_word(SCRATCH+0x100,original);rendering=0;
     return mmx4_coop_finish(cpu,0);
@@ -1467,6 +1485,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
     psx_mod_register_function_filter_plugin(ID,0x8001FF50,development_fixture);
     psx_mod_register_function_filter_plugin(ID,0x80024E70,coop_hud);
     psx_mod_register_function_filter_plugin(ID,0x80024334,render_owned_effect);
+    psx_mod_register_function_filter_plugin(ID,0x800257BC,render_rider_armor);
     psx_mod_register_function_filter_plugin(ID,0x800EA4D0,retained_upload);
     psx_mod_register_function_filter_plugin(ID,0x800EA80Cu,present_local_view);
 }

@@ -21,6 +21,7 @@ typedef struct {
 } Mmx4CoopViewVisits;
 
 int mmx4_coop_views_requested(int online,const char *cameras);
+uint8_t mmx4_coop_ride_draw_priority(uint8_t native,unsigned owner);
 int mmx4_coop_camera_world_ready(unsigned mode,unsigned phase,unsigned primary_state,int scene_owner);
 int mmx4_coop_view_death_bottom(int camera_y,int room_maximum_y);
 int mmx4_coop_camera_scope_requested(int split,int ready,int first_alive,int second_alive,int scene_owner);

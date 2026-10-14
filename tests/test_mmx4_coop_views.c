@@ -6,6 +6,25 @@
     fprintf(stderr,"line %d: %s\n",__LINE__,#value);exit(1); } } while(0)
 
 int main(void) {
+    /* All of P1 must precede all of P2 in the same native eight-bucket
+     * layer, including bike4/exhaust6 and wind0. Keep each rider's order. */
+    for(unsigned layer=0;layer<4;++layer)for(unsigned a=0;a<=6;a+=2) {
+        uint8_t native=(uint8_t)(layer*16+a);
+        uint8_t first=mmx4_coop_ride_draw_priority(native,1);
+        uint8_t second=mmx4_coop_ride_draw_priority(native,2);
+        CHECK((first>>4)==layer && (second>>4)==layer);
+        CHECK((first&15)<8 && (second&15)<8);
+        for(unsigned b=0;b<=6;b+=2) {
+            CHECK(first<mmx4_coop_ride_draw_priority((uint8_t)(layer*16+b),2));
+            if(a<b)for(unsigned owner=1;owner<=2;++owner)
+                CHECK(mmx4_coop_ride_draw_priority(native,owner)<
+                      mmx4_coop_ride_draw_priority((uint8_t)(layer*16+b),owner));
+        }
+        CHECK(mmx4_coop_ride_draw_priority(native,0)==native);
+        CHECK(mmx4_coop_ride_draw_priority(native,3)==native);
+    }
+    CHECK(mmx4_coop_ride_draw_priority(7,2)==7);
+    CHECK(mmx4_coop_ride_draw_priority(0x1A,2)==0x1A);
     /* Native Mushroom lift: limit moves to720 while camera is2047 and the
      * riders are2200/2199. Destination alone wrongly kills both riders. */
     CHECK(2200-8<mmx4_coop_view_death_bottom(2047,720));

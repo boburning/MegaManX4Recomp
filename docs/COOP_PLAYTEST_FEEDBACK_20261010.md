@@ -19,7 +19,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 13 | [x] | P2 dash afterimages disappear after Jet Stingray victory | Warp cleanup erased complete native trail structures. Preserve initialized resources while cancelling visible images. QA49 now follows a real P2 Jet boss kill, native reward and Save UI directly into the train: three correctly red Zero trails appear both before and after withdrawal/rejoin. `beads-eio.9.27` |
 | 14 | [x] | P2 dashing removes P1 body, especially after a P2-owned boss door/event | Immutable body textures (87b87ec) preserve both native characters. QA83/84 drive P2's original Intro boss event in both rosters, observe actual P2 Dash during P1's incoming beam, then Dash with either seat after arrival. Separate bodies on the observed arena floor for clear captures: P1's complete blue X/red Zero body remains intact, with no corrupt rectangles. Native Cyber P2-door Dash and open-air Dash qualifications also pass. `beads-eio.9.27`, `beads-eio.9.10` |
 | 15 | [x] | P2 Ride Chaser dash animation is missing in Jet Stingray | QA53/54 execute original bike Dash in both character arrangements: ground phase5, changing rider frames and bike frame3. Inspected captures show both riders' dash poses. Missing animation is not reproduced on this branch; layering remains item16. `beads-eio.9.44` |
-| 16 | [x] | P2 draws over P1 Ride Chaser bike and exhaust | Tie proven native secondary vehicle effects56/57 to their allocating rider, including enrollment and cleanup. Emit P2 rider/bike/following-effect packets behind the complete P1 bundle while restoring native actor priorities immediately. Both-roster QA57/58 bike captures and Dash pass; allocation/reuse/nearest-other-rider tests and all16 title CTests pass. `beads-eio.9.45` |
+| 16 | [x] | P2 draws over P1 Ride Chaser bike and exhaust | Reopened after Playtest20: the old +4 offset spilled P2 bike/exhaust into another layer. Reserve four native buckets per rider in the same layer, including X armor and wind/exhaust. Local Unified A/B and composed Split netplay frames with both character arrangements now keep the complete P1 bundle in front; peer CRCs and priority invariants pass. Fixed after Playtest20; see evidence below. `beads-eio.9.45` |
 | 17 | [x] | Defeated portraits revert to color after returning from a stage | Qualified the actual return paths missing from the earlier tests. QA49 preserves clear16 through native Quit/Yes/current-data Continue and Escape Device/Save UI. QA50 adds a real Web Spider clear (16->17), matching Continue/card records, then repeats both return paths: both portraits remain grey in inspected screenshots and palette reads. Restrict gameplay scene ownership to gameplay/transition modes, preserving P1's frontend resources and input. Recoloring is not reproduced on this branch; no persistent data loss is demonstrated. `beads-eio.9.37` |
 | 18 | [x] | P2 character and HUD pop out/in during pause transitions | Include the partner body/effects/HUD whenever the original world is rendered during native pause fades. Native QA51/52/54 perform four pause/resume sequences per run; both pause-world draw counters advance on every fade (288 each), with healthy inspected resumed frames. Quit still excludes gameplay drawing. `beads-eio.9.26` |
 | 19 | [x] | P2 ordinary dash exhaust appears beside P1 | Deferred effects0/1 read canonical PLAYER/Double and assembly. Project their allocating owner for initialization, position, facing and cleanup; dust3 stays shared. QA74/75 execute28 Dash captures per roster: exhaust follows X/P2 and Zero/P2 with native matching colors, while the idle P1 body remains intact. Both-owner/Double/reuse tests pass. `beads-eio.9.46` |
@@ -1081,3 +1081,23 @@ The Windows ZIP and Linux AppImage exclude discs and player saves. Unified and
 Stacked remain defaults, Split remains experimental, and Double/Iris stays
 optional and default off. Item86 remains open and is not claimed fixed.
 Private receipts: `build-pr23/release20-qa/`. Release issue: `beads-eio.9.118`.
+
+### Jet Stingray rider/bike layering follow-up (2026-10-14)
+
+Owner confirms item75's intro animation is correct. Reopened item16 for the
+remaining interleaved rider/bike composition. Native priority tracing proves
+the old +4 offset overflowed the eight-bucket layer: P2 rider/bike/exhaust
+became6/8/10. Assign four buckets per player within that same layer instead,
+including wind and X armor, restoring native priorities after drawing.
+
+Local Unified X-campaign A/B frames reproduce and correct the overlap, with
+native body/bike priorities unchanged. Two hidden loopback Split netplay runs
+pass the existing entrance-pose, shared READY and control-release checks.
+Composed frames from both peers show complete P1-over-P2 layering in both
+character arrangements. Final core/mod CRC checkpoints agree through4097
+(X campaign) and3650 (Zero campaign). The priority regression test passes.
+No visible windows or tester saves were used. This fix is not in Playtest20.
+
+Private evidence: `build-pr23/feedback20-jet-layer-20261014/`, notably
+`trace2-x`, `fixed-local-x`, `fixed-split-x` and `fixed-split-zero`.
+See `COOP_COMBAT_VEHICLE_EVIDENCE.md` for the native bucket analysis.

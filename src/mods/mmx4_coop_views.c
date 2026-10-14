@@ -1,6 +1,16 @@
 #include "mmx4_coop_views.h"
 #include <string.h>
 
+uint8_t mmx4_coop_ride_draw_priority(uint8_t native,unsigned owner) {
+    /* Native 80024260 has eight buckets per layer, not sixteen. Ride Chaser
+     * wind/rider/bike/exhaust use 0/2/4/6. Reserve four ordered buckets per
+     * rider inside that same layer; adding 4 directly spills bikes/effects
+     * into the next layer and leaves the rider behind them. */
+    unsigned component=native&15u;
+    if(owner<1 || owner>2 || component>6 || (component&1u))return native;
+    return (uint8_t)((native&0xF0u)|(component>>1)|((owner-1u)*4u));
+}
+
 int mmx4_coop_camera_world_ready(unsigned mode,unsigned phase,unsigned primary_state,int scene_owner) {
     /* Native room setup replaces camera limits before initializing PLAYER.
      * A retained partner still belongs to the outgoing world at that point. */
