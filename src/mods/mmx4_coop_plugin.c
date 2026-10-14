@@ -1101,7 +1101,7 @@ static int render_native_rider_component(CPUState *cpu,uint32_t address) {
     psx_mod_write_byte(actor+0x16,priority);rendering=0;
     return mmx4_coop_finish(cpu,result);
 }
-static int render_rider_armor(CPUState *cpu,uint32_t address) {
+int mmx4_coop_render_rider_armor(CPUState *cpu,uint32_t address) {
     if(rendering || projected || !mmx4_coop_ready() || cpu->gpr[4]!=PLAYER ||
        psx_mod_read_byte(PLAYER+0xC5)!=0xFF)return 0;
     return render_native_rider_component(cpu,address);
@@ -1485,7 +1485,6 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
     psx_mod_register_function_filter_plugin(ID,0x8001FF50,development_fixture);
     psx_mod_register_function_filter_plugin(ID,0x80024E70,coop_hud);
     psx_mod_register_function_filter_plugin(ID,0x80024334,render_owned_effect);
-    psx_mod_register_function_filter_plugin(ID,0x800257BC,render_rider_armor);
     psx_mod_register_function_filter_plugin(ID,0x800EA4D0,retained_upload);
     psx_mod_register_function_filter_plugin(ID,0x800EA80Cu,present_local_view);
 }

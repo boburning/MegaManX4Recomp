@@ -14,6 +14,12 @@ static unsigned native_directional_scans,scan_direction;
 static uint32_t native_table=TABLE;
 static int script_owner=-1;
 static unsigned nova_active;
+static unsigned rider_armor_calls;
+int mmx4_coop_render_rider_armor(CPUState *cpu,uint32_t address) {
+    CHECK(address==0x800257BCu && cpu->gpr[4]==ACTOR);
+    ++rider_armor_calls;
+    return mmx4_coop_finish(cpu,123);
+}
 int mmx4_coop_lifecycle_nova_active(void) {return (int)nova_active;}
 static unsigned room_entries,room_owner;
 void mmx4_coop_lifecycle_room_entry(unsigned owner) {++room_entries;room_owner=owner;}
@@ -843,8 +849,10 @@ int main(void) {
     psx_mod_write_byte(ACTOR+3,1);
     CHECK(mmx4_coop_split_sprite_outside(ACTOR));
     cpu.gpr[4]=ACTOR;CHECK(invoke(&cpu,0x800257BCu)==0);
+    CHECK(rider_armor_calls==0); /* Culled armor must not reach the emitter. */
     CHECK(psx_mod_read_byte(ACTOR+3)==1); /* Still alive/visible to the other seat. */
     actor_position(CAMERA,3948,1200);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    CHECK(invoke(&cpu,0x800257BCu)==123 && rider_armor_calls==1);
     actor_position(ACTOR,3948+160,1200+120-2048);CHECK(mmx4_coop_split_sprite_outside(ACTOR));
     actor_position(ACTOR,3948-144,1200-144);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
     actor_position(ACTOR,3948+320+144,1200+240+144);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
@@ -853,6 +861,7 @@ int main(void) {
     CHECK(!mmx4_coop_split_sprite_outside(ACTOR)); /* Native per-layer camera. */
     psx_mod_write_byte(ACTOR+0x14,255);CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
     psx_mod_write_byte(ACTOR+0x14,0);split=0;CHECK(!mmx4_coop_split_sprite_outside(ACTOR));
+    CHECK(invoke(&cpu,0x800257BCu)==123 && rider_armor_calls==2);
     split=1;local_scope=1;projected=1;CHECK(mmx4_coop_split_sprite_outside(ACTOR));
     local_scope=projected=0;actor_position(CAMERA,0,0);
     actor_position(CAMERA+0x54,0,0);

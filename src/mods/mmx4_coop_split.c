@@ -67,8 +67,10 @@ int mmx4_coop_split_sprite_outside(uint32_t actor) {
     return x < -144-margin || x > 320+144+margin || y < -144 || y > 240+144;
 }
 static int draw_armor(CPUState *cpu,uint32_t address) {
-    (void)address;
-    return mmx4_coop_split_sprite_outside(cpu->gpr[4])?mmx4_coop_finish(cpu,0):0;
+    /* One native armor hook must retain both camera culling and rider order.
+     * A second registration for this plugin replaces the first callback. */
+    if(mmx4_coop_split_sprite_outside(cpu->gpr[4]))return mmx4_coop_finish(cpu,0);
+    return mmx4_coop_render_rider_armor(cpu,address);
 }
 static int intro_boss(uint32_t actor) {
     return actor>=0x8013BED0u && actor<0x8013BED0u+48u*0x9Cu &&
