@@ -1,14 +1,27 @@
 # Co-op playtest 19
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.19)
-for Windows ZIP and Linux x86_64 AppImage. Fixes checklist75: P2 uses the
-proper native rider animation during Jet Stingray's entrance, as X or Zero.
-Native gameplay qualification is recorded in the feedback checklist;
-production package qualification follows below. Release issue: `beads-eio.9.115`.
+with Windows ZIP and Linux x86_64 AppImage. Fixes item75: P2 now uses the
+correct rider animation during Jet Stingray's bike entrance, for X and Zero.
+The Double/Iris encounter option remains visible and default off.
 
 Unified cameras and Stacked lifebars remain defaults; Split is experimental.
-Both peers must update. Double/Iris remains optional and default off.
-Campaign memory-card saves are unchanged.
+Both peers must update. Campaign memory-card saves are unchanged.
+
+Compiled source `646668c`, framework `9bd4c20f9`, UI `248c347`.
+All34 Windows and28 Linux title checks pass. Packaged hidden launchers,
+all eight complete option offers, execution/co-op identities, AppImage layout
+and portable startup logs pass. Fresh packages record native inputs with
+diagnostics enabled by default. Development controls are disabled.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `7715e51d2082c035cd19b4908b5ad6908944e2574ac64e8d13d93e722e0e44d1` |
+| Linux x86_64 AppImage | `656a4280680509c0927d240f072c3a8564c6a3df0330e550ef29410db2ca420d` |
+
+Private package qualification: `build-pr23/release19-qa/release-receipt-final.json`.
+Release issue: `beads-eio.9.115`. Player-facing changes are in
+[release notes](../RELEASE_NOTES.md).
 
 ## Previous co-op playtest 18
 
