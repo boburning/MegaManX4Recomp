@@ -1,4 +1,31 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.20
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.21
+
+**Smoother partner teleports and corrected Jet Stingray bike layering.**
+
+- **Partner teleports:** P2's arrival now finishes while P1 jumps or uses Nova
+  Strike. Walking and dashing also leave the arrival intact, so P1 can keep
+  fighting while their partner returns.
+- **Jet Stingray:** Each rider, bike and exhaust now stays together when the
+  players overlap. This fixes the bike drawing over the other bike but behind
+  its rider, for both X and Zero.
+
+Verified in local co-op and split-camera netplay. Double's appearance in Zero's
+story was also checked through the optional Iris-to-Double sequence; the
+Playtest 20 sprite fix already covers it.
+
+Includes all Playtest 20 fixes. Windows ZIP and Linux x86_64 AppImage.
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. **Fight Double and Iris** remains optional
+and default off. Campaign memory-card saves carry forward.
+
+The unconfirmed Sigma stage 3 P2 disappearance remains open. If it recurs,
+keep **Input Display and Recording** enabled, look for **REC**, note the video
+timestamp, quit normally, and send the complete `saves/diagnostics` folder
+beside the executable or AppImage. For netplay, include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.20
 
 **Fixes for co-op boss doors, Zero versus Double, and the optional Iris fight.**
 

@@ -1,4 +1,22 @@
-# Co-op playtest 20
+# Co-op playtest 21
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.21)
+with Windows ZIP and Linux x86_64 AppImage. Fixes committed partner arrivals
+being canceled by P1 jumps or Nova Strike (item6) and Jet Stingray rider/bike/
+exhaust layering (item16). Both fixes passed local and hidden two-peer Split
+netplay validation. Double in Zero's story (item87) passed the native optional
+Iris-to-Double sequence with the existing Playtest20 selector fix.
+
+Item86, the unconfirmed Sigma stage3 P2 disappearance, remains open.
+Unified cameras and Stacked lifebars remain defaults; Split is experimental.
+Both peers must update. Fight Double and Iris remains optional and default off.
+Campaign memory-card saves carry forward.
+
+Release issue: `beads-eio.9.119`. Package qualification is recorded under
+`build-pr23/release21-qa/`; final results will be added after both packages pass.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 20
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.20)
 with Windows ZIP and Linux x86_64 AppImage. Includes the Colonel paired-door
