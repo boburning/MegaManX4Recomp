@@ -26,6 +26,7 @@ static std::map<std::string,unsigned> counters;
 static std::string save_root,shown[2];
 static std::string application_root;
 static bool online;
+static bool diagnostics_active=true;
 static bool projected_context;
 static std::array<uint8_t,0xE4> canonical_first;
 static std::array<PSXModControllerSource,2> sources{};
@@ -41,6 +42,9 @@ int psx_mod_register_snapshot_loaded_observer(const char*,PSXModSnapshotLoadedOb
 int psx_mod_register_snapshot_provider(const char*,const PSXModSnapshotProvider*) {return 1;}
 int psx_mod_local_view_scope(void) {return 0;}
 int psx_mod_netplay_is_active(void) {return online;}
+int mod_runtime_snapshot_package_active(const char *id) {
+    return !strcmp(id,"mmx4.diagnostics") && diagnostics_active;
+}
 int psx_mod_set_controller_source(uint32_t seat,PSXModControllerSource source) {sources.at(seat)=source;return 1;}
 void psx_mod_counter_add(const char* name,uint32_t n) {counters[name]+=n;}
 uint16_t sio_get_pad_buttons_slot(int slot) {return pads.at(slot);}
@@ -177,6 +181,17 @@ int main(int argc,char **argv) {
     // restored machine image. It must not append a time jump to old inputs.
     online=false;activate();inputs(&cpu,0x80012328u);
     const uint8_t restored_image[]={0x50,0x53,0x54,0x0A,0xFE,0x01};
+    diagnostics_active=false;activate();
+    auto folder_count=std::distance(std::filesystem::directory_iterator(
+        std::filesystem::path(application_root)/"saves/diagnostics"),
+        std::filesystem::directory_iterator{});
+    state_loaded(restored_image,sizeof restored_image);
+    uint16_t disabled_buttons=0xFF7F;mmx4_diagnostics_resolve_input(1,&disabled_buttons);
+    CHECK(!started && !recording.is_open() && pending_baseline.empty() && sequence==0);
+    CHECK(std::distance(std::filesystem::directory_iterator(
+        std::filesystem::path(application_root)/"saves/diagnostics"),
+        std::filesystem::directory_iterator{})==folder_count);
+    diagnostics_active=true;
     state_loaded(restored_image,sizeof restored_image);
     CHECK(sequence==0 && started && recording.is_open() && pending_baseline.empty());
     CHECK(counters["mmx4.diagnostics.state-segments"]==1);

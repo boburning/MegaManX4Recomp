@@ -1386,6 +1386,50 @@ class Scenarios:
         return dict(p2_drop_opens_secret_camera=True,p2_room_entry_updates_camera=True,
                     camera_bounds=row['bounds'])
 
+    def dragoon_survivor_reward(self):
+        """A dead campaign owner still controls the post-victory reward/save UI."""
+        self.watch_enemy=65
+        self.load(4,1,3)
+        self.r.fixture(5,3)
+        self.r.teleport_both(5350,620)
+        self.wait('dragoon-native-fight',lambda v:any(
+            e['type']==65 and e['hp']>0 and e['state'][0]==1 for e in self.enemies())
+            and not v['blocked'] and not v['warning'],30,True)
+        self.r.fixture(2,0,0x80)
+        self.wait('dragoon-p1-dead',lambda v:v['players'][0]['state']==3 and
+                  v['players'][0]['hp']==0,12)
+        boss=next(e for e in self.enemies() if e['type']==65 and e['hp']>0)
+        self.r.fixture(6,boss['slot'],1)
+        deadline=time.monotonic()+30
+        try:
+            while time.monotonic()<deadline:
+                target=next((e for e in self.enemies() if e['type']==65),None)
+                if target is None or target['state'][0]==2:break
+                # The observed arena floor ends before the lava at either side.
+                self.r.teleport(1,max(5184,min(5440,int(target['x'])-48)),651)
+                self.r.input(0xffdf,1);time.sleep(.05);self.r.release()
+                self.r.input(0x7fff,1);time.sleep(.25);self.r.release();time.sleep(.12)
+            else:raise TimeoutError('Native P2 attack did not defeat HP1 Dragoon')
+            win=self.sample('dragoon-p2-native-victory',True)
+            assert win['players'][0]['hp']==0,'Victory revived dead P1'
+            deadline=time.monotonic()+35
+            while time.monotonic()<deadline:
+                row=self.sample('dragoon-dialogue-to-reward')
+                if row['mode'][0]==7:break
+                self.r.input(0xbfff,1);time.sleep(.09);self.r.release();time.sleep(.11)
+            else:raise TimeoutError('Dragoon victory did not reach weapon reward')
+        finally:self.r.release()
+        self.sample('dragoon-reward-before-p1-input')
+        # Only P1 advances the reward and native memory-card UI. An old P2
+        # story-pad edge must not steal control after gameplay ends.
+        result=self.finish_save(win,8)
+        assert self.r.read(0x801721c0+0x43,1)[0]==self.campaign
+        cache=list(self.r.read(0x800f1d90,8))
+        assert cache[0]==self.campaign and cache[4]==8,cache
+        self.watch_enemy=None
+        return dict(result,p1_dead_p2_victory=True,p1_reward_input=True,
+                    continue_cache=cache,campaign=self.campaign)
+
     def victory(self):
         self.load(5,1,1)
         height=int(self.sample('jet-victory-setup')['players'][0]['y'])
@@ -1581,6 +1625,11 @@ class Scenarios:
             while time.monotonic()<deadline:
                 row=self.sample('native-save-to-stage-select')
                 if row['mode'][:2]==[3,4]:break
+                if row['mode'][0]==3 and row['mode'][1]!=9:
+                    # Let the board finish building with neutral controls.
+                    # Rapid headless execution can otherwise confirm a stage
+                    # between samples and skip the state we intend to inspect.
+                    time.sleep(.02);continue
                 self.r.input(0xbfff,0);time.sleep(.06)
                 self.r.release();time.sleep(.06)
             else:raise TimeoutError('Native save/continue UI did not reach stage selection')
@@ -1634,7 +1683,7 @@ def main():
     parser.add_argument('--both-story-bosses',action='store_true')
     parser.add_argument('--boss-scaling',action='store_true')
     parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','storm_warp', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
-                        'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','diagnostics','audio',
+                        'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):

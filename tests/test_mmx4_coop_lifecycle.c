@@ -1508,6 +1508,25 @@ int main(void) {
     mmx4_coop_call(&cpu,0x80021D20u,0,0);
     CHECK(dialogue_calls==1 && dialogue_edge==0x800);
 
+    /* A surviving P2 can finish Dragoon with P1 dead. The weapon reward
+     * (mode7) reuses the text/stage actor dispatchers, but must accept live
+     * P1 input even with a stale P2-owned victory script and cached edge. */
+    for(unsigned campaign=0;campaign<2;++campaign) {
+        reset();psx_mod_write_word(PLAY,7);
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
+        script_active=script_owner=1;story_pad[0]=story_pad[2]=0x80;
+        memcpy(front_p2,p2,sizeof front_p2);
+        psx_mod_write_half(PAD,0x40);psx_mod_write_half(PAD+4,0x40);
+        mmx4_coop_call(&cpu,0x8002166Cu,0,0);
+        CHECK(stage_script_calls==1 && !stage_script_projected && !projected);
+        CHECK(observed_campaign==campaign && !memcmp(front_p2,p2,sizeof front_p2));
+        mmx4_coop_call(&cpu,0x80021D20u,0,0);
+        CHECK(dialogue_calls==1 && dialogue_edge==0x40);
+        CHECK(psx_mod_read_half(PAD)==0x40 && psx_mod_read_half(PAD+4)==0x40);
+        CHECK(script_active && script_owner==1 && !projected);
+    }
+
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned story=0;story<2;++story) {
         reset();psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
         psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);

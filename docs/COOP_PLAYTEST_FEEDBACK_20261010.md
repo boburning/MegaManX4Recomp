@@ -74,6 +74,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 66 | [x] | Intro dragon appears on both distant independent views; shots only in progressing player's view | **Published in [Playtest 13](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.13).** Native intro actor0 switches to screen-relative coordinates during its background attack. Rebase it and attached type10 effects through the canonical world camera only inside private rendering. Actual composed before/after captures show the boss and muzzle effect remaining with X at3237 while Zero at224 no longer sees a duplicate. Original state stays screen-relative, both peers match through sim5444, render isolation and all32 checks pass. `beads-eio.9.90` |
 | 67 | [x] | Product-focused co-op README, fresh screenshots and MIT license | **Completed after Playtest 13 publication**, per owner. Co-op-first page with seven actual gameplay/launcher screenshots, current downloads/defaults and short setup. Detailed player/developer guides moved out of the landing page. Project code is MIT; dependency and Capcom notices stay distinct. Hidden captures, GitHub Markdown render and local-link checks pass. Future packagers retain guides/images and independent license notices; a private Windows ZIP verifies exact notice/image bytes and an unchanged executable. `beads-eio.9.91` |
 | 68 | [x] | Distant player wraps onto the other Web Spider view | **Published in [Playtest 13](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.13).** Paired Jungle logs from Opening stage dragon camera and web spider camera wrap around ZIP match. Native GPU sprite positions wrap every2048px. Per-view bounds now reject distant world sprites and armor before emission without changing actor visibility/lifetime. Actual composed before/after captures verify both views with either player ahead; all32 checks pass, peer state matches through sim5891, and private rendering preserves RAM/VRAM/devices. `beads-eio.9.92` |
+| 69 | [x] | P1 cannot continue after P2 defeats Magma Dragoon | Reproduced from the reported setup on Playtest13 source. Mode7 incorrectly retains P2 gameplay text/actor ownership. The fix keeps this reward frontend under P1. Hidden native tests pass both campaigns: dead P1, P2's actual boss kill, P1 reward/save input, correct campaign and cleared boss in the native card/Continue cache, grey portrait on the selector. All34 Windows checks pass. Unreleased; separate from intro rescue item54. `beads-eio.9.94` |
+| 70 | [x] | Loading a state with Diagnostics disabled creates incomplete recording folders | Supplied gameplay sessions contain only C rows at sequence0, with Diagnostics explicitly disabled. The co-op restore observer incorrectly starts a recorder whose native input hook is absent. Offline restore now respects the committed Diagnostics package; enabled baseline recording and network behavior remain covered. Focused regression and all34 Windows checks pass. Unreleased. `beads-eio.9.95` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -579,3 +581,48 @@ Production builds pass 34 Windows and 28 Linux checks; packaged launchers,
 eight complete option offers, execution identities, AppImage layout and
 portable startup logs pass. Uploaded SHA256 digests match the tested assets.
 Release receipts: `build-pr23/release13-qa/`. Parked reports retain their status.
+
+## Metadata 3: Magma Dragoon reward input
+
+The 41.12-second clip shows actual Magma Dragoon's defeat in Zero's campaign,
+with X/P2 surviving and Zero/P1 dead. Dialogue and the victory warp complete;
+the clip ends on RYUENJIN's instruction text. It does not show a process crash
+or the intro dragon. Current Playtest13 gameplay source reproduces the input
+lock: after native P2 attacks defeat HP1 Dragoon, P1 advances the reward to
+mode7/1/5 but repeated P1 confirmation cannot dismiss its text.
+
+The lifecycle's gameplay-scene predicate incorrectly includes mode7, the
+weapon/technique reward frontend. The retained P2 scene owner replaces its
+text input with the last gameplay pad snapshot, which no longer refreshes.
+It can also project the survivor over the frontend's stage-actor pass.
+Exclude this mode from gameplay ownership so P1 retains the campaign's live
+input and presentation. Both-campaign unit cases cover a dead P1, living P2,
+stale P2 script/input and unchanged canonical campaign/body state.
+
+The ZIP contains one 31-row startup recording and three restored-state
+segments, with 48,399/25,471/16,002 co-op reads but no native frame/hash rows.
+Their captured mod choices explicitly disable Input Display and Recording.
+An observer registered for co-op nonetheless opens new offline recording
+folders on restore. These segments cannot be verified as input replays;
+the native reproduction uses a documented fixture, not an invented replay.
+Guard that observer with the committed Diagnostics selection. The new test
+verifies disabled restore creates neither a recording nor a session folder,
+while existing enabled-baseline replay checks still pass. Future testers
+should enable Playtest Diagnostics before reproducing and include the full
+session folder.
+
+Private evidence is under `build-pr23/feedback-metadata3-20261013/`.
+`current-native-2` records the pre-fix input lock. The first fixed native run
+passed the reward and saved, then the helper's rapid confirmation entered
+Web Spider before it sampled the selector. A separate initial reverse-roster
+run hit a screenshot request during a native display-disabled fade. These
+are test-harness failures; the retained scenario now stops confirming while
+the selector builds and avoids capturing that reward-screen fade.
+
+Final native runs `final-zero-campaign` and `final-x-campaign` both pass.
+P2 defeats the native boss while P1 stays dead; P1 alone advances the reward
+and memory-card UI. The selector shows Dragoon grey, with clear bit8 retained
+in the card and Continue cache and campaign1/0 respectively. Both selector
+captures were inspected. The reusable `dragoon_survivor_reward` scenario
+records the complete sequence. All34 Windows checks and Python syntax checks
+pass. These fixes are committed after Playtest13 and are not in that release.

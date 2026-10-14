@@ -1176,7 +1176,10 @@ static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t act
 }
 static int gameplay_scene(void) {
     unsigned mode=psx_mod_read_byte(PLAY);
-    return mode==6 || mode==7 || mode==10 || mode==11;
+    /* Mode7 is the campaign's weapon/technique reward screen. P2's last
+     * gameplay script and cached pad must not replace P1's frontend input
+     * or project the surviving body over its presentation actors. */
+    return mode==6 || mode==10 || mode==11;
 }
 static int stage_scripts(CPUState *cpu,uint32_t address) {
     if(script_pool_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected() ||

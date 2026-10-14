@@ -217,6 +217,11 @@ void begin() {
     }
 }
 void state_loaded(const uint8_t *image,uint32_t size) {
+    /* Co-op also registers this observer for the fixed netplay profile.
+     * Offline co-op alone must not start recording when Diagnostics is off:
+     * its native input hook is absent, producing only unplayable C rows. */
+    if(!psx_mod_netplay_is_active() &&
+       !mod_runtime_snapshot_package_active("mmx4.diagnostics"))return;
     if(!replay_path.empty()) {
         // PSX_LOAD_SLOT restores a segment's baseline before its first input.
         // A later manual jump cannot be reconciled with that segment's rows.
