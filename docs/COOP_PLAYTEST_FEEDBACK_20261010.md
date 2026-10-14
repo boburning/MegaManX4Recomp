@@ -9,7 +9,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 3 | [x] | P2-first Volcano boss approach kills Zero during the drop | Reproduced from native Volcano checkpoint3: viewport-based co-op death line kills Zero at Y610 while the camera trails his fall. Fixed death line to the authored room maximum; qa-volcano-entry-fixed-16 lands Zero at Y650 with HP32 while X stays above. Boss activation/handoff remains item5. `beads-eio.9.10` |
 | 4 | [x] | Death during boss approach produces an excessive particle burst and reported slowdown | Reproduced fatal C4 entrant softlock. Transfer the abandoned native doorway to the survivor, initialize its auto-walk, and prevent doorway crush only during recovered auto-walk. Preserve the actual global scene lock during partner death. qa-arrival-death-train-41 passes both death orders: exactly one native death sequence each, survivor HP32, no spent shared life, both gates released. No separate frame-rate improvement claim. `beads-eio.9.43` |
 | 5 | [x] | Boss activation and partner arrival depend on which seat advances | Reproduced in Volcano: the partner left above the committed shared room kept the leader from progressing. Fixed native partner handoff when a new shared camera restriction excludes the other living seat. qa-volcano-handoff-final-18 passes both leading seats, boss65 HP48, both players at floor Y650/651, normal action2, clear scene/door gates and HP32. Split ordinary camera areas stay independent. `beads-eio.9.10` |
-| 6 | [x] | Moving the leader cancels or restarts the partner warp-in | Reproduced in native Cyber door test: walking action4 held passenger in phase1. Fixed grounded movement eligibility; both leading seats complete native arrival while walking (qa-cyber-moving-fixed-13). Scene/fade/victory gates remain tested. `beads-eio.9.10` |
+| 6 | [x] | Moving the leader cancels or restarts the partner warp-in | Earlier Cyber walking fix retained. Reopened and fixed after Playtest20: native Double fight reproduces P1 jump and Nova canceling P2's committed return. Personal +67 and Nova's PLAY+1C were treated as shared scenes. Local A/B and hidden Split netplay now pass uninterrupted walking/dashing/jumping/Nova arrivals; peer CRCs match through6753. Both-seat regression checks preserve real scene gates. `beads-eio.9.10` |
 | 7 | [x] | Cyber boss-room partner arrival passes below the platform and P2 dies or disappears | Healthy outer/inner Cyber entries and both moving leaders pass in both campaigns. Commit the arrival anchor to the new grounded room, so a leader dying during arrival cannot return the passenger to the old doorway. qa-arrival-death-train-41 verifies the passenger completes at X729/Y2506 with HP32 after leader death; both ordinary and recovered entries retain native terrain after the handoff. `beads-eio.9.10` |
 | 8 | [x] | Boss introduction leaves one player missing when the other stays behind | Slash Beast's entrance checks X9472 while its actor waits at X9312; nearest-player AI selected the lagging partner. Choose the leading living seat only at that entrance, then retain native script ownership and nearest fight AI. QA49/50 pass both leading seats, with partner left at X9360: native C0 intro, both healthy and visible at X9473/Y394-395 when the fight starts. `beads-eio.9.10` |
 | 9 | [x] | Boss dialogue box uses a rainbow palette | Canonical shared textbox setup in50a6df6 preserves the campaign's panel resources. QA56 qualifies the P1 native panel; QA78 P2-owned Slash entrance captures the actual blue gradient panel with white lettering and matching native RAM/VRAM palette. Inspected owner1-panel3 contains no rainbow bands. Native phase6 no-panel scenes remain distinct from visible dialogue. `beads-eio.9.26` |
@@ -93,6 +93,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 84 | [x] | Iris graphics are corrupt in X campaign | Reproduced in exact Playtest19 local replay (17,303 verified input hashes). Story hook selected stage13's sprite slot instead of stage11's, leaving Double's graphics loaded. Correct the selector; native Iris introduction and armor/core combat render correctly. `beads-eio.9.86` |
 | 85 | [x] | Iris sometimes fails to load properly | Reproduced a stalled intro after a Both-player door. Door minimum2048 conflicts with Iris waiting for camera2032. After physical clearance, admit her intro with the camera inside the authored arena. Fresh entry and recovery from the captured stall reach her fight with both players visible and no partner warp. `beads-eio.9.86` |
 | 86 | [ ] | P2 disappears at Sigma stage 3 entry | Not reproduced in local Unified or a fresh hidden two-peer Split match. With recorded mod settings, P2 defeats Double while P1 is dead, enters11/1 and moves fromX384 to486 with visible body/HUD on both rendered screens. Peer CRCs agree; no render-state leaks. This is a bounded new scenario, not an exact network recording replay. Keep open for a recording capturing the disappearance. `beads-eio.9.117` |
+| 87 | [x] | Double might use incorrect sprites in Zero's story | Not reproduced after Playtest20's shared sprite-selector correction. Fresh native Zero campaign with the optional sequence on defeats Iris, loads Double with correct inspected sprites, defeats him and returns to Zero's normal movie route. Campaign1 and two lives are retained; one sequel/two boss defeats are recorded. No additional graphics patch. `beads-eio.9.86` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -1101,3 +1102,54 @@ No visible windows or tester saves were used. This fix is not in Playtest20.
 Private evidence: `build-pr23/feedback20-jet-layer-20261014/`, notably
 `trace2-x`, `fixed-local-x`, `fixed-split-x` and `fixed-split-zero`.
 See `COOP_COMBAT_VEHICLE_EVIDENCE.md` for the native bucket analysis.
+
+### Boss-fight arrival cancellation and reverse story sprites (2026-10-14)
+
+Reopened item6 after new feedback that P1 must stand still during P2's boss
+return. The reporter cannot identify the boss or camera mode. A private
+continuation of the earlier local Double fight reproduces two concrete cases:
+jumping sets the leader's native +67 airborne phase and cancels P2's beam;
+Nova sets that phase plus PLAY+1C and does the same. P2 becomes inactive,
+waits for P1 to land, then starts a new beam. Walking and ground Dash already
+complete normally. This identifies a reproducible cause without claiming an
+exact replay of the new secondhand report.
+
+Keep the personal +67 gate when choosing a safe, grounded landing point,
+but ignore it after that point is committed. Reuse the existing native Nova
+classification for PLAY+1C. Actual scene ownership, C0/C3/C4, room fades and
+victory gates retain their behavior. The before-failing regression covers
+both leading seats, jump/fall and Nova, preserving the leader's attack/lock;
+negative cases retain real chained scenes and unsafe initial placement.
+Lifecycle and story-state CTests pass.
+
+Native local A/B uses the same saved active Double fight and normal Select
+withdrawal/return controls. Original jumping and Nova take91/112 frames and
+show37/47 hidden samples after the beam starts. Fixed idle/walk/dash/jump/Nova
+complete in36-40 frames with zero hidden samples. P2 is controllable on the
+original floor while P1 is still airborne (action7) or in Nova (action34).
+The first probe timed out because its diagnostic-local frame count stops
+while P2 is withdrawn; the corrected probe uses the native frame counter.
+
+Item87 is a qualification request rather than a reproduced new graphics
+failure. A fresh native Zero campaign, optional sequence enabled, completes
+Iris66 then Double73, including actual boss defeats and the original movie
+route. Inspected `story-fight-1.png` shows Double's correct sprites. Campaign1
+and two lives remain; counters show one sequel and two boss defeats. The
+Playtest20 stage11 sprite-selector fix already applies in either direction.
+No further story graphics change is made.
+
+Private evidence: `build-pr23/feedback20-return-story-20261014/` contains
+`before-2`, `before-nova`, `fixed-local` and `zero-story-native`. The new
+`--boss-return-only` native netplay scenario retains composed frames, verifies
+that P2 stays active throughout the beam, and checks both peer state digests.
+
+The two-peer Split follow-up `fixed-split-x-inward` passes walking, Dash,
+jump and Nova in the live Double arena. Each return takes40-41 native frames,
+P2 stays active at32HP, and composed captures show Zero standing normally
+while X remains airborne or in Nova. Both peer core/mod digests agree through
+tick6753. The first Split run passed movement/jump but rejected its Nova case
+because X faced the solid arena wall: native800375B4 disallows that attack.
+The final scenario resets only its setup position to the observed arena floor,
+faces inward, and verifies actual leader action34 before accepting the result.
+This arrival fix is for the next build; the Double selector correction is
+already in Playtest20. No release was cut by this follow-up.

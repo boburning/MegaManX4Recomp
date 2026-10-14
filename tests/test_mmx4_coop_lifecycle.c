@@ -1434,6 +1434,43 @@ int main(void) {
         CHECK(!warp_phase && mmx4_coop_alive(owner^1u));
     }
 
+    /* Once grounded arrival is committed, the leader's jump/fall or Nova
+     * must not hide the partner and restart the beam. Native +67 is also a
+     * personal airborne phase, not evidence of a shared cutscene. */
+    for(unsigned owner=0;owner<2;++owner)for(unsigned attack=0;attack<2;++attack) {
+        reset();warp_owner=owner;warp_active=warp_visible=1;
+        start_arrival(&cpu,owner^1u);
+        if(owner)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER+2,0);
+        psx_mod_write_byte(PLAYER+5,(uint8_t)(attack?0x22:6));
+        psx_mod_write_byte(PLAYER+0x67,(uint8_t)(attack?1:255));
+        psx_mod_write_byte(PLAYER+0x89,0);
+        if(owner)mmx4_coop_leave_second();
+        psx_mod_write_byte(PLAY+0x1C,(uint8_t)attack);
+        warp_tick(&cpu);
+        CHECK(!warp_phase && mmx4_coop_alive(owner^1u));
+        CHECK(psx_mod_read_byte(PLAYER+3) && p2[3] && !projected);
+        CHECK(incoming_calls[owner^1u]==1);
+        CHECK(psx_mod_read_byte(PLAY+0x1C)==attack);
+        CHECK((owner?p2[5]:psx_mod_read_byte(PLAYER+5))==(attack?0x22:6));
+    }
+    /* Real shared scene locks still postpone an already-started arrival,
+     * including when the leader was using Nova as a conversation begins. */
+    for(unsigned gate=0;gate<5;++gate) {
+        reset();warp_owner=0;start_arrival(&cpu,1);
+        if(gate<3)psx_mod_write_byte(PLAYER+(gate==0?0xC0:gate==1?0xC3:0xC4),1);
+        if(gate==3)psx_mod_write_byte(PLAY+0x1C,1);
+        if(gate==4) {
+            psx_mod_write_byte(PLAYER+5,0x22);psx_mod_write_byte(PLAY+0x1C,1);script_active=1;
+        }
+        warp_tick(&cpu);CHECK(warp_phase==1 && !p2[0] && !p2[3]);
+    }
+    /* A personal lock still blocks choosing an uncommitted landing point. */
+    reset();warp_owner=0;warp_phase=1;warp_active=warp_visible=1;p2[0]=p2[3]=0;
+    psx_mod_write_byte(PLAYER+0x89,8);psx_mod_write_byte(PLAYER+0x67,1);
+    for(unsigned i=0;i<4;++i)warp_tick(&cpu);
+    CHECK(warp_phase==1 && !p2[0] && !incoming_calls[1]);
+
     /* Death during a committed arrival keeps the survivor in the new
      * room, rather than restoring the pre-door departure coordinates. */
     reset();warp_owner=0;warp_phase=1;warp_active=warp_visible=1;

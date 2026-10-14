@@ -728,10 +728,12 @@ static void warp_tick(CPUState *cpu) {
     unsigned state=warp_owner?second[4]:psx_mod_read_byte(PLAYER+4);
     unsigned action=warp_owner?second[5]:psx_mod_read_byte(PLAYER+5);
     unsigned grounded=warp_owner?second[0x89]:psx_mod_read_byte(PLAYER+0x89);
+    unsigned personal=warp_owner?second[0x67]:psx_mod_read_byte(PLAYER+0x67);
     unsigned locked=script_active || psx_mod_read_byte(PLAY+0x10) ||
-        psx_mod_read_byte(PLAY+0x1C) || (warp_owner?(second[0xC0]|second[0xC3]|second[0xC4]|second[0x67]):
+        (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_nova_active()) ||
+        (warp_owner?(second[0xC0]|second[0xC3]|second[0xC4]):
             (psx_mod_read_byte(PLAYER+0xC0)|psx_mod_read_byte(PLAYER+0xC3)|
-             psx_mod_read_byte(PLAYER+0xC4)|psx_mod_read_byte(PLAYER+0x67)));
+             psx_mod_read_byte(PLAYER+0xC4)));
     if(warp_phase==3) {
         /* Victory marks the owner state3 too. Finish the passenger's
          * outgoing beam so the canonical body can release stage termination,
@@ -773,7 +775,7 @@ static void warp_tick(CPUState *cpu) {
         /* Native walking/dashing has a different action from idle. A living
          * grounded leader already supplies a safe landing point; requiring
          * idle restarted the wait whenever that player kept moving. */
-        if(locked || state!=1 || action<2 || action>=0x10 || !(grounded&8u)) {warp_unlocked_ticks=0;return;}
+        if(locked || personal || state!=1 || action<2 || action>=0x10 || !(grounded&8u)) {warp_unlocked_ticks=0;return;}
         if(++warp_unlocked_ticks<3)return;
         uint32_t surface_box=warp_owner?body_word(second,0x68):psx_mod_read_word(PLAYER+0x68);
         position_return(cpu,seat,x,y,warp_active,warp_visible,
@@ -792,7 +794,9 @@ static void warp_tick(CPUState *cpu) {
         if(seat)mmx4_coop_leave_second();
     }else if(locked) {
         /* A boss conversation can acquire its lock after the door releases.
-         * Keep the passenger outside through the complete chained event. */
+         * Keep the passenger outside through the complete chained event.
+         * A leader's +67 jump/fall phase and Nova's PLAY+1C are personal
+         * actions: neither invalidates the already committed landing point. */
         if(seat)mmx4_coop_enter_second();
         psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);
         psx_mod_write_byte(MMX4_VEHICLE,0);psx_mod_write_byte(MMX4_VEHICLE+3,0);
