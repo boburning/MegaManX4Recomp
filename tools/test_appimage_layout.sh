@@ -27,7 +27,8 @@ fail=0
 check_file() { [ -f "$data_dir/$1" ] || { echo "MISSING file: $1" >&2; fail=1; }; }
 check_dir() { [ -d "$data_dir/$1" ] || { echo "MISSING dir: $1" >&2; fail=1; }; }
 for dir in saves cache mods mods/bundled assets bios; do check_dir "$dir"; done
-for file in game.toml input.ini START_HERE.txt LICENSE README.md \
+for file in game.toml input.ini START_HERE.txt LICENSE THIRD_PARTY_NOTICES.md README.md RELEASE_NOTES.md \
+            docs/PLAYTESTING.md docs/images/README.md \
             bios/openbios.bin bios/OpenBIOS.LICENSE .appimage-layout-version; do
     check_file "$file"
 done
