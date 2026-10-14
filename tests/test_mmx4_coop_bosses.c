@@ -60,8 +60,9 @@ int main(void){
         CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==campaign);
         capture(second);
         for(unsigned i=0;i<4;++i){
-            cpu.gpr[2]=campaign;hooks[i].fn(&cpu,hooks[i].address);
-            CHECK(cpu.gpr[2]==(campaign^1u));
+            unsigned reg=hooks[i].address==0x8001302Cu?3u:2u;
+            cpu.gpr[reg]=campaign;hooks[i].fn(&cpu,hooks[i].address);
+            CHECK(cpu.gpr[reg]==(campaign^1u));
             CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==campaign);
         }
         hook(&cpu,0x800224D4u);CHECK(cpu.gpr[4]==(campaign^1u));

@@ -54,7 +54,9 @@ typedef struct { uint32_t address;PSXModFunctionFilterCallback filter; } Filter;
 static Filter filters[64];static unsigned filter_count;
 int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t expected,
     PSXModFunctionEntryCallback callback) {
-    (void)id;(void)callback;assert(address==0x800DA44Cu && expected==0x284218D0u);return 1;
+    (void)id;(void)callback;
+    assert((address==0x800DA44Cu && expected==0x284218D0u) ||
+           (address==0x80081250u && expected==0x14620005u));return 1;
 }
 uint8_t psx_mod_read_byte(uint32_t a) {return ram[a&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t a,uint8_t v) {ram[a&0x1FFFFFu]=v;}
@@ -1779,6 +1781,29 @@ int main(void) {
     reset();mmx4_coop_call(&cpu,0x80085F8Cu,0x8013BED0u,0);
     CHECK(psx_mod_read_byte(0x8013BED5u)==1 && warp_pending);
     cpu.gpr[31]=0;
+
+    /* Iris's camera wait accepts the completed crossing anywhere inside her
+     * room, but cannot start her script while either body is in the doorway. */
+    for(unsigned seat=0;seat<2;++seat) {
+        CHECK(!open_both_door(&cpu,actor));
+        both_door.stage=11;psx_mod_write_byte(PLAY+0x0C,11);
+        psx_mod_write_half(0x801419D6u,2032);psx_mod_write_half(0x801419D4u,2096);
+        if(seat)mmx4_coop_enter_second();
+        for(unsigned phase=1;phase<=4;++phase)for(unsigned x=2031;x<=2097;++x) {
+            both_door.phase=(uint8_t)phase;cpu.gpr[2]=2032;cpu.gpr[3]=x;
+            paired_iris_camera(&cpu,0x80081250u);
+            CHECK((cpu.gpr[3]==2032)==(phase==4 && x>=2032 && x<=2096));
+        }
+        both_door.phase=4;cpu.gpr[3]=2096;psx_mod_write_half(0x801419D6u,2048);
+        paired_iris_camera(&cpu,0x80081250u);CHECK(cpu.gpr[3]==2032);
+        cpu.gpr[3]=2096;psx_mod_write_half(0x801419D4u,2100);
+        paired_iris_camera(&cpu,0x80081250u);CHECK(cpu.gpr[3]==2096);
+        psx_mod_write_half(0x801419D4u,2096);++script_serial;
+        paired_iris_camera(&cpu,0x80081250u);CHECK(cpu.gpr[3]==2096);
+        if(seat)mmx4_coop_leave_second();
+    }
+    reset();cpu.gpr[2]=2032;cpu.gpr[3]=2096;
+    paired_iris_camera(&cpu,0x80081250u);CHECK(cpu.gpr[3]==2096);
 
     /* Death exempts the missing player. Even a dead door owner transfers its
      * gate to the survivor's own position, without the Either-mode rescue. */

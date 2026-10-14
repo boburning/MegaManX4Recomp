@@ -88,8 +88,11 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 79 | [x] | Both-player boss doors still teleport the partner | Fixed after Playtest17. Both-player admission now retains independent controls through the open doorway, waits for physical clearance and suppresses the ensuing conversation's partner warp. Native two-peer test waits for the second contact, walks/slashes P2 while P1 stands still, then crosses and finishes the boss conversation with both players at32HP and no departure. Peer CRCs match through5794. Either-player mode and dead/withdrawn exemptions remain covered. `beads-eio.9.109` |
 | 80 | [x] | Sigma stage 1 enemies wait for P1 when P2 advances ahead | Reproduced and fixed after Playtest17. Accept the actual placement table's valid4-byte base alignment while retaining8-byte records and native directional flags. The fixed two-peer probe spawns the enemies at X944,1108 and1223 as P2 advances while P1 stays at X683; peer CRCs match through4672. `beads-eio.9.110` |
 | 81 | [x] | Colonel's lightning whites out the screen after P1 dies | Reproduced and fixed after Playtest17. Preserve the shared palette rebuild request across P2 survivor projection. The unfixed native lightning leaves1,920 white palette entries after its RGB additions clear; the fixed probe restores19, and the inspected P2 frame shows the normal stage and HUD. Peer CRCs match through10338. `beads-eio.9.111` |
-| 82 | [x] | Zero cannot damage Double | Reproduced and fixed after Playtest17. Eight native Zero combo attempts leave the unfixed boss at48HP despite reaching follow-up cuts. Admit the existing nonzero Zero damage entries only during Double's normal damage window. The fixed two-peer probe reduces him from48 to45HP and enters his original cooldown, with matching peer CRCs through7554. His invulnerable phases, first cut's native zero damage and X's reactions remain covered. `beads-eio.9.112` |
+| 82 | [x] | Zero cannot damage Double, including jumping spin | Ground-combo fix retained. Kuuenzan34 has FF/0 damage; reuse Double's authored two-point saber damage for that collision, preserving attack type, tokens, cooldown and scaling. Six original attempts leave48HP; fixed attempts reduce48 to42 with boss scaling on. Both-seat/survivor cooldown and lethal-hit tests pass. `beads-eio.9.112` |
 | 83 | [x] | Sigma stage 1 second boss door kills P1 and traps P2 in local Unified | Reproduced from the Playtest19 local recording with Both-player doors. Colonel starts WARNING before the physical crossing completes, cancelling the aperture exemption and crushing P1. Defer that admission until the doorway and camera finish. Native continuation reaches the fight with both visible, clear controls and unchanged40/31HP; no partner departure. Windows34 checks and Linux lifecycle check pass. `beads-eio.9.116` |
+| 84 | [x] | Iris graphics are corrupt in X campaign | Reproduced in exact Playtest19 local replay (17,303 verified input hashes). Story hook selected stage13's sprite slot instead of stage11's, leaving Double's graphics loaded. Correct the selector; native Iris introduction and armor/core combat render correctly. `beads-eio.9.86` |
+| 85 | [x] | Iris sometimes fails to load properly | Reproduced a stalled intro after a Both-player door. Door minimum2048 conflicts with Iris waiting for camera2032. After physical clearance, admit her intro with the camera inside the authored arena. Fresh entry and recovery from the captured stall reach her fight with both players visible and no partner warp. `beads-eio.9.86` |
+| 86 | [ ] | P2 disappears at Sigma stage 3 entry | Not reproduced. Paired logs agree on all670 comparable gameplay frames in11/1: P1 dead, P2 alive. Native continuation kills P1, defeats Iris as P2, enters11/1 and moves P2 fromX384 to555.5 with48HP, visible body/HUD and controls. Keep open for a recording capturing the disappearance. `beads-eio.9.117` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -996,3 +999,45 @@ pickup also hold both positions. No missing shared pause reproduces here.
 Split netplay intentionally keeps health refills asynchronous, per the earlier
 owner preference; the archive includes separate network sessions as well.
 This update does not publish a release.
+
+## Playtest19 Double / Iris / Sigma intake (2026-10-14)
+
+Source: `Double Iris Sigma stage 3.zip`, SHA256
+`c3827afbd4ddc35e9e131598b2e9cfef580944f63ab147af1e4a18aafc3a1fd7`.
+Companion videos: https://youtu.be/M6oZGhGRx2k and
+https://youtu.be/p6TYd_-tSD4. Public retrieval returned HTTP403; findings below
+come from supplied diagnostics and hidden native runs, not video review.
+
+Original Playtest19 local session1792009197507469 replays exactly through
+17,303 verified native inputs. Iris has mismatched sprite pieces. Loader1302C
+selects stage11 sprites through V1; the old130D4 hook only changes stage13.
+The corrected selector uses the current encounter without changing P1's
+campaign. The Double/Iris option remains optional and off by default.
+
+A native continuation also reproduces Iris waiting in state1/2/1 with0HP after
+both players cross her door. Her81250 camera wait requires2032, but physical
+closure raises the minimum to2048. Wait through the paired crossing, then
+accept the camera inside2032..2096. Ordinary admission and private render
+passes stay untouched. Fresh entry and recovery from the captured stall both
+reach the48HP fight with both visible, clear controls and no partner departure.
+Subsequent native armor/core combat and defeat advance to11/1.
+
+Zero's airborne spin is Kuuenzan34; Double has no retail damage for it. The
+co-op collision borrows his authored saber26 damage2 through a lookup register.
+The attack class, consumption, hit token, invulnerability, original RAM table,
+damage multiplier and boss scaling are preserved. Six original native attempts
+leave48HP; six fixed attempts reduce48 to42 with recorded boss scaling enabled.
+Unit checks include both seats, survivors, cooldown and lethal hits.
+
+Paired sessions1792009600374384 /1792009600376151 match all670 common gameplay
+frames in11/1, including state digests. They show P1 dead and P2 alive. A native
+continuation with P1 killed and P2 defeating Iris reaches11/1, refills P2 to48HP
+and permits movement fromX384 to555.5 with visible body/HUD. Item86 remains open.
+This is not an offline replay of the network session or a new two-peer graphical
+qualification of these fixes.
+
+All34 Windows checks and Linux combat, story-state and lifecycle checks pass.
+Private evidence: `build-pr23/feedback19-double-iris-sigma3-20261014/`
+(`local-inspect`, `double-air-original`, `double-air-fixed2`,
+`iris-selector-fixed2`, `iris-camera-recovery`, `iris-full-entry-fixed`,
+`sigma-survivor-entry`). No release is published by this update.

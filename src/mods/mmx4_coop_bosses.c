@@ -53,7 +53,7 @@ static void select_story(CPUState *cpu,uint32_t address) {
     }else {
         unsigned reg=2;
         if(address==0x800224D4u || address==0x80022928u)reg=4;
-        if(address==0x80022880u || address==0x800228B4u)reg=3;
+        if(address==0x8001302Cu || address==0x80022880u || address==0x800228B4u)reg=3;
         cpu->gpr[reg]=story_character();
     }
 }
@@ -85,7 +85,9 @@ static int story_transition(CPUState *cpu,uint32_t address) {
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_bosses) {
     psx_mod_register_function_filter_plugin(ID,0x800200D4u,story_transition);
-    psx_mod_register_instruction_plugin(ID,0x800130D4u,0x00220821u,select_story);
+    /* The loader chooses stage11 sprites through V1 at 1302C. The later
+     * V0 selector at 130D4 only fills stage13's table entry. */
+    psx_mod_register_instruction_plugin(ID,0x8001302Cu,0x00230821u,select_story);
     psx_mod_register_instruction_plugin(ID,0x80013148u,0x14400005u,select_story);
     psx_mod_register_instruction_plugin(ID,0x80080714u,0x14400005u,select_story);
     psx_mod_register_instruction_plugin(ID,0x8008BA54u,0x10400005u,select_story);

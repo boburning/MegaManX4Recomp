@@ -225,8 +225,16 @@ static void double_counterpart_hit(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4],type=cpu->gpr[6];
     if(actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
        (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
-       psx_mod_read_byte(actor+1)!=73 || type<25 || type>32 ||
-       !psx_mod_read_byte(cpu->gpr[7]+type*2u+1u))return;
+       psx_mod_read_byte(actor+1)!=73 ||
+       !((type>=25 && type<=32) || type==34))return;
+    /* Kuuenzan (34) has no retail Double damage entry. Reuse his authored
+     * two-point saber damage for this collision only. Keep S0/A2 and the
+     * attack itself intact so consumption, hit tokens and the native result
+     * still describe Kuuenzan. A3 is only the subsequent damage lookup base.
+     * This also precedes the damage multiplier and co-op health scaling. */
+    uint32_t entry=type==34?26u:type;
+    if(!psx_mod_read_byte(cpu->gpr[7]+entry*2u+1u))return;
+    cpu->gpr[7]-=(type-entry)*2u;
     cpu->gpr[2]=0;
 }
 

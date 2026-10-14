@@ -215,7 +215,7 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             if(type>=26 && type<36)psx_mod_write_byte(MMX4_PLAYER+0xBD,1);
             if(admission.gpr[2]==0xFFu)return 0x7F;
             uint8_t hp=psx_mod_read_byte(a0+0x5C);
-            uint8_t amount=psx_mod_read_byte(table+type*2u+1u);
+            uint8_t amount=psx_mod_read_byte(admission.gpr[7]+type*2u+1u);
             psx_mod_write_byte(a0+0x5C,(uint8_t)(hp>amount?hp-amount:0));
             ++consumed;
             return hp>amount?type+1u:UINT32_MAX;
@@ -909,10 +909,12 @@ static uint32_t double_tick(void) {
     return hit.gpr[2];
 }
 static void double_counterpart_damage(void) {
+    for(unsigned spin=0;spin<2;++spin)
     for(unsigned zero=0;zero<2;++zero)for(unsigned survivor=0;survivor<2;++survivor) {
         double_setup(zero);if(survivor)alive[zero^1u]=0;
+        attack_type[zero]=(uint8_t)(spin?34:26);
         uint8_t original[88];memcpy(original,address_ptr(DOUBLE_TABLE),sizeof original);
-        CHECK(double_tick()==27 && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==46);
+        CHECK(double_tick()==(spin?35u:27u) && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==46);
         CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x63)==0 && consumed==1);
         CHECK((zero?second[0xBD]:psx_mod_read_byte(MMX4_PLAYER+0xBD))==1);
         CHECK(psx_mod_read_word(DOUBLE_ENEMY+0x58)==DOUBLE_COOLDOWN);
@@ -925,7 +927,7 @@ static void double_counterpart_damage(void) {
         for(unsigned i=0;i<63;++i)CHECK(!double_tick());
         CHECK(psx_mod_read_word(DOUBLE_ENEMY+0x58)==DOUBLE_TABLE);
         attack_present[zero]=1;++attack_token[zero];
-        CHECK(double_tick()==27 && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==44 && consumed==2);
+        CHECK(double_tick()==(spin?35u:27u) && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==44 && consumed==2);
         /* Repeated persistent attack tokens are rejected before admission. */
         psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_TABLE);
         CHECK(!double_tick() && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==44 && consumed==2);
@@ -934,7 +936,7 @@ static void double_counterpart_damage(void) {
     }
     for(unsigned type=24;type<=36;++type) {
         double_setup(1);attack_type[1]=(uint8_t)type;
-        uint32_t result=double_tick();unsigned amount=type==25?3:type>=26 && type<=31?2:type==32?1:0;
+        uint32_t result=double_tick();unsigned amount=type==25?3:type>=26 && type<=31?2:type==32?1:type==34?2:0;
         CHECK(result==(amount?type+1u:0x7Fu));
         CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==48-amount);
     }
@@ -953,8 +955,10 @@ static void double_counterpart_damage(void) {
     }
     /* A lethal accepted slash returns the native negative result; the
      * original caller enters its defeat state rather than an extra hit/call. */
+    for(unsigned spin=0;spin<2;++spin)
     for(unsigned zero=0;zero<2;++zero)for(unsigned survivor=0;survivor<2;++survivor) {
         double_setup(zero);if(survivor)alive[zero^1u]=0;
+        attack_type[zero]=(uint8_t)(spin?34:26);
         psx_mod_write_byte(DOUBLE_ENEMY+0x5C,2);
         CHECK(double_tick()==UINT32_MAX && !psx_mod_read_byte(DOUBLE_ENEMY+0x5C));
         CHECK(psx_mod_read_byte(DOUBLE_ENEMY+4)==2 && !psx_mod_read_byte(DOUBLE_ENEMY+5));
