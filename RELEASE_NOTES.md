@@ -1,4 +1,34 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.17
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.18
+
+**Smoother co-op progression, independent cameras, and boss fights.**
+
+- **Walk through boss doors together.** With **Both players** selected, both
+  living, present players can move and attack through the open door without
+  the partner teleporting out and back in.
+- **Opening stage:** destroying the breakable miniboss door correctly releases
+  Player 2's independent camera.
+- **Web Spider:** Player 2's scenery updates correctly in part 2 instead of
+  disappearing or freezing as the players separate.
+- **Sigma stage 1:** enemies spawn when Player 2 advances ahead of Player 1.
+- **Colonel:** lightning no longer leaves the screen white after Player 1 dies.
+- **Double:** Zero's attacks with native damage values now hurt him during
+  his normal vulnerable phases.
+
+Windows ZIP and Linux x86_64 AppImage. **Both netplay peers must update.**
+Unified cameras and Stacked lifebars remain the defaults; Split cameras remain
+experimental. Existing gameplay option defaults are unchanged.
+
+**Save compatibility:** normal campaign memory-card saves carry forward.
+Older co-op save states are incompatible; create new states with Playtest 18.
+
+Diagnostics default on in fresh installs. Keep **Input Display and Recording**
+enabled and look for **REC**. After reproducing a bug, quit normally and zip the
+complete `saves/diagnostics` folder beside the executable or AppImage.
+
+Jet Stingray's reported P2 entrance presentation remains open.
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.17
 
 **Both players now survive Web Spider's part 1-to-2 transition when P2 leads far ahead.**
 The outgoing fade could incorrectly kill the hidden P1, leaving only P2 in

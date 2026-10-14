@@ -1,6 +1,6 @@
 # Playing and reporting co-op
 
-Use the [current playtest release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.17)
+Use the [current playtest release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.18)
 on both computers. The launcher and netplay UI are included on Windows and Linux.
 
 ## Local co-op

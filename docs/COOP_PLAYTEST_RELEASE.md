@@ -1,4 +1,18 @@
-# Co-op playtest 17
+# Co-op playtest 18
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.18)
+for Windows ZIP and Linux x86_64 AppImage. Includes checklist77-82:
+independent intro camera and Web Spider scenery, physical Both-player door
+crossing, Sigma P2 enemy spawning, Colonel's survivor palette and Zero damage
+against Double. Native gameplay qualification is recorded in the feedback
+checklist. Production package qualification is recorded separately below when
+complete. Release issue: `beads-eio.9.113`.
+
+Unified cameras and Stacked lifebars remain defaults; Split is experimental.
+Both peers must update. Older co-op save states are incompatible with X4P6;
+campaign memory-card saves are unchanged.
+
+## Previous co-op playtest 17
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.17)
 with Windows ZIP and Linux x86_64 AppImage. Includes checklist74 and76:
