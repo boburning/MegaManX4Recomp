@@ -1,4 +1,32 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.19
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.20
+
+**Fixes for co-op boss doors, Zero versus Double, and the optional Iris fight.**
+
+- **Colonel:** With Both-player doors enabled, the fight waits until the pair
+  finishes crossing. This fixes the door interruption that could kill P1 and
+  leave P2 trapped.
+- **Double:** Zero's spinning jump attack now deals damage, including as P2.
+- **Iris in X's story:** The optional encounter loads the correct sprites and
+  can start after both players cross her boss door.
+
+Includes all Playtest 19 fixes. Windows ZIP and Linux x86_64 AppImage.
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. **Fight Double and Iris** remains optional
+and default off. Campaign memory-card saves carry forward.
+
+**Still under investigation:** P2 disappearing at Sigma stage 3 entry. A new
+hidden two-peer Split netplay attempt completed the transition with P1 dead and
+P2 visible and controllable on both screens. This release does not claim a fix
+for that report.
+
+Diagnostics default on in fresh installs. Keep **Input Display and Recording**
+enabled and look for **REC**. If the disappearance recurs, note the video
+timestamp, quit normally, and send the complete `saves/diagnostics` folder
+beside the executable or AppImage from **both peers**.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.19
 
 **Player 2 rides into Jet Stingray's stage with the proper animation.**
 

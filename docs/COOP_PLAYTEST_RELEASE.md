@@ -1,4 +1,24 @@
-# Co-op playtest 19
+# Co-op playtest 20
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.20)
+with Windows ZIP and Linux x86_64 AppImage. Includes the Colonel paired-door
+admission fix (item83), Zero aerial damage against Double (item82), and Iris
+sprite selection and paired-door admission (items84-85).
+
+Item86, the Sigma stage3 P2 disappearance, remains open and is not claimed fixed.
+Both local Unified and a fresh hidden two-peer Split netplay survivor transition
+passed; the latter used recorded mod settings but did not replay the exact inputs.
+See the [numbered checklist](COOP_PLAYTEST_FEEDBACK_20261010.md) for evidence limits.
+
+Unified cameras and Stacked lifebars remain defaults; Split is experimental.
+Both peers must update. The Double/Iris encounter option remains optional and
+default off. Campaign memory-card saves are unchanged.
+
+Release issue: `beads-eio.9.118`. Private package qualification is retained under
+`build-pr23/release20-qa/`. Player-facing changes are in
+[release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 19
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.19)
 with Windows ZIP and Linux x86_64 AppImage. Fixes item75: P2 now uses the
