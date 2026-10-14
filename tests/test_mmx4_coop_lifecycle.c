@@ -43,6 +43,10 @@ static uint8_t p2_solid_bits;
 static uint16_t inputs[2];
 typedef struct { uint32_t address;PSXModFunctionFilterCallback filter; } Filter;
 static Filter filters[64];static unsigned filter_count;
+int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t expected,
+    PSXModFunctionEntryCallback callback) {
+    (void)id;(void)callback;assert(address==0x800DA44Cu && expected==0x284218D0u);return 1;
+}
 uint8_t psx_mod_read_byte(uint32_t a) {return ram[a&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t a,uint8_t v) {ram[a&0x1FFFFFu]=v;}
 uint16_t psx_mod_read_half(uint32_t a) {
@@ -919,6 +923,17 @@ int main(void) {
     CHECK(!psx_mod_read_byte(PLAY+1) && world_calls==1);
     p2[4]=3;p2[0x5C]=0;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
     CHECK(psx_mod_read_byte(PLAY+1)==1);
+    /* A completed warp has state3 and positive HP; let native stage
+     * termination advance instead of keeping the surviving partner loop. */
+    reset();psx_mod_write_byte(PLAYER+4,3);
+    mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+    CHECK(psx_mod_read_byte(PLAY+1)==1);
+    reset();psx_mod_write_byte(PLAY+12,7);psx_mod_write_byte(PLAYER+4,3);
+    psx_mod_write_byte(PLAYER+0x5C,0);p2[10]=0xD1;p2[11]=0x18;
+    cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);
+    CHECK(cpu.gpr[2]==6353);
+    psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,12);
+    cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
     reset();p2[4]=2;p2[0x5C]=0;mmx4_coop_enter_second();
     mmx4_coop_call(&cpu,0x80035A6Cu,PLAYER,0);mmx4_coop_leave_second();
     CHECK(!psx_mod_read_byte(PLAY+0x12) && !psx_mod_read_byte(PLAY+0x1C));

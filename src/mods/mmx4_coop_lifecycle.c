@@ -915,7 +915,8 @@ static int stage_normal(CPUState *cpu,uint32_t address) {
     psx_mod_write_half(PAD+4,native_edge);
     normal_guard=1;
     uint32_t result;
-    if(psx_mod_read_byte(PLAYER+4)==3 && mmx4_coop_alive(1)) {
+    if(psx_mod_read_byte(PLAYER+4)==3 && !(psx_mod_read_byte(PLAYER+0x5C)&127u) &&
+       mmx4_coop_alive(1)) {
         if(owner>=0) {
             psx_mod_write_byte(PLAY+1,2);result=0;
             mmx4_coop_call(cpu,0x80023D68u,0,0);
@@ -1190,6 +1191,16 @@ static int stage_scripts(CPUState *cpu,uint32_t address) {
     script_pool_guard=1;
     uint32_t result=call_story_as_second(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     script_pool_guard=0;return mmx4_coop_finish(cpu,result);
+}
+static void storm_survivor_exit(CPUState *cpu,uint32_t address) {
+    (void)address;
+    /* Storm Owl's background controller checks PLAYER.x at 800DA440,
+     * outside the small stage-script pool. Keep its one world update and
+     * native X>=6352 warp predicate, but read the surviving seat's X. */
+    if(mmx4_coop_ready() && !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+       psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+12)==7 &&
+       !psx_mod_read_byte(PLAY+13) && !mmx4_coop_alive(0) && mmx4_coop_alive(1))
+        cpu->gpr[2]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
 }
 static int fan_latch(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
@@ -1551,6 +1562,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x80035A6Cu,death_animation);
     psx_mod_register_function_filter_plugin(ID,0x80033BC8u,death_detection);
     psx_mod_register_function_filter_plugin(ID,0x8002166Cu,stage_scripts);
+    psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);
     psx_mod_register_function_filter_plugin(ID,0x8002AD7Cu,shared_ride_ready);
     psx_mod_register_function_filter_plugin(ID,0x80021D20u,script_text);

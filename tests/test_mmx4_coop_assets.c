@@ -24,6 +24,17 @@ static int original(const char *path) {
     printf("%s: %u original sprite frames decoded\n",path,frames);free(b);return 0;
 }
 int main(int argc,char **argv) {
+    CHECK(mmx4_coop_character_palette_offset(0x7800)==0);
+    CHECK(mmx4_coop_character_palette_offset(0x780D)==0x1A0);
+    CHECK(mmx4_coop_character_palette_offset(0x7843)==0x260);
+    CHECK(mmx4_coop_character_palette_offset(0x7844)==0x280);
+    CHECK(mmx4_coop_character_palette_offset(0x784F)==0x3E0);
+    CHECK(mmx4_coop_character_palette_offset(0x7810)==-1);
+    CHECK(mmx4_coop_character_palette_offset(0x783F)==-1);
+    CHECK(mmx4_coop_character_palette_offset(0x7850)==-1);
+    CHECK(mmx4_coop_character_palette_offset(0x78C0)==-1);
+    CHECK(mmx4_coop_character_palette_offset(0x77FF)==-1);
+    CHECK(mmx4_coop_character_palette_offset(0xFFFF)==-1);
     /* Captured Frost Tower row: native page-edge clipping left a gap at
      * screen y174. Rebuild the missing edge without dropping source row0. */
     uint32_t ice[10]={0x123456,0x2D000000,0x009F0073,0x78000FD0,

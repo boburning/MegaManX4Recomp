@@ -340,6 +340,16 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         ++actor_updates[seat];
         ai_target_x[seat]=psx_mod_read_word(MMX4_PLAYER+8);
         CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==0);
+        if(psx_mod_read_byte(a0+1)==22) {
+            if(psx_mod_read_byte(a0+4)==2) {
+                psx_mod_write_byte(MMX4_PLAYER+0xBA,0);
+                psx_mod_write_byte(a0,0);return 0;
+            }
+            CHECK(!filter(CONTACT)(cpu,CONTACT)); /* Current seat owns continuation. */
+            psx_mod_write_byte(MMX4_PLAYER+0xBA,1);
+            psx_mod_write_word(a0+0x8C,3);
+            return 0;
+        }
         if(ai_direct_write)psx_mod_write_byte(MMX4_PLAYER+0x5C,
             psx_mod_read_byte(MMX4_PLAYER+0x5C)-1u);
         if(ai_contact)filter(CONTACT)(cpu,CONTACT);
@@ -727,6 +737,31 @@ static void vehicle_secondary_ownership(void) {
         psx_mod_write_byte(actor+1,1);CHECK(!mmx4_coop_vehicle_effect_owner(actor));
     }
 }
+static void spider_capture_ownership(void) {
+    for(unsigned victim=0;victim<2;++victim) {
+        setup();const uint32_t actor=0x8013F328u;
+        /* Allocation target may differ from the player actually caught. */
+        allocated_actor=actor;
+        if(!victim)mmx4_coop_enter_second();
+        invoke(0x8002ACA4u);
+        if(!victim)mmx4_coop_leave_second();
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,22);
+        psx_mod_write_byte(actor+4,1);
+        psx_mod_write_word(actor+8,(victim?30u:10u)<<16);
+        invoke(0x8002144Cu);
+        CHECK(actor_updates[victim]==1 && !actor_updates[victim^1]);
+        /* Moving the other player nearer cannot transfer the capture. */
+        psx_mod_write_word(actor+8,(victim?10u:30u)<<16);
+        invoke(0x8002144Cu);
+        CHECK(actor_updates[victim]==2 && !actor_updates[victim^1]);
+        alive[victim]=0;
+        if(victim)second[0xBC]=4;else psx_mod_write_byte(MMX4_PLAYER+0xBC,4);
+        invoke(0x8002144Cu);
+        CHECK(actor_updates[victim]==3 && !actor_updates[victim^1]);
+        CHECK(!psx_mod_read_byte(actor) && !second[0xBA] && !psx_mod_read_byte(MMX4_PLAYER+0xBA));
+        CHECK(!projected);
+    }
+}
 static void attached_dash_slide_effects(void) {
     for(unsigned campaign=0;campaign<2;++campaign)
     for(unsigned double_owner=0;double_owner<2;++double_owner)
@@ -798,6 +833,7 @@ int main(void) {
     split_native_targets();
     slash_intro_leader();
     vehicle_secondary_ownership();
+    spider_capture_ownership();
     attached_dash_slide_effects();
     death_particle_ownership();
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned target=0;target<2;++target) {

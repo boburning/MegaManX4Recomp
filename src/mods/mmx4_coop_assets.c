@@ -1,6 +1,14 @@
 #include "mmx4_coop_assets.h"
 static uint16_t u16(const uint8_t *p) { return (uint16_t)(p[0]|p[1]<<8); }
 static uint32_t u32(const uint8_t *p) { return (uint32_t)u16(p)|(uint32_t)u16(p+2)<<16; }
+int mmx4_coop_character_palette_offset(uint16_t clut) {
+    /* Native upload rectangle 800F1658 is (0,480,256,8), whereas encoded
+     * PSX CLUT rows have a 1024-pixel stride. Only its first two rows are
+     * character-owned. Armor 7843/7844 lives at 260/280, not 860/880. */
+    unsigned x=(clut&63u)*16u,y=clut>>6;
+    if(x>=256u || y<480u || y>=482u)return -1;
+    return (int)(((y-480u)*256u+x)*2u);
+}
 uint16_t mmx4_coop_sprite_quad_tile(uint32_t q[10]) {
     /* 80024754/800247A8 shorten an edge when a flipped native tile would
      * need a UV of -1 (or a forward tile would need 256). At private origin

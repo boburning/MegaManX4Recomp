@@ -88,6 +88,31 @@ class Scenarios:
                                    y=struct.unpack_from('<i',p,12)[0]/65536))
         return result
 
+    def spider_capture(self):
+        from coop_spider_capture_scenario import spider_capture
+        return spider_capture(self)
+
+    def storm_survivor_exit(self):
+        """Actual Storm Owl7 exit; teleport only to the observed final floor."""
+        self.load(7,0)
+        self.r.fixture(5,2)
+        self.r.fixture(2,0,0x80)
+        self.wait('owl-p1-dead',lambda v:v['players'][0]['state']==3,12)
+        self.r.teleport(1,6310,380)
+        self.wait('owl-final-floor',lambda v:v['players'][1]['grounded'],8)
+        before=self.sample('owl-exit-before',True)
+        self.r.input(0xffdf,1)
+        try:
+            self.wait('owl-native-transition',lambda v:v['section']==1,15)
+        finally:
+            self.r.release()
+        after=self.wait('owl-section2',lambda v:v['stage']==7 and v['section']==1 and
+            v['mode'][:2]==[6,0] and v['players'][1]['state']==1 and
+            v['players'][1]['action']==2 and v['players'][1]['hp']>0,30)
+        assert after['players'][0]['hp']==0 and after['players'][0]['state']==3,after
+        self.sample('owl-exit-after',True)
+        return dict(before=before,after=after)
+
     def x_armor(self):
         """Render each shared armor upgrade on X in either roster.
 
@@ -1684,7 +1709,7 @@ def main():
     parser.add_argument('--boss-scaling',action='store_true')
     parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

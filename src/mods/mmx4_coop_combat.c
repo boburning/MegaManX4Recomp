@@ -48,8 +48,8 @@ static unsigned combat_call, solid_call, allocation_call, aim_call;
 static unsigned effect_allocation_call;
 static unsigned personal_effect_call;
 static uint8_t second_effect_owner[EFFECT_CAPACITY];
-/* Ride Chaser types56/57 read PLAYER as well as their vehicle parent.
- * Their allocating rider, not nearest-player AI, owns every later update. */
+/* Ride Chaser types56/57 retain their allocating rider. Web Spider type22
+ * replaces this with its actual victim when native contact captures them. */
 static uint8_t secondary_owner[SECONDARY_CAPACITY];
 /* The type-11 death effect defers its character assembly and position reads
  * until the shared pool pass. Keep the allocation-time origin through rejoin. */
@@ -207,7 +207,16 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 
+static int spider_web(uint32_t actor) {
+    return actor>=SECONDARY_POOL && actor<SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE &&
+        !((actor-SECONDARY_POOL)%SECONDARY_STRIDE) && psx_mod_read_byte(actor+1)==22;
+}
 static int accepted_hit(CPUState *cpu,uint32_t address) {
+    /* 8009DB9C reads/writes PLAYER immediately after CONTACT. It must see
+     * the same seat that the collision tested, throughout this actor pass. */
+    if(address==CONTACT && actor_call && !actor_suspended && spider_web(cpu->gpr[4]))
+        return mmx4_coop_alive(actor_owner) && !psx_mod_read_byte(MMX4_PLAYER+0xBC)?
+            0:mmx4_coop_finish(cpu,0);
     return mmx4_coop_combat_canonical_call(cpu,address,accepted_hit_canonical);
 }
 
@@ -600,20 +609,32 @@ static void update_actor(CPUState *cpu,uint32_t address) {
         target=!actors[0].active || (actors[1].active && actors[1].world_x>actors[0].world_x);
     unsigned vehicle_owner=actor_pool==0x8002144Cu?mmx4_coop_vehicle_effect_owner(actor):0;
     if(vehicle_owner)target=vehicle_owner-1;
+    int web=actor_pool==0x8002144Cu && spider_web(actor);
+    int captured=web && psx_mod_read_word(actor+0x8C)==3;
+    if(captured) {
+        unsigned victim=secondary_owner[(actor-SECONDARY_POOL)/SECONDARY_STRIDE];
+        if(victim)target=victim-1;
+        /* Native 8009DA7C pins PLAYER to the web and periodically damages
+         * them without checking death. Release through native 8009DCF4
+         * before selecting a new living AI target could transfer the web. */
+        if(!mmx4_coop_alive(target))psx_mod_write_byte(actor+4,2);
+    }
     actor_owner=target;
     actor_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
     uint32_t result=0;
-    if(actors[target].active || vehicle_owner) {
+    if(actors[target].active || vehicle_owner || captured) {
         if(target) {
             mmx4_coop_enter_second();
             psx_mod_write_byte(MMX4_PLAY+0x43,actor_campaign);
         }
-        if(psx_mod_read_byte(MMX4_PLAYER+0xBC)) {
+        if(psx_mod_read_byte(MMX4_PLAYER+0xBC) && !(captured && psx_mod_read_byte(actor+4)==2)) {
             if(psx_mod_read_byte(actor+3))result=mmx4_coop_call(cpu,0x8002B3C0u,actor,0);
         }else {
             mmx4_coop_balance_begin(actor);
             result=mmx4_coop_call(cpu,function,actor,cpu->gpr[5]);
             mmx4_coop_balance_end();
+            if(web && !captured && psx_mod_read_word(actor+0x8C)==3)
+                secondary_owner[(actor-SECONDARY_POOL)/SECONDARY_STRIDE]=(uint8_t)(target+1);
             psx_mod_counter_add(target?"mmx4.coop.p2-native-ai":"mmx4.coop.p1-native-ai",1);
         }
         if(target) {

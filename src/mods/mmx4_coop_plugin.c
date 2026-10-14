@@ -848,8 +848,9 @@ static uint16_t sprite_bank(unsigned character,uint32_t table,unsigned frame,uin
     uint32_t packed=le32(body->data+offset+frame*4),source=table+(packed&0xFFFFF);
     unsigned tiles=packed>>20;
     if(!tiles || tiles>256 || source<a->sprites || source-a->sprites>=body->size)return 0;
-    if(clut>=0x7800 && clut<0x7880) {
-        capture(character_palette(character)+(uint32_t)(clut-0x7800)*32,colors,sizeof colors);
+    int palette_offset=mmx4_coop_character_palette_offset(clut);
+    if(palette_offset>=0) {
+        capture(character_palette(character)+(uint32_t)palette_offset,colors,sizeof colors);
     }else {
         /* Capsule upgrade effects reuse character geometry with shared
          * animation CLUTs (e.g.78C0). Those colors are outside the private
@@ -916,8 +917,9 @@ static uint16_t ui_tile(unsigned character,uint16_t page,uint16_t clut,uint16_t 
     uint16_t colors[16];
     unsigned cx=(clut&63)*16,cy=clut>>6;
     const uint16_t *vram=gpu_get_vram();
-    for(unsigned i=0;i<16;++i)colors[i]=private_colors && clut>=0x7800 && clut<0x7880?
-        psx_mod_read_half(character_palette(character)+(clut-0x7800)*32+i*2):vram[cy*1024+cx+i];
+    int palette_offset=mmx4_coop_character_palette_offset(clut);
+    for(unsigned i=0;i<16;++i)colors[i]=private_colors && palette_offset>=0?
+        psx_mod_read_half(character_palette(character)+(uint32_t)palette_offset+i*2):vram[cy*1024+cx+i];
     for(unsigned i=0;i<*count;++i) {
         UiBank *b=&cache[i];
         if(b->character==character && b->page==page && b->clut==clut && b->uv==uv && !memcmp(b->colors,colors,32))return b->id;
