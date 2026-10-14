@@ -506,6 +506,12 @@ static int enroll(CPUState *cpu) {
     mmx4_coop_spawn_facing_right();
     if(on_chaser) {
         guest(cpu,0x80035A24,PLAYER,0);guest(cpu,0x80021C14,0,0);
+        /* The bike initializer requests boarding (C5=1). Finish that native
+         * handoff before its first acceleration tick requests rider pose47.
+         * Otherwise 33974 overwrites the request's substate6=0 with1 during
+         * P2's next controller tick, leaving the rider in the standing pose
+         * for the whole entrance. Keep native character cleanup/mount state. */
+        guest(cpu,0x80033974,PLAYER,0);
         if(incoming)psx_mod_counter_add("mmx4.coop.concurrent-chaser-arrivals",1);
     }
     /* An authored incoming position can be inside the stage's ceiling.

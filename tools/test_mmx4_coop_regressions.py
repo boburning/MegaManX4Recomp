@@ -240,15 +240,34 @@ class Scenarios:
             self.r.fixture(3, checkpoint)
             self.r.wait_playable(45, advance_dialogue=True)
 
-    def jet_intro(self):
+    def jet_intro(self, capture=None):
         self.r.fixture(1,5,0,self.campaign)
         deadline=time.monotonic()+45;entered=None;ready_peak=0
+        rider_phases=[set(),set()]
         while time.monotonic()<deadline:
             play=self.r.read(0x801721c0,0x20)
             if play[0]==6 and play[12]==5:
                 mirror=self.r.read(self.r.diagnostic(),0x6d0)
                 bodies=[mirror[at:at+0xe4] for at in (0x300,0x100)]
                 bikes=[mirror[at:at+0xb0] for at in (0x620,0x200)]
+                # The bike can advance correctly while its rider stays in
+                # pose0. Check each actual rider throughout the entrance;
+                # enrollment and READY counts alone missed this regression.
+                for seat,(body,bike) in enumerate(zip(bodies,bikes)):
+                    if not (body[0] and body[3] and bike[0] and bike[4:6]==bytes([1,0])):
+                        continue
+                    phase=bike[6]
+                    # P1's controller precedes its bike: a freshly requested
+                    # pose (substate6=0) is consumed on the following tick.
+                    if phase not in (1,2,3,4) or not body[6]:continue
+                    expected=0x47 if phase in (1,2) else 0x4b
+                    assert body[0x17]==body[0xd4]==expected,(
+                        'Wrong Jet rider pose',seat,phase,body[0x17],body[0xd4],expected)
+                    if phase not in rider_phases[seat]:
+                        rider_phases[seat].add(phase)
+                        label='jet-rider-%d-phase-%d'%(seat+1,phase)
+                        self.events.append(dict(label=label,pose=body[0x17],frame=body[0x47]))
+                        if capture:capture(label)
                 actors=self.r.read(0x80142f98,32*0x30)
                 ready_peak=max(ready_peak,sum(actors[i*0x30]!=0 and actors[i*0x30+1]==27 for i in range(32)))
                 if entered is None and play[0x1c] and all(b[0] and b[4:6]==bytes([1,0]) and b[6] in (1,2) for b in bikes):
@@ -259,12 +278,15 @@ class Scenarios:
                     assert pointers[0]==pointers[1]!=0,pointers
                     entered=dict(separation=(xs[0]-xs[1])/65536,ready_actor=pointers[0])
                     self.sample('jet-concurrent-entrance',True)
-                if not play[0x1c] and all(b[0] and b[4]==1 and b[5]==1 for b in bikes):break
+                if not play[0x1c] and all(b[0] and b[4]==1 and b[5]==1 for b in bikes) and all(b[6] for b in bodies):break
             time.sleep(.025)
         else:raise TimeoutError('Jet entrance did not release both bikes')
         assert entered and ready_peak<=1,(entered,ready_peak)
+        assert all({1,2}.issubset(phases) for phases in rider_phases),rider_phases
+        assert all(body[0x17]==body[0xd4]==0x41 for body in bodies),[b.hex() for b in bodies]
         self.sample('jet-concurrent-controls',True)
-        return dict(**entered,ready_peak=ready_peak,both_native_entrances=True)
+        return dict(**entered,ready_peak=ready_peak,both_native_entrances=True,
+                    rider_phases=[sorted(phases) for phases in rider_phases])
 
     def jet(self):
         entrance=self.jet_intro()
@@ -1726,7 +1748,7 @@ def main():
     parser.add_argument('--boss-doors',choices=('either','both'),default='either')
     parser.add_argument('--both-story-bosses',action='store_true')
     parser.add_argument('--boss-scaling',action='store_true')
-    parser.add_argument('--cases', nargs='+', choices=('jet','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
+    parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()

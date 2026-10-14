@@ -52,6 +52,7 @@ def main():
     parser.add_argument('--cameras', choices=('unified', 'split'), default='unified')
     parser.add_argument('--campaign', type=int, choices=(0, 1), default=0)
     parser.add_argument('--doors', action='store_true', help='Also traverse the P2-led Cyber door')
+    parser.add_argument('--jet-only',action='store_true',help='Check both native Jet rider entrance animations and composed frames')
     parser.add_argument('--train-only',action='store_true',help='Qualify both Slash Split background panes and CRCs')
     parser.add_argument('--latch-only',action='store_true',help='Qualify the native Mushroom latch and matching peer state')
     parser.add_argument('--stairs-only',action='store_true',help='Qualify independent Mushroom stair animation with the partner ahead')
@@ -101,6 +102,22 @@ def main():
         exercise = Exercise(args, peers, report)
         exercise.boot(args.campaign)
         debug = NetplayDevelopment(ports[2], ports[3])
+        if args.jet_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            from test_mmx4_coop_regressions import Scenarios
+            scenario=Scenarios(NetplayRuntime(debug),args.output,args.campaign)
+            def capture(label):
+                # Capture the composed private texture banks, not raw VRAM.
+                for seat,peer in enumerate(peers):
+                    peer.request('present_shot',path=str(args.output/('%s-p%d.png'%(label,seat+1))))
+            try:
+                report['jet_entrance']=scenario.jet_intro(capture)
+                tick=min(peer.status()['tick'] for peer in peers)
+                exercise.checkpoint('Jet rider entrances',tick,min_digests=2)
+                report['status']='passed'
+            finally:
+                (args.output/'scenario-events.json').write_text(json.dumps(scenario.events,indent=2))
+            return
         if args.jungle_exit_only:
             from mmx4_netplay_runtime import NetplayRuntime
             from test_mmx4_coop_regressions import Scenarios
