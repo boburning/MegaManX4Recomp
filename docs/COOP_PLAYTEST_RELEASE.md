@@ -1,4 +1,16 @@
-# Co-op playtest 18
+# Co-op playtest 19
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.19)
+for Windows ZIP and Linux x86_64 AppImage. Fixes checklist75: P2 uses the
+proper native rider animation during Jet Stingray's entrance, as X or Zero.
+Native gameplay qualification is recorded in the feedback checklist;
+production package qualification follows below. Release issue: `beads-eio.9.115`.
+
+Unified cameras and Stacked lifebars remain defaults; Split is experimental.
+Both peers must update. Double/Iris remains optional and default off.
+Campaign memory-card saves are unchanged.
+
+## Previous co-op playtest 18
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.18)
 with Windows ZIP and Linux x86_64 AppImage. Includes checklist77-82:

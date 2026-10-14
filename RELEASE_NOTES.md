@@ -1,4 +1,26 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.18
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.19
+
+**Player 2 rides into Jet Stingray's stage with the proper animation.**
+
+X and Zero now use their native leaning bike entrance instead of standing
+upright on the accelerating bike. Both riders still enter together, share
+one READY animation, and regain normal controls afterward.
+
+Verified with both character rosters in split-camera netplay and with Zero
+as Player 2 in local co-op. Includes all Playtest 18 fixes.
+
+Windows ZIP and Linux x86_64 AppImage. **Both netplay peers must update.**
+Unified cameras and Stacked lifebars remain the defaults; Split remains
+experimental. **Fight Double and Iris** stays optional and default off.
+Campaign memory-card saves carry forward.
+
+Diagnostics default on in fresh installs. Keep **Input Display and Recording**
+enabled and look for **REC**. After reproducing a bug, quit normally and zip the
+complete `saves/diagnostics` folder beside the executable or AppImage.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.18
 
 **Smoother co-op progression, independent cameras, and boss fights.**
 
