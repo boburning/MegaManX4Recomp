@@ -92,7 +92,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 83 | [x] | Sigma stage 1 second boss door kills P1 and traps P2 in local Unified | Reproduced from the Playtest19 local recording with Both-player doors. Colonel starts WARNING before the physical crossing completes, cancelling the aperture exemption and crushing P1. Defer that admission until the doorway and camera finish. Native continuation reaches the fight with both visible, clear controls and unchanged40/31HP; no partner departure. Windows34 checks and Linux lifecycle check pass. `beads-eio.9.116` |
 | 84 | [x] | Iris graphics are corrupt in X campaign | Reproduced in exact Playtest19 local replay (17,303 verified input hashes). Story hook selected stage13's sprite slot instead of stage11's, leaving Double's graphics loaded. Correct the selector; native Iris introduction and armor/core combat render correctly. `beads-eio.9.86` |
 | 85 | [x] | Iris sometimes fails to load properly | Reproduced a stalled intro after a Both-player door. Door minimum2048 conflicts with Iris waiting for camera2032. After physical clearance, admit her intro with the camera inside the authored arena. Fresh entry and recovery from the captured stall reach her fight with both players visible and no partner warp. `beads-eio.9.86` |
-| 86 | [ ] | P2 disappears at Sigma stage 3 entry | Not reproduced. Paired logs agree on all670 comparable gameplay frames in11/1: P1 dead, P2 alive. Native continuation kills P1, defeats Iris as P2, enters11/1 and moves P2 fromX384 to555.5 with48HP, visible body/HUD and controls. Keep open for a recording capturing the disappearance. `beads-eio.9.117` |
+| 86 | [ ] | P2 disappears at Sigma stage 3 entry | Not reproduced in local Unified or a fresh hidden two-peer Split match. With recorded mod settings, P2 defeats Double while P1 is dead, enters11/1 and moves fromX384 to486 with visible body/HUD on both rendered screens. Peer CRCs agree; no render-state leaks. This is a bounded new scenario, not an exact network recording replay. Keep open for a recording capturing the disappearance. `beads-eio.9.117` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -1041,3 +1041,29 @@ Private evidence: `build-pr23/feedback19-double-iris-sigma3-20261014/`
 (`local-inspect`, `double-air-original`, `double-air-fixed2`,
 `iris-selector-fixed2`, `iris-camera-recovery`, `iris-full-entry-fixed`,
 `sigma-survivor-entry`). No release is published by this update.
+
+### Sigma Split netplay follow-up (2026-10-14)
+
+The earlier survivor continuation used local Unified and the optional Iris
+sequel. It did not qualify the reported Split netplay mode. On owner review,
+ran two hidden SDL/OpenGL peers over loopback LAN using a separate development
+build of2638bed with synchronized fixtures. Copied the recording's mod settings:
+Split cameras, Either-player doors, boss scaling, Ultimate X, Black Zero and
+the Double/Iris sequence off. The new scenario starts a fresh X campaign with
+32HP capacity; the supplied recording has48HP. It does not replay the original
+inputs, retry history, save progression or remote-network timing.
+
+Native checkpoint setup reaches Double's room. After a synchronized fatal
+request for P1, P2 defeats Double with a native attack; only boss HP and setup
+positions are adjusted. The native ending advances11/0 to11/1. P1 stays dead,
+P2 refills to32HP, completes arrival and walks fromX384 to486. Composed captures
+show Black Zero and his HUD on both peers, including P1's spectator view.
+Both peers commit private local views; renderer verification mismatches,
+watchdogs, VRAM leaks and co-op view-state leaks stay zero. Core/mod CRCs agree
+through the final checkpoint at tick8928. Both owned processes exit afterward.
+
+Evidence: `sigma-split-survivor-1/report.json`, `scenario-events.json`, both
+peer runtime logs and composed `arrival-ready-p1.png`, `arrival-ready-p2.png`,
+`survivor-moved-3-p2.png` under the private intake directory above. Item86 stays
+open: this unsuccessful reproduction attempt is not a confirmed fix. Request
+both peers' diagnostics and a video timestamp if it recurs in the next build.
