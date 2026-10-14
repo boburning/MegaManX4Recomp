@@ -1,4 +1,27 @@
-# Mega Man X4 Recompiled — v0.1.1-coop-playtest.13
+# Mega Man X4 Recompiled — v0.1.1-coop-playtest.14
+
+Two-player X + Zero co-op for Windows and Linux. Both netplay peers must update.
+Unified cameras and Stacked lifebars remain the defaults; Split is experimental.
+
+- **Magma Dragoon progression fixed:** if P1 dies and P2 wins, P1 can now
+  advance the weapon reward, save, and return to stage selection. Both character
+  orders were tested; boss clears and saves stay with P1's campaign.
+- **Diagnostics enabled by default:** the input display and recording start
+  automatically on a fresh install. Loading a state with Diagnostics disabled
+  no longer creates misleading, incomplete recording folders.
+- Includes the new co-op showcase, screenshots and player guide. Project code
+  is MIT; bundled dependencies and game imagery retain their separate terms.
+
+If you carry over settings where recording was turned off, re-enable
+**Mods → Playtest Diagnostics → Input Display and Recording** before testing.
+Look for **REC** on the input display. After reproducing a bug, quit normally
+and zip the complete `saves/diagnostics` folder beside the executable or AppImage.
+
+Keep normal memory-card saves for campaign progress; use save states made with
+this release. Earlier unresolved reports retain their status in the
+[numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.13
 
 Two-player X + Zero co-op for Windows and Linux. Both netplay peers must update.
 Unified cameras and Stacked lifebars remain the defaults; independent Split

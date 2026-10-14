@@ -70,6 +70,8 @@ new diagnostic session with a `baseline.pst` file.
 
 1. Leave **Playtest Diagnostics → Input Display and Recording** enabled. The
    input display shows P1/P2's accepted buttons and **REC** while recording.
+   It defaults on in fresh installs. If you copied older settings that turned
+   it off, enable it again in **Mods** before testing.
 2. Reproduce the problem and note the stage, section, camera mode, which player
    led, whether either player was dead, and the approximate video timestamp.
 3. Quit normally. Open **`saves/diagnostics` beside the executable or AppImage**.

@@ -53,7 +53,9 @@ CO-OP PLAYTEST
   These features are unavailable during a netplay match.
 
   Playtest Diagnostics defaults on. It shows both players' accepted buttons
-  and records each run under saves/diagnostics, including starting memory
+  and REC while recording. If copied older settings turned it off, re-enable
+  Mods -> Playtest Diagnostics -> Input Display and Recording before testing.
+  It records each run under saves/diagnostics, including starting memory
   cards and mod choices. Keep the session folder for reproducing a report;
   offline input replay needs the matching build and settings.
   Recordings always live in saves/diagnostics beside the executable, or beside
