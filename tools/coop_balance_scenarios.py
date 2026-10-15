@@ -51,14 +51,31 @@ def boss_balance(s, spider=False):
         else:
             raise AssertionError(('Native boss was not damaged', seat, samples[-10:]))
         s.sample('balance-native-hit-' + str(seat), True)
+    if s.boss_scaling and getattr(s,'boss_cooldowns','per_player')=='per_player':
+        overlap='mmx4.coop.boss-hit-during-partner-cooldown'
+        overlap_before=counts().get(overlap,0)
+        for attempt in range(16):
+            target=next(e for e in s.enemies() if e['slot']==boss['slot'])
+            x=max(bounds[1]+48,min(bounds[0]+288,int(target['x'])-32)) if spider else max(17088,min(17296,int(target['x'])-32))
+            y=max(bounds[3]+32,min(bounds[2]+220,int(target['y'])+24)) if spider else max(160,min(283,int(target['y'])+24))
+            s.r.teleport_both(x,y)
+            for seat in (0,1):s.r.input(0xff7f if target['x']<x else 0xffdf,seat)
+            time.sleep(.03);s.r.release()
+            for seat in (0,1):s.r.input(0x7fff,seat)
+            time.sleep(.16);s.r.release();time.sleep(.08)
+            if counts().get(overlap,0)>overlap_before:break
+        else:raise AssertionError('No native damage accepted during the partner cooldown')
+        s.sample('balance-independent-overlap',True)
     final = counts()
     hp = s.r.read(address + 0x5c, 1)[0]
     if s.boss_scaling:
         raw = final['mmx4.coop.boss-damage-before-scaling'] - initial.get('mmx4.coop.boss-damage-before-scaling', 0)
         applied = final['mmx4.coop.boss-damage-after-scaling'] - initial.get('mmx4.coop.boss-damage-after-scaling', 0)
         assert applied == raw // 2 and hp == 48 - applied, (raw, applied, hp)
-        assert final['mmx4.coop.shorter-boss-cooldown'] > initial.get('mmx4.coop.shorter-boss-cooldown', 0)
-        assert max(r['cooldown'] for r in samples) <= 32, samples
+        separate=getattr(s,'boss_cooldowns','per_player')=='per_player'
+        counter='mmx4.coop.per-player-boss-cooldown' if separate else 'mmx4.coop.shorter-boss-cooldown'
+        assert final[counter] > initial.get(counter, 0)
+        assert max(r['cooldown'] for r in samples) <= (64 if separate else 32), samples
     else:
         assert not final.get('mmx4.coop.scaled-boss-hit') and hp < 48, (hp, final)
     # Exercise real native death after the fixture sets up its final HP.

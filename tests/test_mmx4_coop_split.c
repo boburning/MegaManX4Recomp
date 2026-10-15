@@ -1042,7 +1042,14 @@ int main(void) {
     for(unsigned seat=0;seat<2;++seat)for(unsigned layer=0;layer<3;++layer) {
         uint32_t camera=0x801F0000u+16u+seat*0xFCu+layer*0x54u;
         psx_mod_write_word(camera+12,0x01234567u);psx_mod_write_word(camera+24,0x02345678u);
+        psx_mod_write_half(camera+0x42,1000+seat*10+layer);
+        if(!layer) {
+            psx_mod_write_half(camera+0x24,400+seat);psx_mod_write_half(camera+0x26,100+seat);
+            psx_mod_write_half(camera+0x28,768);psx_mod_write_half(camera+0x2A,768);
+        }
     }
+    for(unsigned i=0;i<4;++i)psx_mod_write_half(CAMERA+(const unsigned[]){0x20,0x22,0x28,0x2A}[i],1024);
+    psx_mod_write_byte(MMX4_PLAY+0x26,1);
     mmx4_coop_split_flip_cameras();
     for(unsigned seat=0;seat<2;++seat)for(unsigned layer=0;layer<3;++layer) {
         uint32_t camera=0x801F0000u+16u+seat*0xFCu+layer*0x54u;
@@ -1050,9 +1057,15 @@ int main(void) {
         CHECK(psx_mod_read_word(camera+12)==axis-0x01234567u);
         CHECK(psx_mod_read_word(camera+24)==axis-0x02345678u);
         CHECK(psx_mod_read_byte(camera+0x4C)==1);
+        if(!layer) {
+            CHECK(psx_mod_read_half(camera+0x24)==400+seat && psx_mod_read_half(camera+0x26)==100+seat);
+            for(unsigned i=0;i<4;++i)CHECK(psx_mod_read_half(camera+(const unsigned[]){0x20,0x22,0x28,0x2A}[i])==1024);
+        }else CHECK(psx_mod_read_half(camera+0x42)==1000+seat*10+layer+(layer==1?128:192));
     }
+    psx_mod_write_byte(MMX4_PLAY+0x26,0);
     mmx4_coop_split_flip_cameras();
     CHECK(psx_mod_read_word(0x801F0000u+16u+12u)==0x01234567u);
+    CHECK(psx_mod_read_half(0x801F0000u+16u+0xFCu+0x54u+0x42u)==1011);
     script_owner=-1;train_backgrounds(&cpu);storm_backgrounds(&cpu);split=0;CHECK(mmx4_coop_split_activate());
     /* Unified has no private camera storage, but either living seat must
      * activate the authored secret-room bounds/checkpoint once. */

@@ -1,3 +1,6 @@
+> [!NOTE]
+> A special thank you to Thomu, Moro, and JMOTZU for their extensive playtesting in the Co-op mod. Also, a special thank you to Thomu for his generous support towards the project's development.
+
 # Mega Man X4 Recompiled
 
 **X and Zero. Together.**

@@ -10,10 +10,13 @@
 #define STRIDE 0x9Cu
 #define SLOTS 48u
 static unsigned enabled;
+static unsigned per_player;
 static uint8_t fraction[SLOTS][3];
+static uint8_t immunity[SLOTS][3][2];
 static uint32_t current_actor;
 static uint8_t saved_fraction[3];
 static unsigned accepted_damage;
+static unsigned damage_owner;
 
 static int slot(uint32_t actor) {
     if(actor<POOL || actor>=POOL+SLOTS*STRIDE || (actor-POOL)%STRIDE)return -1;
@@ -40,38 +43,57 @@ static unsigned bank(uint32_t actor) {
 }
 void mmx4_coop_balance_reset(void) {
     memset(fraction,0,sizeof fraction);memset(saved_fraction,0,sizeof saved_fraction);
-    current_actor=0;accepted_damage=0;
+    memset(immunity,0,sizeof immunity);
+    current_actor=0;accepted_damage=damage_owner=0;
 }
 void mmx4_coop_balance_activate(void) {
-    char value[8];
+    char value[32];
     enabled=psx_mod_current_option_value("boss_scaling",value,sizeof value) && !strcmp(value,"true");
+    per_player=!(psx_mod_current_option_value("boss_cooldowns",value,sizeof value) && !strcmp(value,"shared"));
     mmx4_coop_balance_reset();
     if(enabled)psx_mod_counter_add("mmx4.coop.boss-scaling-enabled",1);
 }
 void mmx4_coop_balance_forget(uint32_t actor) {
-    int i=slot(actor);if(i>=0)memset(fraction[i],0,sizeof fraction[i]);
+    int i=slot(actor);if(i>=0) {
+        memset(fraction[i],0,sizeof fraction[i]);
+        memset(immunity[i],0,sizeof immunity[i]);
+    }
+}
+int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {
+    if(!enabled || !per_player || psx_mod_local_view_scope() || seat>1 || !boss(actor))return 1;
+    if(!immunity[slot(actor)][bank(actor)][seat])return 1;
+    psx_mod_counter_add("mmx4.coop.boss-repeat-hit-blocked",1);
+    return 0;
 }
 void mmx4_coop_balance_begin(uint32_t actor) {
     if(!enabled || psx_mod_local_view_scope() || slot(actor)<0)return;
     if(!psx_mod_read_byte(actor+4))mmx4_coop_balance_forget(actor);
     current_actor=actor;
-    accepted_damage=0;
+    accepted_damage=damage_owner=0;
+    if(per_player)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        if(immunity[slot(actor)][b][seat])--immunity[slot(actor)][b][seat];
     memcpy(saved_fraction,fraction[slot(actor)],sizeof saved_fraction);
 }
 void mmx4_coop_balance_end(void) {
     if(current_actor && !psx_mod_read_byte(current_actor+0x5C))
         fraction[slot(current_actor)][bank(current_actor)]=0;
-    current_actor=0;accepted_damage=0;memset(saved_fraction,0,sizeof saved_fraction);
+    current_actor=0;accepted_damage=damage_owner=0;memset(saved_fraction,0,sizeof saved_fraction);
 }
 int mmx4_coop_balance_snapshot_ready(void) {return !current_actor;}
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
     mmx4_snapshot_fixed(s,enabled);
+    mmx4_snapshot_fixed(s,per_player);
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)MMX4_SNAPSHOT_BOOL(s,fraction[i][b]);
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        MMX4_SNAPSHOT_U8(s,immunity[i][b][seat]);
     return s->ok;
 }
 uint32_t mmx4_coop_balance_digest(uint32_t seed) {
     seed=(seed^enabled)*16777619u;
+    seed=(seed^per_player)*16777619u;
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)seed=(seed^fraction[i][b])*16777619u;
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        seed=(seed^immunity[i][b][seat])*16777619u;
     return seed;
 }
 static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
@@ -79,7 +101,12 @@ static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
     unsigned b=bank(actor);uint8_t *half=&fraction[slot(actor)][b];
     unsigned total=amount+*half;
     *half=(uint8_t)(total&1u);
-    if(current_actor==actor)accepted_damage+=amount;
+    if(current_actor==actor) {
+        accepted_damage+=amount;
+        damage_owner=(unsigned)(mmx4_coop_projected()!=0)+1u;
+        if(per_player && immunity[slot(actor)][b][(damage_owner-1u)^1u])
+            psx_mod_counter_add("mmx4.coop.boss-hit-during-partner-cooldown",1);
+    }
     psx_mod_counter_add("mmx4.coop.scaled-boss-hit",1);
     psx_mod_counter_add("mmx4.coop.boss-damage-before-scaling",amount);
     psx_mod_counter_add("mmx4.coop.boss-damage-after-scaling",total/2);
@@ -111,7 +138,7 @@ static void rejected_hit(CPUState *cpu,uint32_t address) {
      * A discarded hit must also discard its fractional damage. */
     if(enabled && current_actor==actor && !psx_mod_local_view_scope()) {
         memcpy(fraction[slot(actor)],saved_fraction,sizeof saved_fraction);
-        accepted_damage=0;
+        accepted_damage=damage_owner=0;
     }
 }
 static void damage_reaction(CPUState *cpu,uint32_t address) {
@@ -126,8 +153,23 @@ static void cooldown(CPUState *cpu,uint32_t address) {
     if(!enabled || !mmx4_coop_ready() || psx_mod_local_view_scope() || !boss(actor))return;
     unsigned ticks=cpu->gpr[2];
     if(ticks>1 && ticks<255) {
-        cpu->gpr[2]=(ticks+1)/2;
-        psx_mod_counter_add("mmx4.coop.shorter-boss-cooldown",1);
+        if(per_player) {
+            if(current_actor!=actor || !damage_owner)return;
+            uint8_t *timers=immunity[slot(actor)][bank(actor)];
+            timers[damage_owner-1u]=(uint8_t)ticks;
+            /* Native collision/flash gates see the earliest available seat.
+             * The filter above retains the full duration for the attacker.
+             * Reactions and AI still execute once in the original caller. */
+            unsigned next=timers[0]<timers[1]?timers[0]:timers[1];
+            /* Spider installs a temporary hit table and restores it on the
+             * timer's 1->0 transition. Zero would skip that cleanup forever.
+             * Retain one native expiry tick even when the partner is ready. */
+            cpu->gpr[2]=next?next:1u;
+            psx_mod_counter_add("mmx4.coop.per-player-boss-cooldown",1);
+        }else {
+            cpu->gpr[2]=(ticks+1)/2;
+            psx_mod_counter_add("mmx4.coop.shorter-boss-cooldown",1);
+        }
     }
 }
 

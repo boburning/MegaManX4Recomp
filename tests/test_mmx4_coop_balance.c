@@ -4,9 +4,9 @@
 #include <string.h>
 #define CHECK(x) do {if(!(x)){fprintf(stderr,"line%d: %s\n",__LINE__,#x);exit(1);}}while(0)
 #define BOSS 0x8013BED0u
-#define SAVE_BYTES (4+48*3)
+#define SAVE_BYTES (8+48*3+48*3*2)
 static uint8_t ram[0x200000];
-static int enabled,local,ready=1;
+static int enabled,local,ready=1,per_player,projected;
 static struct {uint32_t address;PSXModFunctionEntryCallback fn;} hooks[32];
 static unsigned count;
 uint8_t psx_mod_read_byte(uint32_t a){return ram[a&0x1fffff];}
@@ -16,8 +16,12 @@ void psx_mod_write_byte(uint32_t a,uint8_t v){ram[a&0x1fffff]=v;}
 static void word(uint32_t a,uint32_t v){for(unsigned i=0;i<4;++i)psx_mod_write_byte(a+i,(uint8_t)(v>>(8*i)));}
 int psx_mod_local_view_scope(void){return local;}
 int mmx4_coop_ready(void){return ready;}
+int mmx4_coop_projected(void){return projected;}
 int psx_mod_current_option_value(const char *key,char *value,uint32_t cap){
-    CHECK(!strcmp(key,"boss_scaling") && cap>=6);strcpy(value,enabled?"true":"false");return 1;
+    CHECK(cap>=16);
+    if(!strcmp(key,"boss_scaling"))strcpy(value,enabled?"true":"false");
+    else {CHECK(!strcmp(key,"boss_cooldowns"));if(per_player==2)return 0;strcpy(value,per_player?"per_player":"shared");}
+    return 1;
 }
 void psx_mod_counter_add(const char *name,uint32_t v){(void)name;CHECK(v<=255);}
 int psx_mod_register_instruction_plugin(const char *id,uint32_t a,uint32_t expected,PSXModFunctionEntryCallback fn){
@@ -43,6 +47,15 @@ static unsigned hit(unsigned amount,int rejected){
     if(rejected){hook(&cpu,0x8007D8CCu);psx_mod_write_byte(BOSS+0x5C,(uint8_t)hp);}
     mmx4_coop_balance_end();
     return psx_mod_read_byte(BOSS+0x5C);
+}
+static unsigned timed_hit(unsigned seat,unsigned amount,unsigned ticks) {
+    projected=(int)seat;
+    unsigned hp=psx_mod_read_byte(BOSS+0x5C);
+    CPUState cpu={0};cpu.gpr[4]=cpu.gpr[16]=BOSS;cpu.gpr[2]=amount;cpu.gpr[3]=hp-amount;
+    mmx4_coop_balance_begin(BOSS);hook(&cpu,0x8002DF08u);
+    psx_mod_write_byte(BOSS+0x5C,(uint8_t)cpu.gpr[3]);
+    cpu.gpr[2]=ticks;hook(&cpu,0x8008CEC0u);
+    mmx4_coop_balance_end();projected=0;return cpu.gpr[2];
 }
 int main(void){
     CPUState cpu={0};uint8_t saved[SAVE_BYTES];
@@ -101,6 +114,30 @@ int main(void){
     mmx4_coop_balance_begin(BOSS);CHECK(!mmx4_coop_balance_snapshot_ready());
     mmx4_coop_balance_end();CHECK(mmx4_coop_balance_snapshot_ready());
     enabled=0;mmx4_coop_balance_activate();
+    io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(!mmx4_coop_balance_snapshot(&io));
+    /* A fresh/missing choice defaults to independent full native cooldowns.
+     * The first hit leaves the partner eligible; then both timers coexist. */
+    enabled=1;per_player=2;mmx4_coop_balance_activate();actor(73,48);
+    CHECK(timed_hit(0,1,64)==1);
+    CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(timed_hit(1,1,64)==63);
+    CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(psx_mod_read_byte(BOSS+0x5C)==47);
+    for(unsigned i=0;i<62;++i){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+    CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
+    mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+    CHECK(mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
+    digest=mmx4_coop_balance_digest(1);
+    io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
+    CHECK(mmx4_coop_balance_snapshot(&io));
+    mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();CHECK(mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(digest!=mmx4_coop_balance_digest(1));
+    io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_READ,1};
+    CHECK(mmx4_coop_balance_snapshot(&io) && digest==mmx4_coop_balance_digest(1));
+    CHECK(!mmx4_coop_balance_hit_allowed(BOSS,1));
+    mmx4_coop_balance_forget(BOSS);CHECK(mmx4_coop_balance_hit_allowed(BOSS,1));
+    per_player=0;mmx4_coop_balance_activate();
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
     CHECK(!mmx4_coop_balance_snapshot(&io));
     puts("Boss scaling preserves weak hits, separate pools, rejected hits and snapshots.");return 0;

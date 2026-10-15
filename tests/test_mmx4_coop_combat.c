@@ -42,6 +42,8 @@ void mmx4_coop_web_reset(void) {}
 void mmx4_coop_balance_forget(uint32_t actor) {(void)actor;}
 void mmx4_coop_balance_begin(uint32_t actor) {(void)actor;}
 void mmx4_coop_balance_end(void) {}
+static unsigned boss_immunity[2];
+int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {(void)actor;return !boss_immunity[seat];}
 uint32_t mmx4_coop_web_digest(uint32_t seed) {return seed;}
 static uint8_t ram[0x200000];
 static uint8_t scratchpad[1024];
@@ -428,7 +430,7 @@ static void setup(void) {
     projected=split=0;ready=1;alive[0]=alive[1]=1;script_owner=-1;deferred_portal=arriving=0;
     pool_updates=bounds_updates=ai_contact=ai_solid=ai_direct_write=ai_canonical=0;
     memset(actor_updates,0,sizeof actor_updates);
-    hit_result[0]=hit_result[1]=0;
+    hit_result[0]=hit_result[1]=0;boss_immunity[0]=boss_immunity[1]=0;
     allocated_actor=ACTOR;
     mount_accept[0]=mount_accept[1]=0;
     token_model=double_model=local_view=0;attack_present[0]=attack_present[1]=0;
@@ -488,6 +490,11 @@ static void death_particle_ownership(void) {
     }
 }
 static void accepted_events(void) {
+    setup();boss_immunity[0]=1;hit_result[0]=1;hit_result[1]=2;
+    CHECK(invoke(HIT)==2 && !native_calls[0] && native_calls[1]==1);
+    setup();boss_immunity[0]=boss_immunity[1]=1;hit_result[0]=1;hit_result[1]=2;
+    CHECK(!invoke(HIT) && !native_calls[0] && !native_calls[1]);
+    CHECK(invoke(CONTACT)==1); /* Offensive immunity never suppresses contact. */
     const uint32_t addresses[]={CONTACT,HIT};
     for (unsigned i=0;i<2;++i) {
         setup();hit_result[0]=1;hit_result[1]=2;

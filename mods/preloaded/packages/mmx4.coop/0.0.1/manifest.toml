@@ -76,9 +76,23 @@ default = false
 feature = "coop"
 id = "boss_scaling"
 label = "Co-op boss scaling"
-description = "Double effective boss health and shorten shared hit cooldowns. Keeps native boss phases and weakness reactions. Works in local and online co-op. Off preserves the original balance."
+description = "Double effective boss health using the selected hit cooldown method. Works in local and online co-op. Off preserves the original balance."
 type = "boolean"
 default = false
+
+[[option]]
+feature = "coop"
+id = "boss_cooldowns"
+label = "Boss hit cooldowns"
+description = "With co-op boss scaling enabled, separate cooldowns let each player damage a boss while the other player's damage immunity is active. Reduced shared cooldowns keeps the earlier scaling behavior. The netplay host chooses for both players."
+type = "choice"
+default = "per_player"
+[[option.choice]]
+value = "per_player"
+label = "Separate for each player"
+[[option.choice]]
+value = "shared"
+label = "Reduced shared cooldowns"
 
 [[option]]
 feature = "coop"

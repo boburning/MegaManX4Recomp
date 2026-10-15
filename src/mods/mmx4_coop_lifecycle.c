@@ -732,6 +732,39 @@ static void position_return(CPUState *cpu,unsigned seat,uint32_t x,uint32_t y,
     if(seat)mmx4_coop_spawn_facing_right();
     if(seat)mmx4_coop_leave_second();
 }
+static int safe_return_position(CPUState *cpu,unsigned seat) {
+    if(seat)mmx4_coop_enter_second();
+    if(psx_mod_read_byte(PLAYER+0xC5)) {
+        if(seat)mmx4_coop_leave_second();
+        return 1;
+    }
+    /* Matching the leader's feet does not guarantee that the other hero's
+     * wider standing box fits. Probe native terrain before exposing a body
+     * to the incoming animation; prefer the same height and a small offset. */
+    uint8_t body[0xE4];read_bytes(PLAYER,body,sizeof body);
+    static const int offsets[]={0,8,-8,16,-16,24,-24,32,-32};
+    int safe=0;
+    unsigned guard=warp_guard;warp_guard=1;
+    for(unsigned i=0;i<sizeof offsets/sizeof offsets[0];++i) {
+        write_bytes(PLAYER,body,sizeof body);
+        uint32_t x=body_word(body,8)+(uint32_t)(offsets[i]*65536);
+        int center=(int16_t)(x>>16);
+        if(i && (center<(int16_t)psx_mod_read_half(0x801419D6u)+16 ||
+           center>(int16_t)psx_mod_read_half(0x801419D4u)+304))continue;
+        psx_mod_write_word(PLAYER+8,x);psx_mod_write_word(PLAYER+0x18,x);
+        psx_mod_write_byte(PLAYER+0x70,0);psx_mod_write_byte(PLAYER+0x71,0);
+        psx_mod_write_byte(PLAYER+0x79,0);psx_mod_write_byte(PLAYER+0x89,0);
+        mmx4_coop_call(cpu,0x8002C614u,PLAYER,0);
+        unsigned contact=psx_mod_read_byte(PLAYER+0x70)|psx_mod_read_byte(PLAYER+0x71);
+        if((contact&12u)!=12u && (contact&3u)!=3u &&
+           !psx_mod_read_byte(PLAYER+0x79) && psx_mod_read_byte(PLAYER+0x5C)==body[0x5C] &&
+           (!i || (contact&8u))) {safe=1;break;}
+    }
+    warp_guard=guard;
+    if(!safe)write_bytes(PLAYER,body,sizeof body);
+    if(seat)mmx4_coop_leave_second();
+    return safe;
+}
 static void warp_tick(CPUState *cpu) {
     warp_begin(cpu);
     if(!warp_phase || mmx4_coop_projected())return;
@@ -797,6 +830,12 @@ static void warp_tick(CPUState *cpu) {
         uint32_t surface_box=warp_owner?body_word(second,0x68):psx_mod_read_word(PLAYER+0x68);
         position_return(cpu,seat,x,y,warp_active,warp_visible,
             warp_vehicle_active,warp_vehicle_visible,surface_box);
+        if(!safe_return_position(cpu,seat)) {
+            if(seat)mmx4_coop_enter_second();
+            psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);
+            if(seat)mmx4_coop_leave_second();
+            warp_unlocked_ticks=0;return;
+        }
         /* Once the new grounded arrival is committed, a leader's death
          * must not send the survivor back outside the previous room. */
         warp_origin_x=seat?body_word(second,8):psx_mod_read_word(PLAYER+8);
@@ -807,6 +846,13 @@ static void warp_tick(CPUState *cpu) {
             if(seat)mmx4_coop_leave_second();
             start_arrival(cpu,seat);
             if(seat)mmx4_coop_enter_second();
+            /* This return was aligned to the leader's validated floor.
+             * Retain that contact for 31410's first incoming tick: clearing
+             * it makes X descend another eight pixels through a thin floor
+             * before the hidden passenger can participate in solid contact.
+             * Initial airborne stage arrivals keep their native descent. */
+            psx_mod_write_byte(PLAYER+0x70,8);
+            psx_mod_write_byte(PLAYER+0x89,8);
         }
         if(seat)mmx4_coop_leave_second();
     }else if(locked) {
@@ -1475,8 +1521,8 @@ static int paired_colonel_admission(CPUState *cpu,uint32_t address) {
     (void)address;
     if(!mmx4_coop_ready() || !both_door_scope() ||
        both_door.serial!=script_serial || both_door.phase>3)return 0;
-    /* Colonel's 80085F8C starts WARNING and action15 without waiting for
-     * C4. In Both mode the leader can reach that trigger while the partner
+    /* Colonel's 80085F8C and Storm Owl's General 80088D30 start admission
+     * without waiting for C4/camera arrival. A leading player can reach that trigger while the partner
      * is still in the aperture. That command aborts the crossing, restores
      * the sealed map's collision and crushes the leader. Defer the entire
      * admission (including its actor allocation) until physical clearance
@@ -1731,6 +1777,10 @@ static int partner_victory_pose(CPUState *cpu,uint32_t address) {
 static int script_command(CPUState *cpu,uint32_t address) {
     if(command_guard || !mmx4_coop_ready() || !gameplay_scene())return 0;
     unsigned owner=mmx4_coop_projected()?1u:0u;
+    fprintf(stderr,"mmx4.coop: scene-command stage=%u section=%u address=%08X caller=%08X "
+        "command=%u seat=%u pair=%u serial=%u/%u\n",
+        psx_mod_read_byte(PLAY+12),psx_mod_read_byte(PLAY+13),address,cpu->gpr[31],
+        cpu->gpr[4],owner,both_door.phase,both_door.serial,script_serial);
     unsigned redirect=!owner && !mmx4_coop_alive(0) && mmx4_coop_alive(1);
     if(redirect) {mmx4_coop_enter_second();owner=1;}
     if(address==0x80036AE4u && paired_victory_scene(cpu)) {
@@ -1920,6 +1970,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
     psx_mod_register_function_filter_plugin(ID,0x800C1D90u,both_door_traversal);
     psx_mod_register_function_filter_plugin(ID,0x80085F8Cu,paired_colonel_admission);
+    psx_mod_register_function_filter_plugin(ID,0x80088D30u,paired_colonel_admission);
     psx_mod_register_instruction_plugin(ID,0x800D0580u,0x14620006u,paired_intro_camera);
     psx_mod_register_instruction_plugin(ID,0x80081250u,0x14620005u,paired_iris_camera);
     psx_mod_register_function_filter_plugin(ID,0x8002D7E4u,both_door_map);

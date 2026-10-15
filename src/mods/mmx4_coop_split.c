@@ -362,6 +362,22 @@ void mmx4_coop_split_flip_cameras(void) {
         uint32_t axis=layer?0x09000000u:0x07000000u;
         for(unsigned at=12;at<=24;at+=12)
             psx_mod_write_word(camera+at,axis-psx_mod_read_word(camera+at));
+        if(!layer) {
+            /* C4F40 also calls C5210, which replaces the room's vertical
+             * follow/limit pairs. Mirroring XY alone leaves P2 clamped to
+             * the old floor after the world has turned over, crushing a
+             * grounded partner on the very first flipped camera update.
+             * Keep each view's horizontal limits and position independent. */
+            static const unsigned offsets[]={0x20,0x22,0x28,0x2A};
+            for(unsigned i=0;i<4;++i)psx_mod_write_half(camera+offsets[i],
+                psx_mod_read_half(CAMERA+offsets[i]));
+        }else {
+            /* C5210 shifts the authored parallax Y origin by 128/192.
+             * Apply its delta to each view's own origin, once per flip. */
+            int delta=layer==1?128:192;
+            if(!psx_mod_read_byte(MMX4_PLAY+0x26))delta=-delta;
+            psx_mod_write_half(camera+0x42,psx_mod_read_half(camera+0x42)+delta);
+        }
         psx_mod_write_byte(camera+0x4C,1);
     }
 }

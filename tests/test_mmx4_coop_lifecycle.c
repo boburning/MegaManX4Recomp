@@ -47,6 +47,7 @@ static unsigned initial_arrival_model,initial_control_calls[2],incoming_calls[2]
 static unsigned natural_arrivals,direct_arrivals,terrain_calls[2];
 static unsigned direct_initializer_calls[2];
 static uint8_t terrain_contact;
+static int narrow_return_x;
 static unsigned flip_queries[2],flip_hits[2],flip_world_calls,flip_second_calls,flip_camera_calls;
 static uint8_t p2_solid_bits;
 static uint16_t inputs[2];
@@ -206,7 +207,9 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             psx_mod_read_byte(MMX4_PLAYER+2)?0x800F8BC8u:0x800F8BC4u);break;
     case 0x8002C614:
         ++terrain_calls[projected];
-        psx_mod_write_byte(MMX4_PLAYER+0x70,terrain_contact);break;
+        psx_mod_write_byte(MMX4_PLAYER+0x70,
+            narrow_return_x && (int16_t)psx_mod_read_half(MMX4_PLAYER+10)==narrow_return_x?
+            13:terrain_contact);break;
     case 0x8002D7E4:
     case 0x8002D724:
         ++door_map_queries;
@@ -404,6 +407,7 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         break;
     }
     case 0x80085F8C:
+    case 0x80088D30:
         psx_mod_write_byte(a0+5,(uint8_t)(psx_mod_read_byte(a0+5)+1));
         cpu->gpr[31]=0x80085FE4u;
         mmx4_coop_call(cpu,0x80036AE4u,0x15,0);
@@ -530,7 +534,7 @@ static void reset(void) {
     memset(incoming_calls,0,sizeof incoming_calls);
     memset(terrain_calls,0,sizeof terrain_calls);
     memset(direct_initializer_calls,0,sizeof direct_initializer_calls);
-    natural_arrivals=direct_arrivals=0;terrain_contact=8;
+    natural_arrivals=direct_arrivals=0;terrain_contact=8;narrow_return_x=0;
     collect_calls[0]=collect_calls[1]=0;ready=1;split_views=0;
     psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+3,1);
     psx_mod_write_byte(MMX4_PLAYER+4,1);psx_mod_write_byte(MMX4_PLAYER+0x5C,16);
@@ -1491,7 +1495,35 @@ int main(void) {
         psx_mod_write_byte(PLAYER+5,2);psx_mod_write_word(PLAYER+12,144u<<16);
         for(unsigned i=0;i<3;++i)mmx4_coop_lifecycle_tick(&cpu);
         CHECK(warp_phase==2 && body_word(p2,12)==144u<<16);
+        CHECK(p2[0x70]==8 && p2[0x89]==8); /* Grounded return must not take another descent step. */
         mmx4_coop_lifecycle_tick(&cpu);CHECK(!warp_phase && mmx4_coop_alive(1));
+    }
+
+    /* The leader's feet may fit where the other hero's standing box is
+     * crushed. Native terrain must admit a nearby same-height landing;
+     * otherwise keep the passenger hidden until a safe location exists. */
+    for(unsigned owner=0;owner<2;++owner) {
+        reset();warp_owner=owner;warp_phase=1;warp_active=warp_visible=1;
+        unsigned passenger=owner^1u;
+        if(passenger) {p2[0]=p2[3]=0;}
+        else {psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);}
+        if(owner)mmx4_coop_enter_second();
+        psx_mod_write_word(PLAYER+8,640u<<16);psx_mod_write_word(PLAYER+12,180u<<16);
+        psx_mod_write_byte(PLAYER+0x89,8);
+        if(owner)mmx4_coop_leave_second();
+        psx_mod_write_half(0x801419D6u,512);psx_mod_write_half(0x801419D4u,512);
+        terrain_contact=12;narrow_return_x=640;
+        for(unsigned i=0;i<3;++i)warp_tick(&cpu);
+        CHECK(warp_phase==1 && !incoming_calls[passenger] && !projected);
+        CHECK(passenger?!p2[0]:!psx_mod_read_byte(PLAYER));
+        CHECK((passenger?body_word(p2,12):psx_mod_read_word(PLAYER+12))==180u<<16);
+        CHECK((passenger?p2[0x5C]:psx_mod_read_byte(PLAYER+0x5C))==(passenger?12:16));
+        terrain_contact=8;
+        for(unsigned i=0;i<3;++i)warp_tick(&cpu);
+        CHECK(warp_phase==2 && incoming_calls[passenger]==1 && !projected);
+        CHECK((passenger?body_word(p2,8):psx_mod_read_word(PLAYER+8))==648u<<16);
+        CHECK((passenger?body_word(p2,12):psx_mod_read_word(PLAYER+12))==180u<<16);
+        warp_tick(&cpu);CHECK(!warp_phase && mmx4_coop_alive(passenger));
     }
 
     /* A grounded walking/dashing leader releases the arrival for either seat.
@@ -1913,18 +1945,19 @@ int main(void) {
     /* Colonel's WARNING must not cancel an in-progress physical crossing.
      * The native initializer advances its actor and starts action15 once;
      * both projections defer all of that until the door/camera are ready. */
-    for(unsigned seat=0;seat<2;++seat) {
+    for(unsigned admission=0;admission<2;++admission)for(unsigned seat=0;seat<2;++seat) {
         CHECK(!open_both_door(&cpu,actor));
         uint32_t colonel=0x8013BED0u;
+        uint32_t entry=admission?0x80088D30u:0x80085F8Cu;
         if(seat)mmx4_coop_enter_second();
         for(unsigned phase=1;phase<=3;++phase) {
             both_door.phase=(uint8_t)phase;
-            mmx4_coop_call(&cpu,0x80085F8Cu,colonel,0);
+            mmx4_coop_call(&cpu,entry,colonel,0);
             CHECK(!psx_mod_read_byte(colonel+5) && !warp_pending && !warp_phase);
             CHECK(both_door.phase==phase && !psx_mod_read_byte(PLAYER+0xC0));
         }
         both_door.phase=4;
-        mmx4_coop_call(&cpu,0x80085F8Cu,colonel,0);
+        mmx4_coop_call(&cpu,entry,colonel,0);
         CHECK(psx_mod_read_byte(colonel+5)==1 && psx_mod_read_byte(PLAYER+0xC0));
         CHECK(both_door.phase==5 && script_owner==seat && !warp_pending && !warp_phase);
         if(seat)mmx4_coop_leave_second();

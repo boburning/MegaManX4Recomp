@@ -1115,7 +1115,7 @@ static int render_native_rider_component(CPUState *cpu,uint32_t address) {
 }
 int mmx4_coop_render_rider_armor(CPUState *cpu,uint32_t address) {
     if(rendering || projected || !mmx4_coop_ready() || cpu->gpr[4]!=PLAYER ||
-       psx_mod_read_byte(PLAYER+0xC5)!=0xFF)return 0;
+       psx_mod_read_byte(PLAYER+0xC5)!=0xFF || psx_mod_read_byte(MMX4_VEHICLE+1)!=0)return 0;
     return render_native_rider_component(cpu,address);
 }
 static int render(CPUState *cpu,uint32_t address) {
@@ -1126,7 +1126,9 @@ static int render(CPUState *cpu,uint32_t address) {
     enter_second();
     uint32_t original=psx_mod_read_word(SCRATCH+0x100),base=arena+(psx_mod_read_word(SCRATCH)&1u)*FRAME_ARENA;
     psx_mod_write_word(SCRATCH+0x100,base);
-    unsigned chaser=second.body[0xC5]==0xFF?2u:0u;
+    /* Ride Armor also uses C5=FF, but its odd bucket3 must remain behind
+     * the native rider bucket2. Only Ride Chaser has the four-part ordering. */
+    unsigned chaser=second.body[0xC5]==0xFF && second.vehicle[1]==0?2u:0u;
     if(second.body[3])render_rider_component(cpu,PLAYER,base,counterpart,chaser);
     if(psx_mod_read_byte(0x80175D58u+3))render_actor(cpu,0x80175D58u,base,counterpart);
     if(!second.body[2])for(unsigned i=0;i<2 && !failed;++i)
@@ -1152,8 +1154,10 @@ static int render_owned_effect(CPUState *cpu,uint32_t address) {
     if(rendering || projected || !mmx4_coop_ready() || !world_draw_visible())return 0;
     uint32_t actor=cpu->gpr[4],assembly=psx_mod_read_word(actor+0x3C);
     unsigned vehicle_owner=mmx4_coop_vehicle_effect_owner(actor);
-    unsigned ride_owner=vehicle_owner;
+    unsigned ride_owner=vehicle_owner &&
+        (vehicle_owner==2?second.vehicle[1]:psx_mod_read_byte(MMX4_VEHICLE+1))==0?vehicle_owner:0;
     if(psx_mod_read_byte(PLAYER+0xC5)==0xFF &&
+       psx_mod_read_byte(MMX4_VEHICLE+1)==0 &&
        (actor==PLAYER || actor==MMX4_VEHICLE ||
         (actor>=SHOTS && actor<SHOTS+sizeof first.shots && (actor-SHOTS)%0x9C==0 &&
          psx_mod_read_byte(actor+1)==57)))ride_owner=1;
@@ -1338,7 +1342,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x37503458u); /* X4P7, paired victory presentation */
+    mmx4_snapshot_fixed(s,0x38503458u); /* X4P8, per-player boss immunity */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);

@@ -103,6 +103,11 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 93 | [x] | P2 Jet Stingray intro looks slower than Playtest19 | Shared entrance camera restores missing autoscroll displacement. Both rosters regain controls 6/7 native frames apart in Split netplay; Unified 5 frames. Native poses and one READY retained. `beads-eio.9.129` |
 | 94 | [x] | Storm Owl background graphics corrupt in Split netplay | Confirmed P2 sky froze while P1 sky advanced. Publish native kind5 aircraft/parallax movement into both independent views without repeating stage events; restore native panorama wrapping to remove black columns. Native before/after and peer CRCs pass. `beads-eio.9.130` |
 | 95 | [x] | Slash Beast background graphics are glitched | Reproduced large missing mountain/sky regions around recorded input2730. Independent drawing discarded native wrapped panorama columns. Title drawing policy restores the authored background; strict private replay and screenshots validate it. `beads-eio.9.131` |
+| 96 | [x] | Cyber Peacock flip switch kills the nearby partner | Reproduced in two-peer Split with P2 at X624/Y1126. Reflecting private camera positions without C5210's new vertical limits crushed P2. Both saved views now receive those authored limits and their parallax-origin shifts. Both switch activators pass with both players retaining32HP. `beads-eio.9.133` |
+| 97 | [x] | Storm Owl midboss door teleports P2 after a Both-player crossing | General began action14 while the door was still in phase3, aborting the crossing. Defer his native admission until physical clearance and camera arrival. Local Unified and two-peer Split show one completed crossing and no partner departure. `beads-eio.9.134` |
+| 98 | [x] | P2 Ride Armor draws its rider at the wrong sprite priority | Ride Armor and Ride Chaser share C5=FF; only Chaser kind0 gets the bike ordering now. Native Ride Armor retains rider bucket2/vehicle bucket3. Local and Split captures validate the rider; native mounting, attacks and ejection pass. Related X return safety is tracked separately as100. `beads-eio.9.135` |
+| 99 | [x] | Boss-scaling cooldown dropdown with independent player cooldowns | Default method is per-player full native cooldowns; reduced shared cooldowns remain selectable and scaling itself stays optional. Native Jet/Spider damage, overlapping attacker windows and death pass; Split Jet combat also passes with matching peer state. Preserve one native expiry tick for Spider's temporary hit-table cleanup. Timers reset on slot/stage reuse and persist in X4P8 snapshots/digests. `beads-eio.9.136` |
+| 100 | [x] | A returning P2 X is crushed after forced Ride Armor dismount | Native HP80 store80033C14 proves ceiling+floor crush at5558/683 after the scripted leader position5558/682. Preventing an extra8px descent alone was insufficient. Probe the returning body's terrain, try bounded same-height offsets, and defer if no safe landing exists. The native Zero-campaign case keeps X alive, returns him on foot when the leader reaches clear ground, and passes next-stage cleanup. `beads-eio.9.137` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -1278,3 +1283,38 @@ a new live Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release23-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.132`.
+
+### Next-playtest follow-up (2026-10-15)
+
+Items96-99 address Cyber Peacock's grounded partner death, Storm Owl's paired
+midboss door, Ride Armor rider priority and the requested boss-cooldown choice.
+Scaling remains off by default. When enabled, its default cooldown method is
+separate full-duration immunity for each player; reduced shared cooldowns remain
+available. Ordinary enemies, contact damage and native weakness reactions retain
+their existing handling. A one-tick native expiry preserves Web Spider's
+temporary hit-table cleanup. The additional timers are included in snapshots
+and deterministic state checks; the co-op snapshot schema is now X4P8.
+
+Hidden local native cases cover the paired door and both bosses, including
+overlapping player cooldowns and native death. A two-peer Split run completes
+both Cyber switch activators, the Storm Owl door, Ride Armor and scaled Jet
+Stingray combat, with 596 matching core/mod samples through tick19104. Its final
+presentation debug query times out after those cases complete; this is recorded
+as a harness limitation, not an overall successful harness exit. See private
+`build-pr23/feedback23-20261015/completed-net-checks.json`,
+`overlapping-cooldowns-cleanup-fixed/report.json` and
+`cooldown-offers-final/report.json`. The latter confirms the host negotiates the
+chosen cooldown method, including the omitted-option default.
+
+All 34 Windows title checks and four focused Linux C fixtures pass. These checks
+do not constitute a new Linux release build or cross-OS gameplay qualification.
+The README now starts with the owner's requested playtester acknowledgment.
+Items53,86 and89 remain open. Item100 is the additional grounded-return safety
+case discovered during Ride Armor validation. Its native fatal writer was
+captured in `x-return-writer-warm/return-writes.json`; the complete fixed case
+passes in `x-return-safe-landing3/report.json` under the same private QA directory.
+That case deliberately moves the leader from the unsafe scripted position onto
+clear ground. If the local search has no valid landing, the passenger remains
+hidden until one is available. It does not bypass terrain damage or disable
+crushes. The bounded terrain-model tests cover both passenger seats, safe
+offsets, deferral without health loss and completion after a valid site appears.

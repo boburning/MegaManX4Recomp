@@ -179,7 +179,8 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
      * The shared pool runs for P1, so apply the same gate to each projected
      * seat. Otherwise a persistent Zero saber reasserts +BD every world pass
      * and the next player tick restarts the five-tick hit pause forever. */
-    if (mmx4_coop_alive(0) && !psx_mod_read_byte(MMX4_PLAYER+0xBC)) {
+    if (mmx4_coop_alive(0) && !psx_mod_read_byte(MMX4_PLAYER+0xBC) &&
+        (address!=ENEMY_HIT || mmx4_coop_balance_hit_allowed(actor,0))) {
         result=mmx4_coop_call(cpu,address,actor,arg);
         if (history) {
             first_token=psx_mod_read_byte(actor+0x65);
@@ -187,7 +188,8 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
             if (history) history->token[0]=first_token;
         }
     }
-    if (!result && mmx4_coop_alive(1) && !mmx4_coop_second_body()[0xBC]) {
+    if (!result && mmx4_coop_alive(1) && !mmx4_coop_second_body()[0xBC] &&
+        (address!=ENEMY_HIT || mmx4_coop_balance_hit_allowed(actor,1))) {
         if (history) psx_mod_write_byte(actor+0x65,history->token[1]);
         mmx4_coop_enter_second();
         result=mmx4_coop_call(cpu,address,actor,arg);
