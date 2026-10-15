@@ -497,6 +497,20 @@ done:
     cpu->gpr[4]=old4;cpu->gpr[5]=old5;cpu->gpr[2]=old2;return result;
 }
 
+int mmx4_coop_armor_mounted(void) {
+    return ready && psx_mod_read_byte(0x801418C8u+0xC5) &&
+        psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_byte(MMX4_VEHICLE+1)==1 &&
+        (psx_mod_read_byte(MMX4_VEHICLE+0x97)&0x40);
+}
+void mmx4_coop_armor_dismount(CPUState *cpu,unsigned seat) {
+    (void)cpu;
+    if(seat>1 || local_view)return;
+    uint8_t *body=seat==projected?ram+(0x801418C8u&0x1FFFFFu):seat?p2:p1_backup;
+    uint8_t *vehicle=seat==projected?ram+(MMX4_VEHICLE&0x1FFFFFu):seat?p2_vehicle:p1_vehicle_backup;
+    if(body[0xC5] && vehicle[0] && vehicle[1]==1 && (vehicle[0x97]&0x40)) {
+        body[0xC5]=0;vehicle[0x97]&=(uint8_t)~0x40u;
+    }
+}
 #include "../src/mods/mmx4_coop_lifecycle.c"
 #define CHECK(x) do {if(!(x)) {fprintf(stderr,"line %d: %s\n",__LINE__,#x);return 1;}}while(0)
 static void reset(void) {
@@ -1766,6 +1780,43 @@ int main(void) {
         CHECK(scene_calls==2 && script_active && !script_owner && psx_mod_read_byte(PLAYER+0xC4));
         CHECK(!door_wait && !projected);
     }
+    /* Mounted contact queries borrow the foot box without ejecting a rider.
+     * A remote or missing partner cannot commit a Both door; once both touch,
+     * only the mounted hero dismounts and native admission starts on foot. */
+    for(unsigned rider=0;rider<2;++rider) {
+        reset();both_door_players=1;
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,8);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_word(actor+8,0x02000000u);
+        if(rider)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER+0xC5,255);psx_mod_write_word(PLAYER+0x68,0);
+        psx_mod_write_byte(MMX4_VEHICLE,0x41);psx_mod_write_byte(MMX4_VEHICLE+1,1);
+        psx_mod_write_byte(MMX4_VEHICLE+0x97,0x40);
+        if(rider)mmx4_coop_leave_second();
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK((rider?p2[0xC5]:psx_mod_read_byte(PLAYER+0xC5))==255 && !script_active);
+        if(rider)p2[11]=2;else psx_mod_write_word(PLAYER+8,0x02000000u);
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK((rider?p2[0xC5]:psx_mod_read_byte(PLAYER+0xC5))==255 && !script_active);
+        CHECK((rider?body_word(p2,0x68):psx_mod_read_word(PLAYER+0x68))==0);
+        p2[11]=2;psx_mod_write_word(PLAYER+8,0x02000000u);
+        mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+        CHECK(!(rider?p2[0xC5]:psx_mod_read_byte(PLAYER+0xC5)) && script_active && !projected);
+    }
+    /* Passenger transport must leave an ejected world armor at its original
+     * position, including when the passenger is the campaign owner. */
+    reset();
+    psx_mod_write_byte(PLAYER+0xC5,255);
+    psx_mod_write_byte(MMX4_VEHICLE,0x41);psx_mod_write_byte(MMX4_VEHICLE+1,1);
+    psx_mod_write_byte(MMX4_VEHICLE+3,1);psx_mod_write_byte(MMX4_VEHICLE+0x97,0x40);
+    psx_mod_write_word(MMX4_VEHICLE+8,0x12340000u);
+    warp_pending=1;warp_owner=1;warp_begin(&cpu);
+    CHECK(!psx_mod_read_byte(PLAYER+0xC5) && !warp_vehicle_active);
+    CHECK(psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_byte(MMX4_VEHICLE+3));
+    position_return(&cpu,0,0x05000000u,0x03000000u,0,0,0,0,0);
+    CHECK(psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_word(MMX4_VEHICLE+8)==0x12340000u);
+    psx_mod_write_byte(MMX4_VEHICLE+1,0); /* Unmounted Chasers retain native clearing. */
+    position_return(&cpu,0,0x05000000u,0x03000000u,0,0,0,0,0);
+    CHECK(!psx_mod_read_byte(MMX4_VEHICLE) && !psx_mod_read_byte(MMX4_VEHICLE+3));
     for(unsigned absent=0;absent<2;++absent) {
         reset();both_door_players=1;
         psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,8);psx_mod_write_byte(actor+4,1);

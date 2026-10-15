@@ -409,6 +409,37 @@ static int initialize_character_particle(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 
+int mmx4_coop_armor_mounted(void) {
+    return mmx4_coop_ready() && psx_mod_read_byte(MMX4_PLAYER+0xC5) &&
+        psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_byte(MMX4_VEHICLE+1)==1 &&
+        (psx_mod_read_byte(MMX4_VEHICLE+0x97)&0x40u);
+}
+
+void mmx4_coop_armor_dismount(CPUState *cpu,unsigned seat) {
+    if(seat>1 || !mmx4_coop_ready() || psx_mod_local_view_scope())return;
+    unsigned original=(unsigned)(mmx4_coop_projected()!=0);
+    if(seat!=original) {if(seat)mmx4_coop_enter_second();else mmx4_coop_leave_second();}
+    if(mmx4_coop_armor_mounted()) {
+        /* Retail's B/EEF8 is also the automatic scene ejection path selected
+         * by403DC. It clears C5/occupied40, restores the character's foot box,
+         * and retains the actual armor's position, remaining HP and animation.
+         * Run only its first native tick; never replay the whole world update. */
+        unsigned guard=armor_call;armor_call=1;
+        mmx4_coop_call(cpu,0x8003DC44u,MMX4_VEHICLE,0xBu);
+        mmx4_coop_call(cpu,0x8003EEF8u,MMX4_VEHICLE,0);
+        armor_call=guard;
+        if(seat && mmx4_coop_first_vehicle()[0]) {
+            /* Two authored vehicles can coexist. A forced departure cannot
+             * overwrite P1's vehicle or carry unoccupied armor into a new
+             * room; retire this abandoned private actor in that case. */
+            psx_mod_write_byte(MMX4_VEHICLE,0);psx_mod_write_byte(MMX4_VEHICLE+3,0);
+            armor_owner=armor_skip_update=0;
+        }
+        psx_mod_counter_add("mmx4.coop.armor-forced-dismounts",1);
+    }
+    if(seat!=original) {if(original)mmx4_coop_enter_second();else mmx4_coop_leave_second();}
+}
+
 void mmx4_coop_combat_project_end(uint32_t vehicle_mirror) {
     if (!vehicle_mirror || !mmx4_coop_projected() || psx_mod_local_view_scope()) return;
     for (unsigned i=0;i<EFFECT_CAPACITY;++i) {
@@ -428,6 +459,9 @@ void mmx4_coop_combat_project_end(uint32_t vehicle_mirror) {
      * Return this same unoccupied actor to the world, preserving its HP and
      * position. Never overwrite another world vehicle or create a clone. */
     uint8_t *world=mmx4_coop_first_vehicle();
+    if(armor_owner && !psx_mod_read_byte(MMX4_VEHICLE)) {
+        armor_owner=armor_skip_update=0;
+    }
     if (armor_owner && !world[0] && psx_mod_read_byte(MMX4_VEHICLE) &&
         psx_mod_read_byte(MMX4_VEHICLE+1)==1 &&
         !psx_mod_read_byte(MMX4_PLAYER+0xC5) &&
@@ -468,12 +502,12 @@ static int armor_world_update(CPUState *cpu,uint32_t address) {
     uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     uint8_t *second=mmx4_coop_second_vehicle();
     uint8_t *body=mmx4_coop_second_body();
-    /* Mode9 is the original unoccupied mount routine (dispatch800F912C).
+    /* Mode0 is the original unoccupied mount routine (table800F9150/9188).
      * P1 has first choice through the world update above. */
     if (!armor_owner && mmx4_coop_alive(1) && body[4]==1 && !body[0xC5] &&
         !second[0] && !psx_mod_read_byte(MMX4_PLAYER+0xC5) &&
         psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_byte(MMX4_VEHICLE+1)==1 &&
-        psx_mod_read_byte(MMX4_VEHICLE+4)==1 && psx_mod_read_byte(MMX4_VEHICLE+5)==9 &&
+        psx_mod_read_byte(MMX4_VEHICLE+4)==1 && psx_mod_read_byte(MMX4_VEHICLE+5)==0 &&
         !(psx_mod_read_byte(MMX4_VEHICLE+0x97)&0x40)) {
         uint8_t candidate[0xB0],previous[0xB0];
         capture_vehicle(candidate);memcpy(previous,second,sizeof previous);

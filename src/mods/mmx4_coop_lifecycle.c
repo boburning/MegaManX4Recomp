@@ -635,6 +635,7 @@ static void both_door_tick(CPUState *cpu) {
         both_door_abort(cpu);
 }
 static void start_outgoing(CPUState *cpu,unsigned seat) {
+    mmx4_coop_armor_dismount(cpu,seat);
     if(seat)mmx4_coop_enter_second();
     mmx4_coop_clear_current_attacks();
     psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0xBC,0);
@@ -669,13 +670,20 @@ static void warp_begin(CPUState *cpu) {
     if(!warp_pending || mmx4_coop_projected())return;
     initial_arrival=direct_initial_spawn=0;
     unsigned seat=warp_owner^1u;
+    mmx4_coop_armor_dismount(cpu,seat);
     if(seat)mmx4_coop_enter_second();
     warp_active=psx_mod_read_byte(PLAYER);warp_visible=psx_mod_read_byte(PLAYER+3);
-    warp_vehicle_active=psx_mod_read_byte(MMX4_VEHICLE);
-    warp_vehicle_visible=psx_mod_read_byte(MMX4_VEHICLE+3);
+    /* Unoccupied Ride Armor belongs to its world location, not a passenger.
+     * Chasers retain their existing stage-specific transport behavior. */
+    unsigned world_armor=psx_mod_read_byte(MMX4_VEHICLE) &&
+        psx_mod_read_byte(MMX4_VEHICLE+1)==1 && !psx_mod_read_byte(PLAYER+0xC5);
+    warp_vehicle_active=world_armor?0:psx_mod_read_byte(MMX4_VEHICLE);
+    warp_vehicle_visible=world_armor?0:psx_mod_read_byte(MMX4_VEHICLE+3);
     warp_origin_x=psx_mod_read_word(PLAYER+8);warp_origin_y=psx_mod_read_word(PLAYER+12);
     mmx4_coop_clear_current_attacks();
-    psx_mod_write_byte(MMX4_VEHICLE,0);psx_mod_write_byte(MMX4_VEHICLE+3,0);
+    if(!world_armor) {
+        psx_mod_write_byte(MMX4_VEHICLE,0);psx_mod_write_byte(MMX4_VEHICLE+3,0);
+    }
     unsigned mounted=psx_mod_read_byte(PLAYER+0xC5);
     if(mounted) {psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);}
     if(seat)mmx4_coop_leave_second();
@@ -706,7 +714,13 @@ static void position_return(CPUState *cpu,unsigned seat,uint32_t x,uint32_t y,
     psx_mod_write_byte(PLAYER+0x67,0);psx_mod_write_byte(PLAYER+0xC0,0);
     psx_mod_write_byte(PLAYER+0xC4,0);psx_mod_write_byte(PLAYER+0x61,60);
     mmx4_coop_clear_current_attacks();
-    psx_mod_write_byte(MMX4_VEHICLE,va);psx_mod_write_byte(MMX4_VEHICLE+3,vv);
+    /* A world armor left behind by an on-foot passenger must not be erased
+     * or relocated when that hero returns. */
+    unsigned world_armor=psx_mod_read_byte(MMX4_VEHICLE) &&
+        psx_mod_read_byte(MMX4_VEHICLE+1)==1 && !psx_mod_read_byte(PLAYER+0xC5);
+    if(va || vv || !world_armor) {
+        psx_mod_write_byte(MMX4_VEHICLE,va);psx_mod_write_byte(MMX4_VEHICLE+3,vv);
+    }
     if(va && psx_mod_read_byte(PLAYER+0xC5)) {
         psx_mod_write_word(MMX4_VEHICLE+8,x+vehicle_dx);
         psx_mod_write_word(MMX4_VEHICLE+12,y+vehicle_dy);
@@ -1219,6 +1233,7 @@ static int death_animation(CPUState *cpu,uint32_t address) {
     uint8_t gates[9];read_bytes(PLAY+0x12,gates,9);
     uint8_t scene_lock=psx_mod_read_byte(PLAY+0x1C);
     unsigned initial=psx_mod_read_byte(PLAYER+5)==0;
+    if(initial)mmx4_coop_armor_dismount(cpu,(unsigned)(mmx4_coop_projected()!=0));
     death_guard=1;
     uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     death_guard=0;write_bytes(PLAY+0x12,gates,9);
@@ -1415,7 +1430,20 @@ static int shared_text_init(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int waiting_door_query(CPUState *cpu,uint32_t address) {
-    (void)address;
+    /* A mounted hero has no on-foot collision box. Eligibility remains a
+     * read-only query: temporarily use the native foot box, restoring both
+     * fields before returning. Both-player waiting must not eject either
+     * rider until the actual door admission is committed. C5=0 also guards
+     * the nested original query; no second Armor update runs here. */
+    if(!door_wait && mmx4_coop_armor_mounted() && !psx_mod_local_view_scope()) {
+        uint8_t mounted=psx_mod_read_byte(PLAYER+0xC5);
+        uint32_t box=psx_mod_read_word(PLAYER+0x68);
+        psx_mod_write_byte(PLAYER+0xC5,0);
+        mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
+        uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
+        psx_mod_write_byte(PLAYER+0xC5,mounted);psx_mod_write_word(PLAYER+0x68,box);
+        return mmx4_coop_finish(cpu,result);
+    }
     /* Only suppress admission, never the native door's animation/render pass. */
     if(!door_wait)return 0;
     psx_mod_counter_add("mmx4.coop.boss-door-waits",1);
@@ -1512,6 +1540,13 @@ static int both_door_map(CPUState *cpu,uint32_t address) {
     }
     return mmx4_coop_finish(cpu,result);
 }
+static void dismount_at_door(CPUState *cpu,unsigned seat,uint32_t actor) {
+    if(seat)mmx4_coop_enter_second();
+    unsigned touch=mmx4_coop_armor_mounted() &&
+        mmx4_coop_call(cpu,0x800C1E7Cu,actor,0);
+    if(seat)mmx4_coop_leave_second();
+    if(touch)mmx4_coop_armor_dismount(cpu,seat);
+}
 static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(scene_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected())return 0;
     uint32_t actor=cpu->gpr[4];unsigned owner=0;
@@ -1558,6 +1593,13 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
         door_pool_actor(actor) && psx_mod_read_byte(actor+1)==8 &&
         mmx4_coop_both_door_players() && !departed &&
         mmx4_coop_alive(0) && mmx4_coop_alive(1);
+    if(address==0x800C1994u && !old_door && !door_wait) {
+        /* Doors admit heroes on foot. Eject at the source, after both native
+         * eligibility tests, so Both mode still waits for the actual partner. */
+        if(pair_candidate) {
+            dismount_at_door(cpu,0,actor);dismount_at_door(cpu,1,actor);
+        }else dismount_at_door(cpu,owner,actor);
+    }
     uint16_t old_min=psx_mod_read_half(0x801419D6u);
     uint32_t door_box=pair_candidate?psx_mod_read_word(actor+0x68):0;
     int door_right=(int16_t)psx_mod_read_half(actor+10);

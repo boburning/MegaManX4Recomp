@@ -537,7 +537,19 @@ static void second_tick(CPUState *cpu,uint32_t address) {
     if(enrolled && !failed && mmx4_coop_lifecycle_can_tick()) {
         uint8_t input[6];capture(PAD,input,sizeof input);
         uint8_t camera_view[0xFC],camera_origins[3][20];
-        int own_camera=split_views && mmx4_coop_split_camera_copy(1,camera_view);
+        /* The authored bike entrance consumes the canonical autoscroll
+         * delta at3B898. While READY locks the cameras, the saved Split shadow
+         * can have equal current/previous origins; using it removes six pixels
+         * of travel each tick and makes P2 chase a moving entrance threshold.
+         * Keep the shared entrance camera through P2's native mode0 only, then
+         * restore ordinary independent camera movement. No poses are copied. */
+        int chaser_entrance=psx_mod_read_byte(PLAY+12)==5 &&
+            !psx_mod_read_byte(PLAY+13) && mmx4_coop_alive(0) &&
+            psx_mod_read_byte(MMX4_VEHICLE) && !psx_mod_read_byte(MMX4_VEHICLE+1) &&
+            second.vehicle[0] && !second.vehicle[1] && second.vehicle[4]==1 &&
+            !second.vehicle[5];
+        int own_camera=split_views && !chaser_entrance &&
+            mmx4_coop_split_camera_copy(1,camera_view);
         if(own_camera)for(unsigned layer=0;layer<3;++layer) {
             uint32_t camera=0x801419B0u+layer*0x54u+8u;
             capture(camera,camera_origins[layer],20);

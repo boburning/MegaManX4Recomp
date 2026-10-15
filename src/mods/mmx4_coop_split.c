@@ -200,17 +200,19 @@ static int train_foreground(CPUState *cpu,uint32_t address) {
     background_call=1;
     return mmx4_coop_finish(cpu,result);
 }
-static int train_background(CPUState *cpu,uint32_t address) {
+static int moving_background(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
-    unsigned kind=address==0x800D8648u?0u:2u;
+    unsigned storm=address==0x800DA298u;
+    unsigned kind=storm?5u:address==0x800D8648u?0u:2u;
     if(background_call || !available() || mmx4_coop_projected() ||
-       psx_mod_read_byte(MMX4_PLAY+12)!=8 || actor<TRAIN_POOL ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=(storm?7u:8u) || actor<TRAIN_POOL ||
        actor>=TRAIN_POOL+TRAIN_SLOTS*TRAIN_ACTOR_BYTES ||
        (actor-TRAIN_POOL)%TRAIN_ACTOR_BYTES ||
        psx_mod_read_byte(actor+1)!=kind)return 0;
     initialize_cameras();
     uint8_t before[CAMERA_BYTES],after[CAMERA_BYTES];
     read_bytes(CAMERA,before,CAMERA_BYTES);
+    unsigned storm_live=storm && psx_mod_read_byte(actor+4)<=1;
     background_actor=actor;background_dx=background_parallax=0;background_call=1;
     uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     read_bytes(CAMERA,after,CAMERA_BYTES);
@@ -223,7 +225,9 @@ static int train_background(CPUState *cpu,uint32_t address) {
      * Apply their writes to both saved views, never to canonical RAM again.
      * 0/2 add +18 speed and its arithmetic half. Only D9218's inspected
      * 800D964C branch also adds foreground motion; replace that contribution
-     * with the other view's own displacement when the branch actually runs. */
+     * with the other view's own displacement when the branch actually runs.
+     * Storm Owl's kind5 controller uses the same pool/timing, but DA358's
+     * foreground contribution uses signed truncation instead of sra. */
     for(unsigned seat=0;seat<2;++seat) {
         uint32_t shadow=state+16u+seat*CAMERA_BYTES;
         uint32_t seat_dx=psx_mod_read_word(shadow+8)-psx_mod_read_word(shadow+20);
@@ -245,12 +249,28 @@ static int train_background(CPUState *cpu,uint32_t address) {
                     uint32_t seat_part=layer==1?seat_dx:signed_half(seat_dx);
                     value+=seat_part-native_part;
                 }
+                if(storm_live && axis==8 && seat!=owner) {
+                    /* DA358 adds the shared aircraft speed and each view's
+                     * foreground displacement/2 (near) or /4 (far). Retail
+                     * divides previous-current with truncation toward zero;
+                     * preserve its negative odd fixed-unit rounding exactly.
+                     * The one controller also advances stage events: never
+                     * rerun it for the other camera. */
+                    uint32_t native_part=byte_word(before,20)-byte_word(before,8);
+                    uint32_t seat_part=0u-seat_dx;
+                    for(unsigned n=0;n<layer;++n) {
+                        native_part=signed_half(native_part+(native_part>>31));
+                        seat_part=signed_half(seat_part+(seat_part>>31));
+                    }
+                    value+=native_part-seat_part;
+                }
                 psx_mod_write_word(shadow+base+axis,value);
             }
         }
     }
     background_call=background_parallax=0;background_actor=background_dx=0;
-    psx_mod_counter_add("mmx4.coop.split-train-background-ticks",1);
+    psx_mod_counter_add(storm?"mmx4.coop.split-storm-background-ticks":
+                               "mmx4.coop.split-train-background-ticks",1);
     return mmx4_coop_finish(cpu,result);
 }
 static int jungle_background(CPUState *cpu,uint32_t address) {
@@ -658,8 +678,9 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800257BCu,draw_armor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B7078u,mushroom_stage_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800BA57Cu,mushroom_stage_camera);
-    psx_mod_register_function_filter_plugin(COOP_ID,0x800D8648u,train_background);
-    psx_mod_register_function_filter_plugin(COOP_ID,0x800D9218u,train_background);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800D8648u,moving_background);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800D9218u,moving_background);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800DA298u,moving_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D964Cu,train_foreground);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800C0D98u,destructible_camera_unlock);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8ED4u,jungle_background);

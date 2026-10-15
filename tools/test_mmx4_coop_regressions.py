@@ -243,13 +243,20 @@ class Scenarios:
     def jet_intro(self, capture=None):
         self.r.fixture(1,5,0,self.campaign)
         deadline=time.monotonic()+45;entered=None;ready_peak=0
-        rider_phases=[set(),set()]
+        rider_phases=[set(),set()];maximum_separation=0;release_frames=[None,None]
         while time.monotonic()<deadline:
             play=self.r.read(0x801721c0,0x20)
             if play[0]==6 and play[12]==5:
                 mirror=self.r.read(self.r.diagnostic(),0x6d0)
                 bodies=[mirror[at:at+0xe4] for at in (0x300,0x100)]
                 bikes=[mirror[at:at+0xb0] for at in (0x620,0x200)]
+                native_frame=struct.unpack_from('<I',mirror,4)[0]
+                for seat,bike in enumerate(bikes):
+                    if bike[0] and bike[4:6]==bytes([1,1]) and release_frames[seat] is None:
+                        release_frames[seat]=native_frame
+                if all(b[0] and b[1]==0 and b[4]==1 and b[5]<=1 for b in bikes):
+                    xs=[struct.unpack_from('<i',body,8)[0]for body in bodies]
+                    maximum_separation=max(maximum_separation,abs(xs[0]-xs[1])/65536)
                 # The bike can advance correctly while its rider stays in
                 # pose0. Check each actual rider throughout the entrance;
                 # enrollment and READY counts alone missed this regression.
@@ -283,10 +290,13 @@ class Scenarios:
         else:raise TimeoutError('Jet entrance did not release both bikes')
         assert entered and ready_peak<=1,(entered,ready_peak)
         assert all({1,2}.issubset(phases) for phases in rider_phases),rider_phases
+        assert all(frame is not None for frame in release_frames),release_frames
+        assert abs(release_frames[1]-release_frames[0])<=32,('Jet entrance release delay',release_frames)
         assert all(body[0x17]==body[0xd4]==0x41 for body in bodies),[b.hex() for b in bodies]
         self.sample('jet-concurrent-controls',True)
         return dict(**entered,ready_peak=ready_peak,both_native_entrances=True,
-                    rider_phases=[sorted(phases) for phases in rider_phases])
+                    rider_phases=[sorted(phases) for phases in rider_phases],
+                    maximum_intro_separation=maximum_separation,release_frames=release_frames)
 
     def jet(self):
         entrance=self.jet_intro()
@@ -764,6 +774,107 @@ class Scenarios:
                 stage_actors.append(dict(slot=slot,type=actor[1],data=actor.hex()))
         return dict(players=self.sample('volcano-start')['players'],
                     enemies=self.enemies(),stage_actors=stage_actors)
+
+    def ride_armor(self, capture=None):
+        """Board the authored Raiden, attack, eject and reload its checkpoint.
+
+        Fixtures select an original spawn and place P2 above the native armor;
+        actual overlap, controls, boarding/ejection and actors remain native.
+        """
+        self.load(4,1,3)
+        approach=self.sample('ride-armor-authored-boss-approach')['players'][0]
+        self.load(4,1,2)
+        def vehicle(seat):
+            return self.r.read(self.r.diagnostic()+(0x200 if seat else 0x620),0xb0)
+        def shot(label):
+            self.sample(label,True)
+            if capture:capture(label)
+        world=vehicle(0)
+        assert world[0] and world[1]==1 and world[4:6]==bytes([1,0]),world.hex()
+        x,y=struct.unpack_from('<ii',world,8);hp=world[0x5c]&127
+        assert hp>0 and not self.r.players()[0][0xc5]
+        self.r.teleport(1,x//65536,y//65536-70)
+        deadline=time.monotonic()+12
+        while time.monotonic()<deadline:
+            armor=vehicle(1);body=self.r.players()[1]
+            if body[0xc5] and armor[0] and armor[1]==1 and armor[5]==1:break
+            time.sleep(.025)
+        else:raise TimeoutError('P2 did not complete native Ride Armor boarding')
+        assert not vehicle(0)[0] and armor[0x97]&0x40
+        shot('ride-armor-boarded')
+        before=struct.unpack_from('<i',armor,8)[0]
+        try:
+            self.r.input(0xffdf,1);time.sleep(.45)
+        finally:self.r.release()
+        armor=vehicle(1)
+        assert struct.unpack_from('<i',armor,8)[0]>before and armor[0x5c]&127==hp
+        attacks=set()
+        for pulse in range(3):
+            self.r.input(0x7fff,1)
+            deadline=time.monotonic()+.22
+            while time.monotonic()<deadline:
+                pool=self.r.read(self.r.diagnostic()+0x480,16*8)
+                for at in range(0,len(pool),8):
+                    actor=pool[at:at+8]
+                    if actor[0] and 59<=actor[1]<=64:attacks.add(actor[1])
+                time.sleep(.01)
+            self.r.release();time.sleep(.07)
+        shot('ride-armor-attack')
+        assert attacks,('Native armor attack actors missing',vehicle(1).hex())
+        # Retail admits the eject edge in idle/walk. A Jump pressed during
+        # the last punch is consumed; release and finish the native attack.
+        deadline=time.monotonic()+6
+        while time.monotonic()<deadline:
+            if vehicle(1)[5]==1:break
+            time.sleep(.025)
+        else:raise TimeoutError('Ride Armor attack did not return to idle')
+        self.r.release();time.sleep(.12)
+        try:
+            self.r.input(0xbfef,1)
+            deadline=time.monotonic()+6
+            while time.monotonic()<deadline:
+                if not self.r.players()[1][0xc5]:break
+                time.sleep(.015)
+            else:raise TimeoutError('Up+Jump did not eject P2 from Ride Armor')
+        finally:self.r.release()
+        world=vehicle(0)
+        assert world[0] and world[1]==1 and not world[0x97]&0x40 and world[0x5c]&127==hp
+        assert not vehicle(1)[0] and not self.r.players()[0][0xc5]
+        shot('ride-armor-native-eject')
+        # Mount a fresh authored checkpoint actor, then have the partner
+        # enter Dragoon's original arena approach. Its native scene must
+        # dismount the transported rider before starting the incoming beam.
+        self.load(4,1,2)
+        world=vehicle(0);x,y=struct.unpack_from('<ii',world,8)
+        self.r.teleport(1,x//65536,y//65536-70)
+        deadline=time.monotonic()+12
+        while time.monotonic()<deadline:
+            if self.r.players()[1][0xc5] and vehicle(1)[5]==1:break
+            time.sleep(.025)
+        else:raise TimeoutError('Second native armor boarding did not complete')
+        # Keep both within the authored approach so Unified's midpoint
+        # camera can actually activate the native arena actors. Skipping P1
+        # thousands of pixels ahead alone bypasses those activation strips.
+        self.r.teleport(1,int(approach['x'])-24,int(approach['y']))
+        self.r.teleport(0,int(approach['x']),int(approach['y']))
+        try:
+            self.r.input(0xffdf,0)
+            self.wait('ride-armor-native-partner-handoff',lambda row:
+                not self.r.players()[1][0xc5] and any(
+                    p['door'] or p['script'] or p['action']==0 for p in row['players']),15)
+        finally:self.r.release()
+        self.wait('ride-armor-partner-returned-on-foot',lambda row:
+            not row['blocked'] and all(p['active'] and p['visible'] and p['hp']>0 and
+                not p['door'] and not p['script'] and p['action']>=2 for p in row['players']),35,True)
+        assert not self.r.players()[1][0xc5]
+        shot('ride-armor-partner-scene-on-foot')
+        self.load(6,1,1)
+        assert all(not b[0xc5] for b in self.r.players())
+        assert all(not vehicle(seat)[0] for seat in (0,1))
+        shot('ride-armor-stage-cleanup')
+        return dict(native_armor_mount=True,attack_types=sorted(attacks),
+                    native_ejection=True,world_armor_hp=hp,native_partner_scene_dismount=True,
+                    new_stage_on_foot=True)
 
     def volcano_entry(self):
         cases=[]
@@ -1750,7 +1861,7 @@ def main():
     parser.add_argument('--boss-scaling',action='store_true')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

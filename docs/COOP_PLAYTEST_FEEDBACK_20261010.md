@@ -99,6 +99,10 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 89 | [ ] | Storm Owl has an extra wall inside the boss arena | Original Playtest21 replay resumed from its native checkpoint: all10,572 retained tail checks pass. Moving left during the fight pans into wall scenery at cameraX1994-1995; the target min/max remain0/2240. Both surviving P2 and P1 alone reproduce it through the native camera. No new terrain/collision is added. Root admission/bounds cause remains under investigation; not claimed fixed in Playtest22. `beads-eio.9.121` |
 | 90 | [x] | Both living players perform their victory poses together | Default for normal Maverick clears: retain both native bodies/animations without partner withdrawal or a second theme/reward. Actual native Jet defeats pass in both campaigns; X fist raise and Zero salute are visible together, one clear/Continue cache update is retained. A save made during both poses reloads and finishes correctly. Midboss, survivor-only and story/movie paths keep native flow. Lifecycle snapshot/digest tests and all34 Windows title checks pass. `beads-eio.9.122` |
 | 91 | [x] | Intro act1 exit cutscene starts before Both-player door finishes | Metadata6 first recording reproduces a nonfatal stall. Defer D0580 admission until physical clearance: old replay branch leaves camera min4368/P1 stuckX4872/P2 hidden; fixed branch commits min4848, ends the native walk atX4912, and enters intro part2. Separate from older unconfirmed crash item53. `beads-eio.9.123` |
+| 92 | [x] | P2 Ride Armor ownership and safe dismounts | Corrected native mount mode; original Raiden boards, moves, attacks and ejects for either P2 character. Native partner arena transport ejects on foot; world armor retains HP. Both-door waiting/admission, death, occupied world slot and stage cleanup covered. `beads-eio.9.128` |
+| 93 | [x] | P2 Jet Stingray intro looks slower than Playtest19 | Shared entrance camera restores missing autoscroll displacement. Both rosters regain controls 6/7 native frames apart in Split netplay; Unified 5 frames. Native poses and one READY retained. `beads-eio.9.129` |
+| 94 | [x] | Storm Owl background graphics corrupt in Split netplay | Confirmed P2 sky froze while P1 sky advanced. Publish native kind5 aircraft/parallax movement into both independent views without repeating stage events. Native before/after and peer CRCs pass. `beads-eio.9.130` |
+| 95 | [ ] | Slash Beast background graphics are glitched | New paired stage8/0 recording found. Private two-peer inspection verifies 5,400 original native frame/state checks; captures show no clear fault yet. Need an image or video timestamp identifying the bad layer. `beads-eio.9.131` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -1191,3 +1195,48 @@ runtime/archive hashes match the tested binaries. Items53/86/89 remain open.
 
 Private qualification: `build-pr23/release22-qa/release-receipt-final.json`.
 Release issue: `beads-eio.9.127`.
+
+## October 15 follow-up: Ride Armor and moving backgrounds
+
+Ride Armor now retries the native unoccupied mode0 for P2 after P1 gets first
+choice. Ownership transfers the authored actor, preserving its HP and location.
+Committed doors and partner departures use the native ejection path; waiting
+for a Both door does not eject early. A forced departure leaves unoccupied
+armor in the world, or retires the private actor if another world vehicle
+already occupies the native slot. Native Raiden checks cover both rosters in
+Split netplay, local mounted save/load and death, manual ejection, stage cleanup
+and local Unified transport into Dragoon's arena. Eagle uses the same native
+mount/ejection interface; its full flight/combat playtest is not claimed here.
+
+Jet's saved Split camera omitted the foreground scrolling displacement used
+by the authored bike entrance. The entrance now uses the canonical camera
+until P2's native mode0 finishes. Both rosters retain their native poses and
+share one READY actor. Measured control releases are 307/314 and 265/271 in
+the two Split runs; local Unified is 267/272. The retained Playtest19 capture
+also has the old delay, so a newly introduced regression is not established.
+
+Storm Owl's kind5 controller runs after the camera snapshots. The baseline
+shows P1 sky movement of 52px and P2 movement of 0px over 100 transport ticks.
+The fixed two-peer run advances both by 52px, keeps shared stage events at one
+pass, and agrees on core/mod state through tick 4260. Per-view foreground
+contributions retain the native signed truncation for half/quarter parallax.
+Both presentation probes have zero verification mismatches and VRAM leaks.
+
+Slash Beast remains open. Its new recording contains 5552/5550 native rows
+with an identical shared prefix. A private instrumented two-peer inspection
+verified 5,400 original native frame/state hashes and 184 peer core/mod samples.
+Only the private copy's build/plan header labels were translated; state checks
+were retained and production replay still refuses network sessions. Captures
+through P1's death have not identified a clear corrupt background layer. An
+image or timestamp is needed to distinguish the reported fault from intended
+train/scene transitions. The earlier direct endpoint teleport was unsafe and
+is excluded as reproduction evidence.
+
+Windows: 34/34 CTests pass. Linux release-config combat, lifecycle, diagnostics
+and Split boundary binaries compile/run. The lifecycle fixture also hits a
+pre-existing assertion with NDEBUG disabled on unchanged HEAD; release-mode
+CHECK assertions remain active and pass. Native QA is private under
+`build-pr23/feedback22-20261015`, including `qualification-net-x-final`,
+`qualification-net-zero`, `qualification-local-armor-handoff`,
+`storm-native-before`, `storm-native-fixed` and
+`slash-recorded-inspection-3`. No new release has been published by this work.

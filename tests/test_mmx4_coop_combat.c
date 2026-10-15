@@ -180,6 +180,16 @@ uint16_t mmx4_coop_input(unsigned seat) { (void)seat;return 0; }
 
 uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) {
     (void)a1;
+    if(address==0x8003DC44u) {
+        psx_mod_write_byte(a0+5,(uint8_t)a1);psx_mod_write_byte(a0+6,0);return 0;
+    }
+    if(address==0x8003EEF8u) {
+        CHECK(psx_mod_read_byte(a0+5)==0xB && !psx_mod_read_byte(a0+6));
+        psx_mod_write_byte(a0+6,1);psx_mod_write_byte(a0+0x97,
+            (uint8_t)(psx_mod_read_byte(a0+0x97)&~0x40u));
+        psx_mod_write_byte(MMX4_PLAYER+0xC5,0);
+        psx_mod_write_word(MMX4_PLAYER+0x68,0x800F8BC4u);return 0;
+    }
     /* Re-entered native dispatch must decline the active host filter. */
     if (address!=ARMOR_MOUNT && address!=NATIVE_AI && address!=0x8002B3C0u)
         CHECK(!filter(address)(cpu,address));
@@ -611,7 +621,7 @@ static void setup_armor(void) {
     setup();memset(second_vehicle,0,sizeof second_vehicle);
     psx_mod_write_byte(MMX4_VEHICLE+1,1);
     psx_mod_write_byte(MMX4_VEHICLE+4,1);
-    psx_mod_write_byte(MMX4_VEHICLE+5,9);
+    psx_mod_write_byte(MMX4_VEHICLE+5,0);
     psx_mod_write_byte(MMX4_VEHICLE+6,1);
     psx_mod_write_byte(MMX4_VEHICLE+0x5C,17);
 }
@@ -631,7 +641,7 @@ static void armor_handoff(void) {
     /* Native dismount hands the same remaining-HP actor back to the world. */
     psx_mod_write_byte(MMX4_PLAYER+0xC5,0);
     psx_mod_write_byte(MMX4_VEHICLE+0x97,0);
-    psx_mod_write_byte(MMX4_VEHICLE+5,9);
+    psx_mod_write_byte(MMX4_VEHICLE+5,0);
     psx_mod_write_word(MMX4_VEHICLE+8,44u<<16);
     mmx4_coop_combat_project_end(MIRROR);mmx4_coop_leave_second();
     CHECK(psx_mod_read_byte(MMX4_VEHICLE)==1 && !second_vehicle[0]);
@@ -645,6 +655,34 @@ static void armor_handoff(void) {
     CHECK(psx_mod_read_byte(MMX4_VEHICLE)==1);
     setup_armor();second_vehicle[0]=1;mount_accept[1]=1;
     invoke_armor();CHECK(armor_updates==1 && !mount_checks);
+}
+static void armor_forced_dismount(void) {
+    CPUState cpu={0};
+    setup_armor();mount_accept[1]=1;invoke_armor();
+    uint8_t first[0xE4];memcpy(first,address_ptr(MMX4_PLAYER),sizeof first);
+    mmx4_coop_armor_dismount(&cpu,1);
+    /* The root projection adapter commits this callback on leave. */
+    mmx4_coop_enter_second();mmx4_coop_combat_project_end(MIRROR);mmx4_coop_leave_second();
+    CHECK(!projected && !second[0xC5] && !second_vehicle[0]);
+    CHECK(psx_mod_read_byte(MMX4_VEHICLE) && psx_mod_read_byte(MMX4_VEHICLE+0x5C)==17);
+    CHECK(psx_mod_read_byte(MMX4_VEHICLE+5)==0xB);
+    CHECK(!(psx_mod_read_byte(MMX4_VEHICLE+0x97)&0x40));
+    CHECK(!memcmp(first,address_ptr(MMX4_PLAYER),sizeof first));
+    /* Preserve another actual world vehicle on forced private abandonment. */
+    setup_armor();mount_accept[1]=1;invoke_armor();
+    psx_mod_write_byte(MMX4_VEHICLE,1);psx_mod_write_byte(MMX4_VEHICLE+0x5C,29);
+    mmx4_coop_enter_second();mmx4_coop_armor_dismount(&cpu,1);
+    CHECK(projected && !mmx4_coop_armor_mounted());
+    mmx4_coop_leave_second();CHECK(!second_vehicle[0]);
+    CHECK(psx_mod_read_byte(MMX4_VEHICLE+0x5C)==29);
+    /* Chasers and private presentation transactions must remain unchanged. */
+    setup_armor();psx_mod_write_byte(MMX4_PLAYER+0xC5,255);
+    psx_mod_write_byte(MMX4_VEHICLE+1,0);psx_mod_write_byte(MMX4_VEHICLE+0x97,0x40);
+    mmx4_coop_armor_dismount(&cpu,0);CHECK(psx_mod_read_byte(MMX4_PLAYER+0xC5)==255);
+    psx_mod_write_byte(MMX4_VEHICLE+1,1);local_view=1;
+    mmx4_coop_armor_dismount(&cpu,0);CHECK(psx_mod_read_byte(MMX4_PLAYER+0xC5)==255);
+    local_view=0;mmx4_coop_armor_dismount(&cpu,0);
+    CHECK(!psx_mod_read_byte(MMX4_PLAYER+0xC5) && psx_mod_read_byte(MMX4_VEHICLE));
 }
 static void independent_hit_tokens(void) {
     setup();token_model=1;attack_present[0]=attack_present[1]=1;
@@ -996,7 +1034,7 @@ static void double_counterpart_damage(void) {
 }
 
 int main(void) {
-    accepted_events();independent_solids();aim_selection();effect_ownership();armor_handoff();independent_hit_tokens();
+    accepted_events();independent_solids();aim_selection();effect_ownership();armor_handoff();armor_forced_dismount();independent_hit_tokens();
     split_native_targets();
     double_counterpart_damage();
     slash_intro_leader();

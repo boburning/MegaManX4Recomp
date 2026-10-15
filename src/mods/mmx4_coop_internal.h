@@ -86,6 +86,9 @@ void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat);
 void mmx4_coop_combat_reset(void);
 unsigned mmx4_coop_vehicle_effect_owner(uint32_t actor);
 void mmx4_coop_combat_project_end(uint32_t vehicle_mirror);
+/* Current projection's native Ride Armor; Chasers are deliberately excluded. */
+int mmx4_coop_armor_mounted(void);
+void mmx4_coop_armor_dismount(CPUState *cpu,unsigned seat);
 int mmx4_coop_combat_actor_context(void);
 int mmx4_coop_combat_canonical_call(CPUState *cpu,uint32_t address,
     PSXModFunctionFilterCallback callback);

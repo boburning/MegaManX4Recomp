@@ -136,13 +136,22 @@ void fail(const char *reason) {
 void begin() {
     started=true;
     if(!replay_path.empty()) {
-        if(psx_mod_netplay_is_active()) {fail("offline replay only");return;}
+        if(psx_mod_netplay_is_active()) {
+            fail("offline replay only");return;
+        }
         replay.open(std::filesystem::u8path(replay_path));
         std::string format,execution,plan,build;
-        if(!std::getline(replay,format) || format!="# mmx4-input-v2" ||
-           !std::getline(replay,execution) || execution!=std::string("# execution ")+PSX_EXECUTION_ID ||
-           !std::getline(replay,plan) || plan!="# plan "+plan_identity() ||
-           !std::getline(replay,build) || build!="# build " MMX4_DIAGNOSTIC_BUILD_ID) {
+        if(!std::getline(replay,format) || !std::getline(replay,execution) ||
+           !std::getline(replay,plan) || !std::getline(replay,build)) {
+            fail("recording header is incomplete");return;
+        }
+        if(format!="# mmx4-input-v2" ||
+           execution!=std::string("# execution ")+PSX_EXECUTION_ID ||
+           plan!="# plan "+plan_identity() || build!="# build " MMX4_DIAGNOSTIC_BUILD_ID) {
+            fprintf(stderr,"mmx4.diagnostics: replay header mismatches: format=%d execution=%d plan=%d build=%d\n",
+                format!="# mmx4-input-v2",execution!=std::string("# execution ")+PSX_EXECUTION_ID,
+                plan!="# plan "+plan_identity(),build!="# build " MMX4_DIAGNOSTIC_BUILD_ID);
+            fprintf(stderr,"mmx4.diagnostics: active plan %s\n",plan_identity().c_str());
             fail("recording version/build/mod settings do not match");return;
         }
         replaying=true;
