@@ -92,7 +92,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 83 | [x] | Sigma stage 1 second boss door kills P1 and traps P2 in local Unified | Reproduced from the Playtest19 local recording with Both-player doors. Colonel starts WARNING before the physical crossing completes, cancelling the aperture exemption and crushing P1. Defer that admission until the doorway and camera finish. Native continuation reaches the fight with both visible, clear controls and unchanged40/31HP; no partner departure. Windows34 checks and Linux lifecycle check pass. `beads-eio.9.116` |
 | 84 | [x] | Iris graphics are corrupt in X campaign | Reproduced in exact Playtest19 local replay (17,303 verified input hashes). Story hook selected stage13's sprite slot instead of stage11's, leaving Double's graphics loaded. Correct the selector; native Iris introduction and armor/core combat render correctly. `beads-eio.9.86` |
 | 85 | [x] | Iris sometimes fails to load properly | Reproduced a stalled intro after a Both-player door. Door minimum2048 conflicts with Iris waiting for camera2032. After physical clearance, admit her intro with the camera inside the authored arena. Fresh entry and recovery from the captured stall reach her fight with both players visible and no partner warp. `beads-eio.9.86` |
-| 86 | [ ] | P2 disappears at Sigma stage 3 entry | Not reproduced in local Unified or a fresh hidden two-peer Split match. With recorded mod settings, P2 defeats Double while P1 is dead, enters11/1 and moves fromX384 to486 with visible body/HUD on both rendered screens. Peer CRCs agree; no render-state leaks. This is a bounded new scenario, not an exact network recording replay. Keep open for a recording capturing the disappearance. `beads-eio.9.117` |
+| 86 | [x] | P2 disappears at Sigma stage 3 entry | Playtest24 archive/video captures P2 dying before P1 defeats Double; slot11's section-carry rule wrongly preserves that corpse into the next fortress level. Treat11/0-to11/1 as a fresh level. Fixed Split/Either two-peer run follows the native Double defeat into Sigma3: both seats return at32 HP, both move, shared lives stay2, and recorded core/mod checks match through7488. Ordinary mid-stage corpse carry is retained. `beads-eio.9.117` |
 | 87 | [x] | Double might use incorrect sprites in Zero's story | Not reproduced after Playtest20's shared sprite-selector correction. Fresh native Zero campaign with the optional sequence on defeats Iris, loads Double with correct inspected sprites, defeats him and returns to Zero's normal movie route. Campaign1 and two lives are retained; one sequel/two boss defeats are recorded. No additional graphics patch. `beads-eio.9.86` |
 
 | 88 | [x] | P2 alone gets stuck in intro part2's crusher shaft | Metadata6 local Unified Playtest21 recording verifies all9,313 retained native checks. Dead P1 remains above; crusher C0558 tests only P1 Y, so panels never close/open the onward route. Use living P2 Y for that predicate while retaining native panel movement/map edits/contact. The verified recorded-state continuation escapes using wall jumps to X4175/Y443, HP23 unchanged and P1 still dead at X863/Y394. Both-campaign and negative predicate checks pass. `beads-eio.9.120` |
@@ -108,6 +108,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 98 | [x] | P2 Ride Armor draws its rider at the wrong sprite priority | Ride Armor and Ride Chaser share C5=FF; only Chaser kind0 gets the bike ordering now. Native Ride Armor retains rider bucket2/vehicle bucket3. Local and Split captures validate the rider; native mounting, attacks and ejection pass. Related X return safety is tracked separately as100. `beads-eio.9.135` |
 | 99 | [x] | Boss-scaling cooldown dropdown with independent player cooldowns | Default method is per-player full native cooldowns; reduced shared cooldowns remain selectable and scaling itself stays optional. Native Jet/Spider damage, overlapping attacker windows and death pass; Split Jet combat also passes with matching peer state. Preserve one native expiry tick for Spider's temporary hit-table cleanup. Timers reset on slot/stage reuse and persist in X4P8 snapshots/digests. `beads-eio.9.136` |
 | 100 | [x] | A returning P2 X is crushed after forced Ride Armor dismount | Native HP80 store80033C14 proves ceiling+floor crush at5558/683 after the scripted leader position5558/682. Preventing an extra8px descent alone was insufficient. Probe the returning body's terrain, try bounded same-height offsets, and defer if no safe landing exists. The native Zero-campaign case keeps X alive, returns him on foot when the leader reaches clear ground, and passes next-stage cleanup. `beads-eio.9.137` |
+| 101 | [x] | Second boss doors are missing in Split netplay with Both-player doors | Reproduced two-peer Cyber Peacock: General8 at992/2496 never spawned after the outer door. The supplemental scan now admits unflagged doors while preserving native eligibility and other scripted activation. Fixed native run crosses both doors without teleporting either player, restores both controls, and matches peer core/mod state through5892. `beads-eio.9.139` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -1339,3 +1340,46 @@ Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release24-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.138`. Existing items53,86 and89 remain open.
+
+### Playtest 24 second-door and fortress-arrival follow-up (2026-10-15)
+
+Item101 reproduces in two native Split peers with Both-player doors. Cyber's
+outer door crosses normally, but the stationary camera leaves the inner door
+at992/2496 inside the viewport without admitting it through retail's moving-edge
+placement strips. The supplemental placement scan excluded General8 doors.
+The correction includes unflagged doors in that scan while retaining native
+eligibility, the shared visit latch, directional exclusions and the exclusions
+for other scripted General actors. The focused fixture fails with the old code
+and passes with the correction, including allocation failure and duplicate-view
+checks. The fixed two-peer Cyber run admits the inner door, completes both
+crossings without partner departure, and restores both controls in the boss
+room. Peer core/mod checks match through5892. Evidence:
+`paired-doors-fixed6/report.json`, case `stage=6`, and its timestamped door
+observations/screenshots. The overall harness exit is failed: an additional Web
+Spider setup placed P2 in terrain before the door check, so that case is not
+qualified. Earlier loading/transport and screenshot-helper failures are also
+excluded from the native success claim.
+
+The new item86 recording and accompanying Double video establish a different
+survivor from the earlier test: P2 dies, then P1 wins. The archive records P2
+HP0/state3 at Sigma stage3 initialization. Retail uses slot11 section0 for the
+story boss and section1 for the next fortress level; the ordinary section-carry
+policy incorrectly carries the corpse across that level boundary. The
+correction enrolls both seats afresh there. Old-code failure and corrected
+Windows/Linux fixtures cover both dead seats, unchanged shared lives and the
+ordinary mid-stage corpse policy. The fixed two-peer Split run explicitly uses
+Either-player doors (the owner-reported setting; the archive's saved setting is
+Both). It kills P2, defeats native Double with charged X attacks, then follows
+the native story transition. Both seats arrive in11/1 active at32 HP and move
+under controller input; shared lives remain2. All234 common recorded core/mod
+samples agree through7488. Evidence: `sigma-survivor-fixed/report.json`, captures
+`double-p2-dead`, `double-defeated`, `sigma3-ready` and `sigma3-both-move`.
+The rendering captures for this case are canonical headless buffers; the native
+enrollment and control checks establish the corrected lifecycle behavior.
+
+All 34 Windows title checks pass across the suite and a retry of the detached
+startup-log child timing test. Four focused Linux fixtures pass; this is not a
+new Linux release build or cross-OS gameplay qualification. Private evidence is
+under `build-pr23/feedback24-20261015`; original archives remain unmodified.
+The combined receipt is `completed-native-checks.json`. Items53 and89 remain
+open; these fixes have not yet been packaged as a new release.

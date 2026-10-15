@@ -315,11 +315,18 @@ void mmx4_coop_lifecycle_reset(void) {
     unsigned team_was_dead=first_was_dead &&
         (second_was_dead || departed || (!body[0] && !mmx4_coop_lifecycle_hidden(1)));
     unsigned life_preserved=lives>=last_lives && !(last_lives==0 && lives==255);
+    /* Retail packs the story boss (Final Weapon2) and Sigma stage3 into
+     * slot11's two sections. This is a new level after Double/Iris, not an
+     * ordinary mid-stage transfer that should keep a teammate dead. */
+    unsigned fortress_stage=stage_known && stage==11 && last_stage==11 &&
+        last_section==0 && section==1;
     /* Invoked before the core clears its second body. A section transfer
      * preserves the partner's state. Changed stage or lost shared life is a
      * team respawn. Section identity comes from native PLAY, never host time. */
-    carry_resources=stage_known && stage==last_stage && life_preserved &&
+    carry_resources=stage_known && stage==last_stage && !fortress_stage && life_preserved &&
         !team_was_dead && (!full_stage_load || section!=last_section);
+    if(fortress_stage && (first_was_dead || second_was_dead))
+        psx_mod_counter_add("mmx4.coop.fortress-stage-rejoins",1);
     carry_dead=carry_resources && second_was_dead;
     carry_first_dead=carry_resources && first_was_dead;
     /* Original 80035240 refills HP for spawn policies0 and-2. A living

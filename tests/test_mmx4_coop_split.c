@@ -655,6 +655,44 @@ static void four_aligned_placements(CPUState *cpu) {
     CHECK(psx_mod_read_byte(table+24)==0x11 && !scan_direction);
     native_directional_scans=0;native_table=TABLE;
 }
+static void stationary_second_door(CPUState *cpu) {
+    /* Cyber Peacock's real paired-door handoff fixes the camera at688.
+     * The second door at992 is already inside that view, outside all moving
+     * edge strips. Its native category4/type8 placement must still spawn. */
+    uint32_t table=native_table=0x800F7480u;
+    split=ready=1;local_scope=projected=0;script_owner=-1;
+    psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,6);
+    psx_mod_write_byte(MMX4_PLAY+13,1);
+    psx_mod_write_byte(MMX4_PLAY+0x10,0);psx_mod_write_byte(MMX4_PLAY+0x1C,0);
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+    second[0]=second[4]=1;
+    actor_position(MMX4_PLAYER,900,2507);second_position(870,2506);
+    memset(ram+(CAMERA&0x1FFFFFu),0,0xFCu);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t view=saved_camera(seat,0);
+        psx_mod_write_half(view+10,688);psx_mod_write_half(view+0x16,688);
+        psx_mod_write_half(view+14,2304);psx_mod_write_half(view+0x1A,2304);
+    }
+    memset(ram+(table&0x1FFFFFu),0,7u*8u);
+    psx_mod_write_word(0x800F43C8u+6u*8u+4u,table);
+    placement(0,688,2496,4);psx_mod_write_byte(table,1);psx_mod_write_byte(table+1,8);
+    placement(1,992,2496,4);psx_mod_write_byte(table+9,8);psx_mod_write_byte(table+10,4);
+    /* Do not extend full-view admission to switches, script regions, or
+     * placements with authored movement-direction offsets. */
+    placement(2,992,2496,4);psx_mod_write_byte(table+17,20);
+    placement(3,992,2496,3);
+    placement(4,992,2496,4);psx_mod_write_byte(table+32,0x20);psx_mod_write_byte(table+33,8);
+    placement(5,1300,2496,4);psx_mod_write_byte(table+41,8);
+    psx_mod_write_byte(table+6u*8u+3u,255);
+    native_directional_scans=1;allocations=capacity=0;
+    invoke(cpu,0x80028E24u);CHECK(!allocations && !psx_mod_read_byte(table+8));
+    capacity=16;invoke(cpu,0x80028E24u);CHECK(allocations==1);
+    CHECK(psx_mod_read_byte(table+8)&1u);
+    for(unsigned i=2;i<6;++i)CHECK(!(psx_mod_read_byte(table+i*8u)&1u));
+    invoke(cpu,0x80028E24u);CHECK(allocations==1); /* Both views, one actor. */
+    native_directional_scans=0;native_table=TABLE;
+}
 static uint32_t train_pool_tick(CPUState *cpu) {
     /* QA87 observed D9218 with a0=80169CB8, ra=80021BDC. Original21B34
      * dispatches four30-byte actors via800F2AB4 AFTER27850/27D40/281E8. */
@@ -1122,6 +1160,7 @@ int main(void) {
     CHECK(mmx4_coop_split_snapshot_ready());
     destructible_camera_unlocks(&cpu);
     four_aligned_placements(&cpu);
+    stationary_second_door(&cpu);
     jungle_backgrounds(&cpu);
     puts("mmx4_coop_split_test: PASS");return 0;
 }

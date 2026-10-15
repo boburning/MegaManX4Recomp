@@ -608,7 +608,8 @@ static int placement_allocate(CPUState *cpu,uint32_t address) {
     if((psx_mod_read_byte(state+VISITS_OFFSET+index/8u)&(1u<<(index&7u))) ||
        (supplemental && (psx_mod_read_byte(record)&0x70u)) ||
        (supplemental && !(category<3u ||
-            (category==4u && psx_mod_read_byte(record+1u)==4u)))) {
+            (category==4u && (psx_mod_read_byte(record+1u)==4u ||
+                             psx_mod_read_byte(record+1u)==8u))))) {
         psx_mod_counter_add("mmx4.coop.split-respawn-suppressed",1);
         return mmx4_coop_finish(cpu,0);
     }
@@ -656,6 +657,11 @@ static int scan_players(CPUState *cpu,uint32_t address) {
         result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     }
     write_bytes(CAMERA,canonical,CAMERA_BYTES);
+    /* A paired doorway can finish with the next door already inside a
+     * stationary view, missing retail's moving-edge spawn strips. Include
+     * unflagged General8 doors in the bounded full-view scan above; native
+     * eligibility still owns admission, and shared visits prevent copies.
+     * Other scripted General actors retain directional-only activation. */
     supplemental=1;
     for(unsigned region=0;region<count;++region)scan_rectangle(cpu,regions[region]);
     supplemental=scanning=0;

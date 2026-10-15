@@ -1394,6 +1394,29 @@ int main(void) {
     p2[4]=1;p2[3]=1;p2[0x5C]=32;mmx4_coop_lifecycle_enrolled(&cpu);
     CHECK(p2[4]==3 && !p2[0x5C]);CHECK(psx_mod_read_byte(PLAYER+4)==1);
 
+    /* The native stage11 slot spans two fortress levels: the story boss
+     * (section0) and Sigma stage3 (section1). A dead teammate rejoins at
+     * that new level, while ordinary stage section transfers keep corpses. */
+    for(unsigned story=0;story<2;++story)for(unsigned dead=0;dead<2;++dead) {
+        reset();psx_mod_write_byte(PLAY+0x0C,(uint8_t)(story?11:1));
+        mmx4_coop_lifecycle_reset();
+        if(dead) {p2[4]=3;p2[0x5C]=0;}
+        else {psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);}
+        psx_mod_write_byte(PLAY+0x0D,1);full_stage(&cpu,0);stage_initialization(&cpu,0);
+        psx_mod_write_byte(PLAYER+4,0);psx_mod_write_byte(PLAYER+0x5C,0);
+        mmx4_coop_lifecycle_reset();
+        CHECK(carry_resources==!story);
+        CHECK(carry_dead==(!story && dead) && carry_first_dead==(!story && !dead));
+        psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,48);
+        p2[0]=p2[3]=p2[4]=1;p2[0x5C]=48;
+        mmx4_coop_lifecycle_enrolled(&cpu);
+        if(story) {
+            CHECK(p2[0x5C]==48 && psx_mod_read_byte(PLAYER+0x5C)==48);
+            CHECK(p2[4]<2 && psx_mod_read_byte(PLAYER+4)<2);
+        }
+        CHECK(psx_mod_read_byte(PLAY+0x44)==2);
+    }
+
     /* Native forward-section refill policies0/-2 heal living P2 to the
      * initialized upgraded maximum, while -1 retains personal resources. */
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned policy=0;policy<3;++policy) {
