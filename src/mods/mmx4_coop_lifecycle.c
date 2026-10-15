@@ -1305,6 +1305,21 @@ static void storm_survivor_exit(CPUState *cpu,uint32_t address) {
        !psx_mod_read_byte(PLAY+13) && !mmx4_coop_alive(0) && mmx4_coop_alive(1))
         cpu->gpr[2]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
 }
+static void intro_survivor_crusher(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[16];
+    /* C0558 compares PLAYER.y against each authored closing threshold.
+     * With P1 dead above the shaft, no panel closes and the escape route never
+     * develops. Substitute only the predicate's loaded Y; keep the native
+     * movement, tile edits and two-player solid-contact pass canonical. */
+    if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12) ||
+       psx_mod_read_byte(PLAY+13)!=1 || mmx4_coop_alive(0) || !mmx4_coop_alive(1) ||
+       actor<0x80165A30u || actor>=0x80165A30u+32u*0x8Cu ||
+       (actor-0x80165A30u)%0x8Cu || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=3 || psx_mod_read_byte(actor+4)!=1)return;
+    cpu->gpr[3]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),12)>>16);
+}
 static int fan_latch(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
     if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
@@ -1802,6 +1817,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x80033BC8u,death_detection);
     psx_mod_register_function_filter_plugin(ID,0x8002166Cu,stage_scripts);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
+    psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);
     psx_mod_register_function_filter_plugin(ID,0x8002AD7Cu,shared_ride_ready);
     psx_mod_register_function_filter_plugin(ID,0x80021D20u,script_text);

@@ -56,6 +56,7 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
     PSXModFunctionEntryCallback callback) {
     (void)id;(void)callback;
     assert((address==0x800DA44Cu && expected==0x284218D0u) ||
+           (address==0x800C0574u && expected==0x00041100u) ||
            (address==0x80081250u && expected==0x14620005u));return 1;
 }
 uint8_t psx_mod_read_byte(uint32_t a) {return ram[a&0x1FFFFFu];}
@@ -1125,6 +1126,31 @@ int main(void) {
     CHECK(cpu.gpr[2]==6353);
     psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,12);
     cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
+    /* The recorded P1 corpse stays at Y394 while P2 reaches the crusher
+     * floor at Y955. Only that survivor may satisfy the native Y predicate. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned ineligible=0;ineligible<9;++ineligible) {
+        reset();uint32_t crusher=0x80165A30u+0x8Cu;
+        psx_mod_write_byte(PLAY+12,0);psx_mod_write_byte(PLAY+13,1);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
+        psx_mod_write_half(PLAYER+14,394);p2[14]=0xBB;p2[15]=3;
+        psx_mod_write_byte(crusher,1);psx_mod_write_byte(crusher+1,3);psx_mod_write_byte(crusher+4,1);
+        cpu.gpr[16]=crusher;cpu.gpr[3]=394;
+        switch(ineligible) {
+        case 1:psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,16);break;
+        case 2:p2[0x5C]=0;p2[4]=2;break;
+        case 3:psx_mod_write_byte(PLAY+12,7);break;
+        case 4:psx_mod_write_byte(PLAY+13,0);break;
+        case 5:psx_mod_write_byte(crusher+1,8);break;
+        case 6:psx_mod_write_byte(crusher+4,2);break;
+        case 7:cpu.gpr[16]=crusher+1;break;
+        case 8:warp_phase=1;warp_owner=0;p2[0]=0;break;
+        }
+        intro_survivor_crusher(&cpu,0x800C0574u);
+        CHECK(cpu.gpr[3]==(ineligible?394u:955u));
+        CHECK(psx_mod_read_half(PLAYER+14)==394 &&
+            psx_mod_read_byte(PLAYER+0x5C)==(ineligible==1?16:0));
+    }
     reset();p2[4]=2;p2[0x5C]=0;mmx4_coop_enter_second();
     mmx4_coop_call(&cpu,0x80035A6Cu,PLAYER,0);mmx4_coop_leave_second();
     CHECK(!psx_mod_read_byte(PLAY+0x12) && !psx_mod_read_byte(PLAY+0x1C));

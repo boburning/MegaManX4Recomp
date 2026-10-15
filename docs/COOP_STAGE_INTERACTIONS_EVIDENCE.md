@@ -662,3 +662,27 @@ owner-confirmed authentic crush and is not evidence for changing crush policy.
 No new P2-specific elevator failure or staircase-offset cause is established;
 items36/46 remain open. All owned native probes are hidden and use private
 cards, without desktop input or changes to the user's running game.
+
+## Metadata6: intro survivor crusher shaft (2026-10-14)
+
+Item88 / beads-eio.9.120. Exact Playtest21 local recording1792032378566405
+verifies all9,313 retained native input/state checks. P1 Zero dies at X863/Y394;
+X/P2 reaches the crusher floor at X3758/Y955 with23HP. All22 solid type3 panels
+remain in state1: original C0558 loads only PLAYER.y at C0570 before comparing
+with the authored Y944 threshold. Moving only the corpse coordinates in a
+private diagnostic branch starts the panels, confirming the singleton predicate.
+
+The C0574 instruction callback substitutes living P2's signed Y when P1 is
+unavailable, only for the original intro section1 type3 waiting panels. It keeps
+original movement, tile updates and shared collision handling. No invulnerability
+or crush policy is changed. Both character arrangements and eight ineligible
+contexts pass the focused lifecycle test.
+
+From the exact recorded endpoint, the corrected continuation uses ordinary
+Right/jump pulses to climb and leave the shaft at X4175/Y443, with P2 HP23 and
+P1 still dead/unmoved. The initial idle probe was inappropriate: those panels
+remain a real crushing hazard; the successful check climbs during their movement.
+Private evidence: build-pr23/feedback21-metadata6-20261015/{exact-intro2,
+inspect-intro2-b,hole-before-probe,hole-native-escape-final}. The inspection build
+translated only its private debug identity header; all original state checks
+remain, and the separate original production replay verifies without translation.
