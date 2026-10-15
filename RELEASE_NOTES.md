@@ -1,4 +1,35 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.22
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.23
+
+**Ride Armor for Player 2, smoother bike entrances, and restored backgrounds.**
+
+- **P2 Ride Armor:** X or Zero can board the stage's armor, move and attack,
+  then eject with Up + Jump. Doors and partner teleport sequences dismount
+  the rider safely. Waiting at a Both-player door keeps the rider mounted
+  until the door actually opens.
+- **Jet Stingray:** P2 keeps pace during the native bike entrance, with the
+  correct rider animation and one shared READY sequence.
+- **Storm Owl:** P2's sky keeps scrolling in Split mode. Missing background
+  columns are restored.
+- **Slash Beast:** Mountain and sky regions no longer disappear into black
+  space as the background scrolls.
+
+Includes all Playtest 22 fixes. Windows ZIP and Linux x86_64 AppImage.
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+our defaults; Split is experimental. **Fight Double and Iris** stays optional
+and default off. Campaign memory-card saves carry forward; use those instead
+of older playtest savestates when updating.
+
+The separate Storm Owl arena wall/camera report (item89), earlier unconfirmed
+intro-door crash (item53), and Sigma stage3 P2 disappearance (item86) remain open.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.22
 
 **Intro-stage progression fixes and shared victory poses.**
 

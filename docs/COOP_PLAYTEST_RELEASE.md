@@ -1,4 +1,22 @@
-# Co-op playtest 22
+# Co-op playtest 23
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.23)
+with Windows ZIP and Linux x86_64 AppImage. Adds native P2 Ride Armor ownership
+and safe dismounts (92), corrects Split Jet entrance timing (93), and restores
+Storm Owl/Slash Beast background scrolling and panorama wrapping (94-95).
+
+Native validation covers local Unified and both character rosters in Split
+netplay. The Slash recording verifies 5,490 original native input/state checks.
+Ride Armor validation uses Raiden; full Eagle flight/combat testing is not
+claimed. The separate Storm arena wall/camera report89 remains open, together
+with items53 and86. Unified and Stacked remain defaults; Split is experimental.
+Both peers must update. Campaign memory-card saves carry forward.
+
+Release issue: `beads-eio.9.132`. Private package receipt:
+`build-pr23/release23-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 22
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.22)
 with Windows ZIP and Linux x86_64 AppImage. Includes the surviving P2 intro
