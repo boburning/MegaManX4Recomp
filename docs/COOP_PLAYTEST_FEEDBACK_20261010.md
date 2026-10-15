@@ -1318,3 +1318,24 @@ clear ground. If the local search has no valid landing, the passenger remains
 hidden until one is available. It does not bypass terrain damage or disable
 crushes. The bounded terrain-model tests cover both passenger seats, safe
 offsets, deferral without health loss and completion after a valid site appears.
+
+### Playtest 24 package qualification (2026-10-15)
+
+Items96-100 ship with production Windows ZIP and Linux x86_64 AppImage packages.
+The README acknowledgment is above the title and present in both packages.
+Compiled source `f973422`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows and 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `55af9dcf00fb5f2d17cc1dc2250cb3e3a106ce7dbe9a909ad46452216ea20554` |
+| Linux x86_64 AppImage | `bb8a05a177af809c326a561295fef8f6ff7560773cb2c0fc4276d7c4f5dee16d` |
+
+Private receipt: `build-pr23/release24-qa/release-receipt-final.json`.
+Release tracking: `beads-eio.9.138`. Existing items53,86 and89 remain open.
