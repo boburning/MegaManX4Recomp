@@ -1,4 +1,32 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.24
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.25
+
+**Boss doors restored in Split netplay, and both heroes return for Sigma stage 3.**
+
+- **Boss doors:** Fixed missing inner boss doors in Split-camera netplay when
+  using the Both-player door rule. Both players can cross the paired doors
+  together without a partner teleport.
+- **Sigma stage 3:** If Player 2 dies during Double and Player 1 wins, Player 2
+  now returns at the next level with health and working controls. Shared lives
+  are preserved. The fix also covers the reverse survivor case.
+
+Includes all Playtest 24 fixes. **Windows ZIP and Linux x86_64 AppImage.**
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. Boss scaling and Fight Double and Iris
+remain optional and default off. Scaling's cooldown method defaults to Separate
+for each player, with Reduced shared cooldowns available.
+
+Campaign memory-card saves carry forward. Use those when updating between
+playtests. The earlier unconfirmed intro-door crash (item53) and Storm Owl arena
+wall/camera report (item89) remain open.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.24
 
 **Safer co-op transitions and separate boss hit cooldowns for X and Zero.**
 

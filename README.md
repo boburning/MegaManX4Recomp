@@ -8,7 +8,7 @@
 Mega Man X4 on Windows and Linux, with **two-player co-op in alpha**.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Download Playtest 24](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.24)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Download Playtest 25](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.25)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -27,7 +27,7 @@ as the other hero. Arrive together, tackle bosses together, and share team retri
 | Arrange your HUD | Stacked lifebars by default, or side by side. Independent screens show their own player's meter. |
 | Set the door rule | Either player opens boss doors by default. Optionally wait for both living, present players. |
 | Fight both story bosses | Opt into Double **and** Iris in sequence; return to the inner door for the second fight. |
-| Turn up the challenge | Optional double effective boss health with shorter shared hit cooldowns. |
+| Turn up the challenge | Optional double effective boss health with separate hit cooldowns for each player, or reduced shared cooldowns. |
 | Enable the secret codes | Ultimate Armor X's code and Black Zero can be enabled together. X still needs a capsule for the armor. |
 
 The extra boss encounters, scaling and character codes are **off by default**.

@@ -1,4 +1,26 @@
-# Co-op playtest 24
+# Co-op playtest 25
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.25)
+with Windows ZIP and Linux x86_64 AppImage. Restores inner boss doors in
+Split/Both-player netplay (101) and brings a dead teammate back at the new
+fortress level after Double/Iris (86).
+
+Native two-peer Split tests verify Cyber Peacock's two doors and the exact
+P2-dead/P1-defeats-Double transition to Sigma stage3. Both seats return healthy
+and controllable without consuming a shared life. Focused tests cover both
+possible survivors and preserve ordinary mid-stage corpse carry.
+
+Unified cameras and Stacked HUD remain defaults; Split is experimental.
+Both peers must update. Campaign memory-card saves carry forward; use those
+when updating between playtests. All existing optional enhancement defaults
+are preserved.
+
+Items53 and89 remain open. Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.140`. Private package receipt:
+`build-pr23/release25-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 24
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.24)
 with Windows ZIP and Linux x86_64 AppImage. Includes Cyber Peacock flip safety,
