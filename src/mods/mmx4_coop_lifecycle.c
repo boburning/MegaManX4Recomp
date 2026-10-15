@@ -1452,6 +1452,18 @@ static int paired_colonel_admission(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.boss-admission-waits",1);
     return mmx4_coop_finish(cpu,0);
 }
+static void paired_intro_camera(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!mmx4_coop_ready() || psx_mod_local_view_scope() || !both_door_scope() ||
+       both_door.serial!=script_serial || both_door.phase>3 ||
+       psx_mod_read_byte(PLAY+0x0C) || psx_mod_read_byte(PLAY+0x0D))return;
+    /* D0554 admits the act1 exit as soon as the camera reaches4848. That
+     * can precede physical clearance of a paired door. Its command then
+     * aborts the crossing before the new minimum is committed, so native
+     * auto-walk chases a moving camera forever. Retain the original wait
+     * until crossing finishes; the authored scene then runs once. */
+    cpu->gpr[3]=cpu->gpr[2]^1u;
+}
 static void paired_iris_camera(CPUState *cpu,uint32_t address) {
     (void)address;
     if(!mmx4_coop_ready() || psx_mod_local_view_scope() || !both_door_scope() ||
@@ -1827,6 +1839,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
     psx_mod_register_function_filter_plugin(ID,0x800C1D90u,both_door_traversal);
     psx_mod_register_function_filter_plugin(ID,0x80085F8Cu,paired_colonel_admission);
+    psx_mod_register_instruction_plugin(ID,0x800D0580u,0x14620006u,paired_intro_camera);
     psx_mod_register_instruction_plugin(ID,0x80081250u,0x14620005u,paired_iris_camera);
     psx_mod_register_function_filter_plugin(ID,0x8002D7E4u,both_door_map);
     psx_mod_register_function_filter_plugin(ID,0x8002D724u,both_door_map);

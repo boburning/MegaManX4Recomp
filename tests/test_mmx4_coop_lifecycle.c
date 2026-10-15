@@ -57,6 +57,7 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
     (void)id;(void)callback;
     assert((address==0x800DA44Cu && expected==0x284218D0u) ||
            (address==0x800C0574u && expected==0x00041100u) ||
+           (address==0x800D0580u && expected==0x14620006u) ||
            (address==0x80081250u && expected==0x14620005u));return 1;
 }
 uint8_t psx_mod_read_byte(uint32_t a) {return ram[a&0x1FFFFFu];}
@@ -1844,6 +1845,21 @@ int main(void) {
     reset();mmx4_coop_call(&cpu,0x80085F8Cu,0x8013BED0u,0);
     CHECK(psx_mod_read_byte(0x8013BED5u)==1 && warp_pending);
     cpu.gpr[31]=0;
+
+    /* Intro act1 must not start its camera-relative auto-walk while the
+     * paired door still owns the old scrolling minimum. */
+    for(unsigned phase=1;phase<=4;++phase) {
+        CHECK(!open_both_door(&cpu,actor));
+        both_door.stage=0;both_door.section=0;
+        psx_mod_write_byte(PLAY+12,0);psx_mod_write_byte(PLAY+13,0);
+        both_door.phase=(uint8_t)phase;cpu.gpr[2]=cpu.gpr[3]=4848;
+        paired_intro_camera(&cpu,0x800D0580u);
+        CHECK((cpu.gpr[3]==4848)==(phase==4));
+        ++script_serial;cpu.gpr[3]=4848;paired_intro_camera(&cpu,0x800D0580u);
+        CHECK(cpu.gpr[3]==4848);
+    }
+    reset();cpu.gpr[2]=cpu.gpr[3]=4848;paired_intro_camera(&cpu,0x800D0580u);
+    CHECK(cpu.gpr[3]==4848);
 
     /* Iris's camera wait accepts the completed crossing anywhere inside her
      * room, but cannot start her script while either body is in the doorway. */

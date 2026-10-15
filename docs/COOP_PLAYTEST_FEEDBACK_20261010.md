@@ -99,6 +99,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 89 | [ ] | Storm Owl has an extra wall inside the boss arena | Metadata6 includes a full local Unified recording with Both-player doors, scaling and optional story bosses enabled. Exact replay/arena collision investigation in progress. `beads-eio.9.121` |
 | 90 | [ ] | Both living players perform their victory poses together | Requested default behavior: native character poses together without withdrawing/rejoining the partner; retain one campaign completion and survivor-only exits. Investigation pending correctness fixes. `beads-eio.9.122` |
 
+| 91 | [x] | Intro act1 exit cutscene starts before Both-player door finishes | Metadata6 first recording reproduces a nonfatal stall. Defer D0580 admission until physical clearance: old replay branch leaves camera min4368/P1 stuckX4872/P2 hidden; fixed branch commits min4848, ends the native walk atX4912, and enters intro part2. Separate from older unconfirmed crash item53. `beads-eio.9.123` |
+
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
 October11's bounded follow-up for item36 now includes the preceding native

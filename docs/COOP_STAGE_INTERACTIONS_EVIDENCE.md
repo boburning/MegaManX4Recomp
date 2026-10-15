@@ -686,3 +686,22 @@ Private evidence: build-pr23/feedback21-metadata6-20261015/{exact-intro2,
 inspect-intro2-b,hole-before-probe,hole-native-escape-final}. The inspection build
 translated only its private debug identity header; all original state checks
 remain, and the separate original production replay verifies without translation.
+
+## Metadata6: intro act1 paired-door admission (2026-10-14)
+
+Item91 / beads-eio.9.123. First recording1792032245331228 reproduces a nonfatal
+story stall; its6,569 retained checks verify. The native D0580 camera comparison
+admits the act1 exit when cameraX reaches4848 even if Both-player traversal is
+still waiting on the partner. Command21 aborts that crossing before its new
+minimum commits. Native34150 then walks toward cameraX+64 while the camera
+follows left; P1 reaches the wall at4874 and C0 never finishes. P2 stays hidden.
+
+The instruction predicate retains the original wait through door phases1-3.
+Once physical clearance commits minimum4848, the authored walk ends at4912.
+A verified pre-admission recording prefix supplies the native A/B: identical
+controller approach stalls on the old build (min4368, P1X4872, P2 hidden), while
+the fixed build crosses and completes the story into stage0/section1. Focused
+checks cover phases1-4, unrelated/no crossing and stale serials. No cutscene
+or native story is skipped. Private evidence: feedback21-metadata6-20261015/
+{inspect-intro1,intro1-prefix,intro-door-before,intro-door-fixed,intro-door-final}
+under build-pr23. Older item53's reported act2 process crash stays unconfirmed.
