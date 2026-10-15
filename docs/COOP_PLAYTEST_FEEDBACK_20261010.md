@@ -1262,3 +1262,19 @@ translation is confined to the private inspection copy. See private evidence
 `storm-panorama-fixed`, `slash-recorded-inspection-3` and
 `slash-panorama-inspection-verified` under the same QA directory. The original
 uncertainty for item 95 is resolved; no new screenshot is needed from the owner.
+
+### Playtest 23 package qualification (2026-10-15)
+
+Items 92-95 ship from compiled source `25af248`: P2 Ride Armor with safe native
+dismounts, Jet Stingray entrance timing, Storm Owl sky motion, and the native
+panorama wrapping shared with Slash Beast. Items 53, 86 and 89 remain open.
+
+All 34 Windows and 28 Linux title checks pass. The Windows ZIP and Linux AppImage
+pass hidden launcher/controller/netplay UI checks, eight matching native option
+offers, execution/co-op identity checks, portable startup logs, and fresh default
+recordings of 181 native inputs per platform. Development controls are disabled.
+The AppImage layout and final package hashes pass. These checks do not claim
+a new live Windows-to-Linux gameplay qualification.
+
+Private receipt: `build-pr23/release23-qa/release-receipt-final.json`.
+Release tracking: `beads-eio.9.132`.

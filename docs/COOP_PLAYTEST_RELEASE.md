@@ -16,6 +16,19 @@ Release issue: `beads-eio.9.132`. Private package receipt:
 `build-pr23/release23-qa/release-receipt-final.json`.
 Player-facing changes are in [release notes](../RELEASE_NOTES.md).
 
+Compiled source `25af248`, framework `9bd4c20f9`, UI `248c347`.
+All 34 Windows and 28 Linux title checks pass. Both production packages pass
+hidden launcher/controller/netplay UI checks, eight matching native option
+offers, execution/co-op identity checks, portable startup logs and fresh default
+recordings of 181 native inputs. Both debug control modes are disabled. The
+AppImage passes its layout checks, and archive hashes match the tested packages.
+This release does not claim a new live Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `a5ffe79c169d9e1cda54ebbb3582b45957e820499777f67004635d3fe54bd11b` |
+| Linux x86_64 AppImage | `43f88484890eeb1d567cebd941283e724a780057ba9b537ed31b06e6c3254c62` |
+
 ## Previous co-op playtest 22
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.22)
