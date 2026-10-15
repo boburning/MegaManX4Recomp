@@ -56,6 +56,23 @@ static int scroll_mapping(unsigned mode, int x, int *value) {
     default: return 0;
     }
 }
+static void background_tile_policy(unsigned layer,int *x,int *y,
+                                   unsigned *mirror_x,uint16_t *bank) {
+    (void)y;(void)mirror_x;(void)bank;
+    if(!layer || layer>=3)return;
+    uint32_t camera=LAYERS+layer*0x54u;
+    unsigned first=psx_mod_read_byte(camera+0x4Du),last=psx_mod_read_byte(camera+0x4Eu);
+    unsigned width=psx_mod_read_byte(0x80172224u);
+    if(first>last || last>=width)return;
+    /* Native273F8..274D4 wraps the scrolling producer's columns between
+     * these inclusive map screens. Background planes can cross either end
+     * while their camera is still inside the adjacent screen. Resolve that
+     * same authored panorama here instead of dropping those tiles. Keep
+     * foreground edges and physical camera/terrain coordinates unchanged. */
+    int start=(int)first*256,period=(int)(last-first+1)*256;
+    int column=(*x-start)%period;if(column<0)column+=period;
+    *x=start+column;
+}
 static void mmx4_bg_begin(CPUState *cpu, uint32_t address) {
     (void)address;
     gpu_ws_bg2d_begin_view_layer(cpu->gpr[4],psx_mod_read_word(0x1f800108u),6u);
@@ -90,7 +107,7 @@ static void mmx4_bg_end(CPUState *cpu, uint32_t address) {
         psx_mod_read_word(0x1f80000cu),width,width?stride/width:0,stride,layer,
         psx_mod_read_byte(b+0x4du),psx_mod_read_byte(b+0x4eu)};
     int packets=psx_capcom_background_render(&background,arena,psx_mod_read_word(0x1f800000u),
-        &map,sx,sy,view,packet,NULL);
+        &map,sx,sy,view,packet,background_tile_policy);
     if (packets>=0) psx_mod_counter_add("mmx4.renderer.tiles",(uint32_t)packets);
     else psx_mod_counter_add("mmx4.renderer.invalid-layer",1);
 }

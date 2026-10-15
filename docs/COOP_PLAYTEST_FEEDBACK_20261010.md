@@ -101,8 +101,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 91 | [x] | Intro act1 exit cutscene starts before Both-player door finishes | Metadata6 first recording reproduces a nonfatal stall. Defer D0580 admission until physical clearance: old replay branch leaves camera min4368/P1 stuckX4872/P2 hidden; fixed branch commits min4848, ends the native walk atX4912, and enters intro part2. Separate from older unconfirmed crash item53. `beads-eio.9.123` |
 | 92 | [x] | P2 Ride Armor ownership and safe dismounts | Corrected native mount mode; original Raiden boards, moves, attacks and ejects for either P2 character. Native partner arena transport ejects on foot; world armor retains HP. Both-door waiting/admission, death, occupied world slot and stage cleanup covered. `beads-eio.9.128` |
 | 93 | [x] | P2 Jet Stingray intro looks slower than Playtest19 | Shared entrance camera restores missing autoscroll displacement. Both rosters regain controls 6/7 native frames apart in Split netplay; Unified 5 frames. Native poses and one READY retained. `beads-eio.9.129` |
-| 94 | [x] | Storm Owl background graphics corrupt in Split netplay | Confirmed P2 sky froze while P1 sky advanced. Publish native kind5 aircraft/parallax movement into both independent views without repeating stage events. Native before/after and peer CRCs pass. `beads-eio.9.130` |
-| 95 | [ ] | Slash Beast background graphics are glitched | New paired stage8/0 recording found. Private two-peer inspection verifies 5,400 original native frame/state checks; captures show no clear fault yet. Need an image or video timestamp identifying the bad layer. `beads-eio.9.131` |
+| 94 | [x] | Storm Owl background graphics corrupt in Split netplay | Confirmed P2 sky froze while P1 sky advanced. Publish native kind5 aircraft/parallax movement into both independent views without repeating stage events; restore native panorama wrapping to remove black columns. Native before/after and peer CRCs pass. `beads-eio.9.130` |
+| 95 | [x] | Slash Beast background graphics are glitched | Reproduced large missing mountain/sky regions around recorded input2730. Independent drawing discarded native wrapped panorama columns. Title drawing policy restores the authored background; strict private replay and screenshots validate it. `beads-eio.9.131` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
@@ -1222,7 +1222,7 @@ pass, and agrees on core/mod state through tick 4260. Per-view foreground
 contributions retain the native signed truncation for half/quarter parallax.
 Both presentation probes have zero verification mismatches and VRAM leaks.
 
-Slash Beast remains open. Its new recording contains 5552/5550 native rows
+Initial Slash Beast assessment (superseded by the panorama follow-up below). Its new recording contains 5552/5550 native rows
 with an identical shared prefix. A private instrumented two-peer inspection
 verified 5,400 original native frame/state hashes and 184 peer core/mod samples.
 Only the private copy's build/plan header labels were translated; state checks
@@ -1240,3 +1240,25 @@ CHECK assertions remain active and pass. Native QA is private under
 `qualification-net-zero`, `qualification-local-armor-handoff`,
 `storm-native-before`, `storm-native-fixed` and
 `slash-recorded-inspection-3`. No new release has been published by this work.
+
+
+## October 15 panorama follow-up
+
+Final visual review isolated the second graphics fault shared by Storm Owl
+and Slash Beast. Native 273F8..274D4 wraps source columns within each background
+plane's inclusive screen interval. The authored-map renderer instead rejected
+those columns, leaving black strips or large missing regions while the scroll
+crossed an interval edge. A title-specific read-only tile policy now reproduces
+that horizontal wrap for layers 1/2. Foreground boundaries, camera positions,
+collision and shared GPU memory stay untouched. Windows/Linux packet fixtures
+cover both sides, negative coordinates, invalid intervals and foreground edges.
+
+Storm's native two-peer capture now has continuous city/sky across the entire
+view, and both skies still scroll with matching core/mod checks through 4291.
+Slash's original recording reproduces the large black mountain/sky region near
+input 2730. Comparing original-state captures at 2731/2734 shows the full panorama
+restored. The replay retained all original native frame/state checks; header
+translation is confined to the private inspection copy. See private evidence
+`storm-panorama-fixed`, `slash-recorded-inspection-3` and
+`slash-panorama-inspection-verified` under the same QA directory. The original
+uncertainty for item 95 is resolved; no new screenshot is needed from the owner.

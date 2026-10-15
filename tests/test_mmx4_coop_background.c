@@ -66,5 +66,27 @@ int main(void){
     CHECK(tiles==2u*22u*16u && (psx_mod_read_word(arena+12)&0xFFFFu)==0x10u);
     split=0;mmx4_bg_end(&cpu,0x80026894u);CHECK(tiles==2u*22u*16u);
     split=1;local=0;mmx4_bg_end(&cpu,0x80026894u);CHECK(tiles==2u*22u*16u);
+    /* Storm/Slash panoramas wrap the authored screen interval. The native
+     * producer273F8 wraps a column left of screen2 onto the final screen;
+     * an independent renderer must not turn that column into black space. */
+    for(unsigned stage=7;stage<=8;++stage) {
+        psx_mod_write_byte(MMX4_PLAY+12,(uint8_t)stage);
+        psx_mod_write_byte(0x80172224u,8);psx_mod_write_half(0x8013BD48u,8);
+        cpu.gpr[4]=2;uint32_t camera=LAYERS+2*0x54u;
+        psx_mod_write_byte(camera+0x4D,2);psx_mod_write_byte(camera+0x4E,7);
+        for(unsigned col=0;col<8;++col)psx_mod_write_byte(map+16+col,col==7?2:1);
+        psx_mod_write_half(camera+10,496);local=1;
+        unsigned before=tiles;mmx4_bg_end(&cpu,0x80026894u);
+        CHECK(tiles-before==22u*16u);
+        uint32_t packets=arena+2u*PSX_CAPCOM_BG_LAYER_BYTES;
+        CHECK((psx_mod_read_word(packets+12)&0xFFFFu)==0x20u);
+        CHECK((psx_mod_read_word(packets+32+12)&0xFFFFu)==0x10u);
+        int x=-16,y=0;unsigned mirror=0;uint16_t bank=0;
+        background_tile_policy(2,&x,&y,&mirror,&bank);CHECK(x==1520);
+        x=2048;background_tile_policy(2,&x,&y,&mirror,&bank);CHECK(x==512);
+        x=-16;background_tile_policy(0,&x,&y,&mirror,&bank);CHECK(x==-16);
+        psx_mod_write_byte(camera+0x4E,8);x=496;
+        background_tile_policy(2,&x,&y,&mirror,&bank);CHECK(x==496);
+    }
     puts("mmx4_coop_background_test: PASS");return 0;
 }
