@@ -1172,3 +1172,22 @@ item87's reverse story encounter already works with the Playtest20 selector fix.
 
 Private receipt: `build-pr23/release21-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.119`.
+
+
+### Playtest22 package qualification (2026-10-14)
+
+Validated items88/90/91 ship in Playtest22 from source `90a8172`: P2's intro
+crusher trigger, paired intro-door cutscene admission, and both heroes' native
+Maverick victory poses. Both campaigns and saving/loading during the paired
+poses pass native gameplay checks. Normal campaign memory cards are unchanged;
+older playtest host savestates can be rejected by the X4P7 schema.
+
+All34 Windows/all28 Linux title checks pass. Both production packages pass
+hidden launcher/controller/netplay UI checks, eight matching native option
+offers, strict execution/co-op identities, portable startup logs, and181fresh
+native diagnostic inputs without an explicit diagnostics override. Both debug
+control modes are off. The Linux AppImage passes layout checks, and package
+runtime/archive hashes match the tested binaries. Items53/86/89 remain open.
+
+Private qualification: `build-pr23/release22-qa/release-receipt-final.json`.
+Release issue: `beads-eio.9.127`.

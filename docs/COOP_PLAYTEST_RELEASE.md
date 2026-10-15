@@ -4,15 +4,26 @@
 with Windows ZIP and Linux x86_64 AppImage. Includes the surviving P2 intro
 crusher fix (88), paired intro-door admission fix (91), and default shared
 Maverick victory poses (90). Both character campaigns and pose save/load pass
-native gameplay checks; all34 Windows title checks pass before packaging.
+native gameplay checks.
 
 Storm Owl wall/camera item89 remains open after a reproduced native comparison.
 Items53 and86 also remain open. Unified and Stacked remain defaults; Split is
 experimental. Both peers must update. Normal campaign cards carry forward;
 older playtest savestates may be rejected by the new host snapshot schema.
 
-Release issue: `beads-eio.9.127`. Final package qualification and identities
-will be recorded in `build-pr23/release22-qa/release-receipt-final.json`.
+Compiled source `90a8172`, framework `9bd4c20f9`, UI `248c347`.
+All34 Windows and all28 Linux title checks pass. Packaged hidden
+launchers, eight complete option offers, execution/co-op identities, AppImage
+layout, portable startup logs and fresh default recordings pass. Both debug
+control modes are disabled; each untouched package recorded181 native inputs.
+
+Release issue: `beads-eio.9.127`. Package qualification:
+`build-pr23/release22-qa/release-receipt-final.json`.
+
+| Asset | SHA256 |
+| --- | --- |
+| Linux x86_64 AppImage | `6992d4aadc9beb5d5cd33edcf0ab4a5057b051d6839bf9720d7e283009383643` |
+| Windows ZIP | `22da8fe531cf4a713977d043241cb098db1110e3d1aa85b0ff8334bfba030e97` |
 
 ## Previous co-op playtest 21
 
