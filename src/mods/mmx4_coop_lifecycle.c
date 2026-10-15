@@ -49,6 +49,7 @@ static unsigned inventory_initialized, inventory_projected;
 static unsigned stage_known, last_stage, last_section, last_lives;
 static unsigned carry_resources, carry_dead, carry_first_dead, carry_departure, carry_refill;
 static unsigned departed, select_ticks, select_release, rejoin_pending;
+static unsigned paired_victory;
 static unsigned full_stage_load;
 static unsigned reward_committed;
 static unsigned first_before_clear_valid, first_before_clear_dead;
@@ -109,6 +110,7 @@ int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
     MMX4_SNAPSHOT_BOOL(s,carry_resources);MMX4_SNAPSHOT_BOOL(s,carry_dead);
     MMX4_SNAPSHOT_BOOL(s,carry_first_dead);MMX4_SNAPSHOT_BOOL(s,carry_departure);
     MMX4_SNAPSHOT_BOOL(s,carry_refill);MMX4_SNAPSHOT_BOOL(s,departed);
+    MMX4_SNAPSHOT_BOOL(s,paired_victory);
     MMX4_SNAPSHOT_FIELD(s,select_ticks,4,90);MMX4_SNAPSHOT_BOOL(s,select_release);
     MMX4_SNAPSHOT_BOOL(s,rejoin_pending);MMX4_SNAPSHOT_BOOL(s,full_stage_load);
     MMX4_SNAPSHOT_BOOL(s,reward_committed);MMX4_SNAPSHOT_BOOL(s,first_before_clear_valid);
@@ -216,7 +218,7 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     carry_resources=carry_dead=carry_first_dead=carry_departure=carry_refill=0;
     departed=select_ticks=select_release=select_previous=rejoin_pending=0;
     full_stage_load=0;
-    reward_committed=0;
+    reward_committed=paired_victory=0;
     first_before_clear_valid=first_before_clear_dead=0;
     script_active=script_owner=script_serial=0;
     warp_pending=warp_phase=warp_owner=warp_guard=warp_unlocked_ticks=0;
@@ -246,7 +248,7 @@ void mmx4_coop_lifecycle_activate(void) {
 static void full_stage(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
     mmx4_coop_bosses_new_stage();
-    if(!mmx4_coop_projected())full_stage_load=1;
+    if(!mmx4_coop_projected()) {full_stage_load=1;paired_victory=0;}
 }
 static void stage_selection(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;
@@ -257,7 +259,7 @@ static void stage_selection(CPUState *cpu,uint32_t address) {
     mmx4_coop_bosses_new_stage();
     stage_known=0;first_before_clear_valid=0;
     carry_resources=carry_dead=carry_first_dead=carry_departure=carry_refill=0;
-    direct_initial_spawn=0;
+    direct_initial_spawn=paired_victory=0;
     memset(&both_door,0,sizeof both_door);
 }
 static unsigned seat_was_dead(unsigned seat) {
@@ -303,6 +305,7 @@ static void stage_initialization(CPUState *cpu,uint32_t address) {
 }
 
 void mmx4_coop_lifecycle_reset(void) {
+    paired_victory=0;
     uint8_t *body=mmx4_coop_second_body();
     unsigned stage=psx_mod_read_byte(PLAY+0x0C);
     unsigned section=psx_mod_read_byte(PLAY+0x0D);
@@ -561,7 +564,7 @@ void mmx4_coop_lifecycle_camera_bounds(CPUState *cpu,unsigned owner) {
     if(seat)mmx4_coop_leave_second();
 }
 static void request_script_departure(unsigned owner) {
-    if(script_active && !warp_pending && !warp_phase && mmx4_coop_alive(owner^1u)) {
+    if(script_active && !paired_victory && !warp_pending && !warp_phase && mmx4_coop_alive(owner^1u)) {
         warp_owner=owner;warp_pending=1;
     }
 }
@@ -1008,7 +1011,8 @@ static int stage_normal(CPUState *cpu,uint32_t address) {
      * leader's world running until that passenger returns; only a real
      * stage-owner departure should reach native stage termination. */
     if(psx_mod_read_byte(PLAYER+4)==3 &&
-       (!(psx_mod_read_byte(PLAYER+0x5C)&127u) || mmx4_coop_lifecycle_hidden(0)) &&
+       (!(psx_mod_read_byte(PLAYER+0x5C)&127u) || mmx4_coop_lifecycle_hidden(0) ||
+        (paired_victory && mmx4_coop_second_body()[4]!=3)) &&
        mmx4_coop_alive(1)) {
         if(owner>=0) {
             psx_mod_write_byte(PLAY+1,2);result=0;
@@ -1652,11 +1656,45 @@ static int cyber_flip_world(CPUState *cpu,uint32_t address) {
     flip_guard=0;psx_mod_counter_add("mmx4.coop.shared-cyber-flips",1);
     return mmx4_coop_finish(cpu,result);
 }
+static int paired_victory_scene(CPUState *cpu) {
+    unsigned stage=psx_mod_read_byte(PLAY+12);
+    uint32_t actor=psx_mod_read_word(0x1F80004Cu);
+    if(stage<1 || stage>8 || cpu->gpr[4]!=0x14u ||
+       actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
+       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+4)!=2 || (psx_mod_read_byte(actor+0x5C)&127u) ||
+       psx_mod_read_word(PLAY+0x20)!=actor ||
+       departed || warp_pending || warp_phase || !mmx4_coop_alive(0) || !mmx4_coop_alive(1))return 0;
+    unsigned kind=psx_mod_read_byte(actor+1);
+    /* These midbosses continue the stage; their scenes retain retail flow. */
+    return kind!=18 && kind!=33 && kind!=70;
+}
+static int partner_victory_pose(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!paired_victory || !mmx4_coop_ready() || !mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || cpu->gpr[4]!=PLAYER ||
+       !(psx_mod_read_byte(PLAY+0x0F)&0x10u))return 0;
+    /* Match native34F7C's character cleanup/pose, leaving its one shared
+     * music request to P1. Each native33368 then animates its own character
+     * and outgoing beam; no partner withdrawal/return is needed. */
+    mmx4_coop_call(cpu,0x80036088u,PLAYER,0);
+    mmx4_coop_call(cpu,0x80038490u,PLAYER,0);
+    mmx4_coop_call(cpu,0x80036534u,PLAYER,0);
+    mmx4_coop_call(cpu,0x80036E98u,PLAYER,0);
+    psx_mod_write_byte(PLAY+0x1C,1);
+    psx_mod_write_byte(PLAYER+5,0x19);psx_mod_write_byte(PLAYER+6,0);
+    psx_mod_counter_add("mmx4.coop.paired-victory-poses",1);
+    return mmx4_coop_finish(cpu,0);
+}
 static int script_command(CPUState *cpu,uint32_t address) {
     if(command_guard || !mmx4_coop_ready() || !gameplay_scene())return 0;
     unsigned owner=mmx4_coop_projected()?1u:0u;
     unsigned redirect=!owner && !mmx4_coop_alive(0) && mmx4_coop_alive(1);
     if(redirect) {mmx4_coop_enter_second();owner=1;}
+    if(address==0x80036AE4u && paired_victory_scene(cpu)) {
+        paired_victory=1;
+        psx_mod_counter_add("mmx4.coop.paired-victory-scenes",1);
+    }
     unsigned paired_boss=address==0x80036AE4u && both_door_scope() &&
         both_door.serial==script_serial && both_door.phase>=4 &&
         cpu->gpr[31]>=0x80048000u && cpu->gpr[31]<0x80094000u &&
@@ -1769,6 +1807,7 @@ uint32_t mmx4_coop_lifecycle_digest(uint32_t seed) {
     seed=hash_word(seed,inventory_initialized);seed=hash_word(seed,stage_known);
     seed=hash_word(seed,last_stage);seed=hash_word(seed,last_section);
     seed=hash_word(seed,last_lives);seed=hash_word(seed,departed);
+    seed=hash_word(seed,paired_victory);
     seed=hash_word(seed,select_ticks);seed=hash_word(seed,select_release);
     seed=hash_word(seed,rejoin_pending);seed=hash_word(seed,full_stage_load);
     seed=hash_word(seed,reward_committed);
@@ -1861,6 +1900,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C4EC8u,cyber_flip_query);
     psx_mod_register_function_filter_plugin(ID,0x800C4F40u,cyber_flip_world);
     psx_mod_register_function_filter_plugin(ID,0x80036AE4u,script_command);
+    psx_mod_register_function_filter_plugin(ID,0x80034F7Cu,partner_victory_pose);
     psx_mod_register_function_filter_plugin(ID,0x80036B18u,script_command);
     psx_mod_register_function_filter_plugin(ID,0x800311ECu,nonowner_controls);
     psx_mod_register_function_filter_plugin(ID,0x8002C614u,hidden_terrain);

@@ -1326,7 +1326,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x36503458u); /* X4P6, paired physical boss-door state */
+    mmx4_snapshot_fixed(s,0x37503458u); /* X4P7, paired victory presentation */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);

@@ -1112,6 +1112,42 @@ int main(void) {
         CHECK(!psx_mod_read_byte(PLAY+1) && world_calls==1);
         CHECK(psx_mod_read_byte(PLAYER+0x5C)==16 && p2[0x5C]==12);
     }
+    /* A shared victory retains both bodies through the native poses and
+     * waits for the longer character animation before stage termination. */
+    for(unsigned campaign=0;campaign<2;++campaign) {
+        reset();uint32_t boss=0x8013BED0u;
+        psx_mod_write_byte(PLAY+12,5);psx_mod_write_word(PLAY+0x20,boss);
+        psx_mod_write_word(0x1F80004Cu,boss);
+        psx_mod_write_byte(boss,1);psx_mod_write_byte(boss+1,56);psx_mod_write_byte(boss+4,2);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        cpu.gpr[4]=0x14;CHECK(paired_victory_scene(&cpu));
+        departed=1;CHECK(!paired_victory_scene(&cpu));departed=0;
+        psx_mod_write_byte(PLAYER+0x5C,0);CHECK(!paired_victory_scene(&cpu));psx_mod_write_byte(PLAYER+0x5C,16);
+        p2[0x5C]=0;CHECK(!paired_victory_scene(&cpu));p2[0x5C]=12;
+        psx_mod_write_byte(boss+1,70);CHECK(!paired_victory_scene(&cpu));psx_mod_write_byte(boss+1,56);
+        psx_mod_write_byte(boss+0x5C,1);CHECK(!paired_victory_scene(&cpu));psx_mod_write_byte(boss+0x5C,0);
+        mmx4_coop_call(&cpu,0x80036AE4u,0x14,0x40);
+        CHECK(paired_victory && !warp_pending && !warp_phase);
+        Mmx4SnapshotIO count={0};count.mode=MMX4_SNAPSHOT_COUNT;count.ok=1;
+        CHECK(mmx4_coop_lifecycle_snapshot(&count));
+        uint8_t *saved=malloc(count.pos);CHECK(saved);
+        Mmx4SnapshotIO io={saved,NULL,count.pos,0,MMX4_SNAPSHOT_WRITE,1};
+        CHECK(mmx4_coop_lifecycle_snapshot(&io));paired_victory=0;
+        io=(Mmx4SnapshotIO){NULL,saved,count.pos,0,MMX4_SNAPSHOT_READ,1};
+        CHECK(mmx4_coop_lifecycle_snapshot(&io) && paired_victory);free(saved);
+        psx_mod_write_byte(PLAY+0x0F,0x10);
+        cpu.gpr[4]=PLAYER;CHECK(!partner_victory_pose(&cpu,0x80034F7Cu));
+        mmx4_coop_enter_second();
+        CHECK(partner_victory_pose(&cpu,0x80034F7Cu));
+        CHECK(psx_mod_read_byte(PLAYER+5)==0x19 && !psx_mod_read_byte(PLAYER+6));
+        mmx4_coop_leave_second();CHECK(p2[0] && p2[3] && p2[5]==0x19 && p2[0x5C]==12);
+        psx_mod_write_byte(PLAYER+4,3);
+        mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+        CHECK(!psx_mod_read_byte(PLAY+1) && world_calls==1);
+        p2[4]=3;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+        CHECK(psx_mod_read_byte(PLAY+1)==1);
+    }
+    reset();paired_victory=1;fresh_game(&cpu,0);CHECK(!paired_victory);
     /* A completed stage-owner warp has state3 and positive HP; let native
      * stage termination advance, including with a hidden P2 passenger. */
     reset();psx_mod_write_byte(PLAYER+4,3);

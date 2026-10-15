@@ -705,3 +705,48 @@ checks cover phases1-4, unrelated/no crossing and stale serials. No cutscene
 or native story is skipped. Private evidence: feedback21-metadata6-20261015/
 {inspect-intro1,intro1-prefix,intro-door-before,intro-door-fixed,intro-door-final}
 under build-pr23. Older item53's reported act2 process crash stays unconfirmed.
+
+
+## Metadata6: shared Maverick victory poses (2026-10-14)
+
+Item90 / beads-eio.9.122. A defeated main Maverick's native command14 now
+keeps both living/present players for the shared end sequence. Each runs native
+34F7C/33368 character cleanup, pose39 and outgoing beam. P2 omits only the
+shared music request; P1 retains the campaign theme and one reward/save path.
+Native stage termination waits if the other character's outgoing animation
+still runs. Midbosses18/33/70, story/movie endings and unavailable partners
+retain their existing flow.
+
+Actual native P2 attacks defeat reduced-health Jet Stingray in both campaigns.
+Both bodies reach action25/pose39 together: captures show X's raised fist and
+Zero's salute, without partner departure/rearrival. One scene and one P2 pose
+counter fire; the reward and Continue cache retain the native Jet clear.
+An early assertion inspected animation-event+46 instead of pose+17; the native
+run was already completing successfully. A pose savestate also reloads and
+finishes using the same normal confirm input as the initial completion.
+
+The paired flag is reset on campaign/stage changes, included in deterministic
+digest and serialized in X4P7 snapshots. Older X4P6 host states are rejected;
+normal campaign cards are unchanged. Both-roster/negative eligibility, shared
+termination and snapshot roundtrip checks pass, as do all34 Windows title tests.
+Private evidence: feedback21-metadata6-20261015/{victory-x-7,
+native-victory-restored-confirm,victory-zero-final} under build-pr23.
+
+## Metadata6: Storm Owl wall qualification (2026-10-14)
+
+Item89 / beads-eio.9.121 remains open. The full original recording reaches
+Storm Owl; a captured native checkpoint resumes its last10,572 input/state
+checks successfully, retaining all original expectations. In the boss room,
+left movement reaches the authored solid wall at X2154/2155 and cameraX1994/1995,
+exposing large wall panels across the view. Target camera min/max remain0/2240.
+The same pan occurs with P1 alone after P2 is made unavailable; its camera
+filters then pass through the original native routines. This narrows the
+problem beyond a P2-specific camera selection, but does not prove the admission
+bounds match an untouched solo run.
+
+No tile/collision or speculative room clamp is changed. The cause of the
+uncommitted arena minimum still needs investigation. Attempts to replay a
+forced checkpoint reload with the old private harness were not successful
+qualifications and are not counted as a new gameplay defect. Private evidence:
+feedback21-metadata6-20261015/{storm-tail-replay,storm-arena-native,
+storm-arena-left,storm-solo-native-camera}. Playtest22 does not claim this fix.
