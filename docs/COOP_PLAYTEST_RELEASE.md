@@ -1,4 +1,24 @@
-# Co-op playtest 23
+# Co-op playtest 24
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.24)
+with Windows ZIP and Linux x86_64 AppImage. Includes Cyber Peacock flip safety,
+Storm Owl's paired midboss crossing, Ride Armor rider priority and safe grounded
+returns, plus independently timed boss damage immunity (items96-100).
+
+Local native checks and hidden two-peer Split checks cover the requested fixes.
+The grounded-return safety case waits when no nearby terrain fits, then returns
+on foot once a safe site is available. Boss scaling remains optional/default off;
+its cooldown method defaults to Separate for each player, with Reduced shared
+cooldowns selectable. Unified and Stacked remain defaults; Split is experimental.
+Both peers must update. Campaign memory-card saves carry forward; older co-op
+savestates are incompatible with the X4P8 snapshot schema.
+
+Items53,86 and89 remain open. Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.138`. Private package receipt:
+`build-pr23/release24-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 23
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.23)
 with Windows ZIP and Linux x86_64 AppImage. Adds native P2 Ride Armor ownership

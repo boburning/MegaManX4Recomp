@@ -1,4 +1,37 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.23
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.24
+
+**Safer co-op transitions and separate boss hit cooldowns for X and Zero.**
+
+- **Cyber Peacock:** Flipping the room no longer crushes the nearby partner
+  through stale Split-camera limits. Both players' views turn with the room.
+- **Storm Owl:** Both-player midboss doors wait for the crossing and camera
+  movement to finish, keeping the partner in the room without another teleport.
+- **Ride Armor:** The second rider draws at the correct priority. After a
+  forced dismount, returning players check the terrain before appearing and
+  wait if there is no safe nearby landing.
+- **Boss scaling:** A new **Boss hit cooldowns** dropdown defaults to
+  **Separate for each player**. X's hit cooldown no longer blocks Zero's
+  damage, and vice versa. **Reduced shared cooldowns** remains available.
+  Boss scaling itself remains optional and off by default.
+
+Includes all Playtest 23 fixes. Windows ZIP and Linux x86_64 AppImage.
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. **Fight Double and Iris** stays optional
+and default off. Campaign memory-card saves carry forward. Use those when
+updating: this build changes co-op savestate data, so older playtest savestates
+are incompatible.
+
+The Storm Owl arena wall/camera report (item89), earlier unconfirmed intro-door
+crash (item53), and Sigma stage3 P2 disappearance (item86) remain open.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.23
 
 **Ride Armor for Player 2, smoother bike entrances, and restored backgrounds.**
 
