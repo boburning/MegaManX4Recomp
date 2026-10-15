@@ -1383,3 +1383,33 @@ new Linux release build or cross-OS gameplay qualification. Private evidence is
 under `build-pr23/feedback24-20261015`; original archives remain unmodified.
 The combined receipt is `completed-native-checks.json`. Items53 and89 remain
 open; these fixes have not yet been packaged as a new release.
+
+### Playtest 25 package qualification (2026-10-15)
+
+Items101 and86 ship with production Windows ZIP and Linux x86_64 AppImage packages.
+The README acknowledgment and requested blog link are above the title and
+present in both packages. The README packaging revision is recorded separately
+from the compiled-code snapshot.
+Compiled source `aa63e61`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows title checks pass across
+the suite and an isolated startup-child timing retry; all 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `7e520ca068d2631892fe4b9129f68004af79c1092a0bde122e27ac2a06108219` |
+| Linux x86_64 AppImage | `2107012b12f3363c690a40c326cb6225c608423d8058bef289a5e54b9cd2f39e` |
+
+Private receipt: `build-pr23/release25-qa/release-receipt-final.json`.
+Release tracking: `beads-eio.9.140`. Existing items53 and89 remain open.
+The first Linux default-recording attempt timed out before emulation while
+reading the image through WSL's Windows-drive bridge. A sampled retry confirmed
+a blocked read of that BIN in `p9_client_rpc`. A private copy on Linux's native
+filesystem was SHA256-verified against the original, and the unchanged AppImage
+then recorded181 native inputs with fresh defaults. The failed attempts remain
+in the private QA directory; they are not presented as passing runs.
