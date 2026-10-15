@@ -1,4 +1,35 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.21
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.22
+
+**Intro-stage progression fixes and shared victory poses.**
+
+- **Intro part 2:** A surviving P2 now starts the crusher panels when P1 is
+  dead. The original moving panels and wall-jump route remain intact.
+- **Intro boss door:** With Both-player doors selected, the act1 exit waits
+  for both players to finish crossing before starting its cutscene. This fixes
+  the reproduced stall with P1 walking against the wall and P2 hidden.
+- **Celebrate together:** Both living, present heroes now perform their own
+  victory poses after normal Maverick clears, then warp out. This is automatic,
+  with one campaign victory theme and reward. Survivor-only clears and story
+  movie sequences retain their existing behavior.
+
+Includes all Playtest 21 fixes. Windows ZIP and Linux x86_64 AppImage.
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. **Fight Double and Iris** stays optional
+and default off. Normal campaign memory-card saves carry forward. Older
+playtest savestates may not load; use memory-card saves between versions.
+
+The Storm Owl arena wall/camera report (item89) is reproduced and remains
+under investigation; this build does not claim a fix. The earlier unconfirmed
+intro-door crash (item53) and Sigma stage3 P2 disappearance (item86) remain open.
+
+If a problem recurs, leave **Input Display and Recording** enabled, look for
+**REC**, note the video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.21
 
 **Smoother partner teleports and corrected Jet Stingray bike layering.**
 

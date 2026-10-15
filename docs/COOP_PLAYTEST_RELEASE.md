@@ -1,4 +1,20 @@
-# Co-op playtest 21
+# Co-op playtest 22
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.22)
+with Windows ZIP and Linux x86_64 AppImage. Includes the surviving P2 intro
+crusher fix (88), paired intro-door admission fix (91), and default shared
+Maverick victory poses (90). Both character campaigns and pose save/load pass
+native gameplay checks; all34 Windows title checks pass before packaging.
+
+Storm Owl wall/camera item89 remains open after a reproduced native comparison.
+Items53 and86 also remain open. Unified and Stacked remain defaults; Split is
+experimental. Both peers must update. Normal campaign cards carry forward;
+older playtest savestates may be rejected by the new host snapshot schema.
+
+Release issue: `beads-eio.9.127`. Final package qualification and identities
+will be recorded in `build-pr23/release22-qa/release-receipt-final.json`.
+
+## Previous co-op playtest 21
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.21)
 with Windows ZIP and Linux x86_64 AppImage. Fixes committed partner arrivals
