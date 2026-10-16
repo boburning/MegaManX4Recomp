@@ -130,27 +130,28 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 120 | [x] | Web Spider background animation stops after P1 dies and P2 continues | Reproduced the opening waterfall freezing after native P1 death while P2 remains healthy. Shared palette controllers keep advancing, but survivor projection discards their upload bit1. Preserve stage palette uploads/rebuilds and canonical palette binding for that one stage pass. Fixed native composed water and VRAM colors animate before/after death; peers agree through8897. Windows34 and Linux lifecycle/split checks pass. Part2 survivor camera follow also passes separately. Included in Playtest28. `beads-eio.9.108` |
 | 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Bounded current-source Split/Both probes do not reproduce this: at the second-section train floor and after real paired boss entry, saved scenery advances8px/tick and each composed background region changes in all4 alive and4 survivor captures. P2 stays32HP; peer checks match through16614 and33925. Exact reported mode/location/recording segment remains unbound; no Slash scrolling fix is claimed from the separate Spider palette fix120. `beads-eio.9.55` |
 
-| 122 | [ ] | P2 cannot activate Sigma3 boss-refight teleporters | New fortress batch, Playtest26 Split LAN. Native admission needs qualification on current source. `beads-eio.9.157` |
-| 123 | [ ] | Offer Both-player activation for boss-refight teleporters | Elective enhancement requested with122; preserve the ordinary Either behavior unless Both is selected. `beads-eio.9.157` |
+| 122 | [x] | P2 cannot activate Sigma3 boss-refight teleporters | Admit the native General27 actor in P2's Split view and retain the actual entering hero through its state machine. Split/Either P2 X enters alone and brings both healthy heroes to Cyber's refight; genuine P1/P2 survivor cases also pass. `beads-eio.9.160` |
+| 123 | [x] | Offer Both-player activation for boss-refight teleporters | Existing door selector now also controls refight pads. Native Split/Both holds P2 alone, admits the pair together, and exempts a genuinely dead partner; Either remains the default. Both campaigns and both survivor seats pass. `beads-eio.9.160` |
 | 124 | [ ] | Magma Dragoon needs an extra walk forward before the refight triggers | Reported; distinguish authored entrance threshold from wrong-seat activation. `beads-eio.9.157` |
 | 125 | [x] | P2 weakness does not affect Storm Owl | Reproduced on current29: native Zero/P2 Rakuhouha (R2, action58/type36) damages Owl but never reaches weakness phase11. Select the accepted hit's character at the original reaction branch instead of P1's campaign. Patched Split/Both native peers enter phase11;722 core/mod samples match through23136. Windows34 and Linux combat checks pass. Fortress-specific admission/grab/transport reports remain separate. `beads-eio.9.158` |
-| 126 | [ ] | Storm Owl leaves P1 grabbed until P2 dies | Reported control/progression failure; investigate captured-player ownership. `beads-eio.9.157` |
-| 127 | [ ] | P2 weakness does not affect Jet Stingray | Reported fortress refight. `beads-eio.9.157` |
+| 126 | [ ] | Storm Owl leaves P1 grabbed until P2 dies | Not reproduced in bounded native low-HP grabs: approaching with P2 or interrupting with P2 Rakuhouha releases P1 normally, alive with controls restored. Exact reported failure remains open. `beads-eio.9.157` |
+| 127 | [x] | P2 weakness does not affect Jet Stingray | Actual P2 Zero ice attack type33 enters Jet's native rootphase3 after the attacker-selector correction;48 to46HP, paired core/mod state agrees through30016. `beads-eio.9.158` |
 | 128 | [ ] | P1 teleports away after the final hit on Split Mushroom | Reported fortress refight; inspect departure and return against the authored room exit. `beads-eio.9.157` |
 | 129 | [ ] | P2 weakness may not affect Slash Beast | Tester explicitly uncertain; confirmation pending. `beads-eio.9.157` |
 | 130 | [ ] | Web Spider weakness may have no effect | Tester explicitly uncertain; attacker and reaction need qualification. `beads-eio.9.157` |
-| 131 | [ ] | P2 weakness does not affect Frost Walrus | Reported fortress refight. `beads-eio.9.157` |
+| 131 | [x] | P2 weakness does not affect Frost Walrus | Actual P2 Zero fire attack type35 enters native weakness phase1/10 after the attacker-selector correction;48 to46HP, paired core/mod state agrees through27138. Combo cooldowns remain separate. `beads-eio.9.158` |
 | 132 | [ ] | P2 Zero cannot combo Frost Walrus because immunity occurs between hits | Compare native chain eligibility with the selected per-player scaling cooldowns. `beads-eio.9.157` |
-| 133 | [ ] | Player death animations lose sprites or disappear | Actor and exact event need binding to the video/recording before a fix is claimed. `beads-eio.9.157` |
+| 133 | [ ] | Death animations lose sprites or disappear | The report does not identify whether this is a hero or boss; actor and exact event need binding to the video/recording before a fix is claimed. `beads-eio.9.157` |
 | 134 | [ ] | P2 teleports away after the final hit on Jet Stingray | Reported fortress refight; distinguish expected return from an interrupted death/transport. `beads-eio.9.157` |
 | 135 | [ ] | Lightning Web sometimes fails to trigger wall-mounted Split Mushroom's weakness | Reported conditional weakness failure. `beads-eio.9.157` |
 | 136 | [ ] | Room before Sigma lacks P1's intro after death or Continue | Exact missing animation/event requires video qualification. `beads-eio.9.157` |
-| 137 | [ ] | Pause does not open while a Both-player boss door is open | Check safe free traversal separately from the actual locked opening/intro. `beads-eio.9.157` |
+| 137 | [x] | Pause does not open while a Both-player boss door is open | Permit each seat's native pause during free door traversal. Opening/admission/intro locks remain enforced. Native Split/Both Frost door: both owners pause/resume then complete crossing, with matching peers through11109. `beads-eio.9.159` |
 | 138 | [ ] | Lightning Web may not trigger Sigma phase2 weakness | Tester explicitly uncertain; compare native damage/reaction tables. `beads-eio.9.157` |
 | 139 | [ ] | P2 Zero cannot combo Sigma phase2 because immunity occurs between hits | Compare native Zero combo rules with per-player scaling cooldowns. `beads-eio.9.157` |
 | 140 | [ ] | Sigma phase1 targets P2 except during the scythe attack | Reported target bias; positions and native phase-specific targeting need qualification. `beads-eio.9.157` |
 | 141 | [ ] | P2 teleports out and back during Sigma phase2 | Reported unexpected transport during the fight. `beads-eio.9.157` |
 | 142 | [ ] | P2 teleports out and back during Sigma phase3 | Reported unexpected transport during the fight. `beads-eio.9.157` |
+| 143 | [x] | Adopt the SNES Mega Man X diagnostic file optimization before release | Bounded background formatting, hashes and writes preserve the v2 format and remove disk waits from steady-state input recording. Windows/Linux writer and replay checks pass; a real co-op recording replays all2542 complete native inputs. `beads-eio.9.161` |
 
 ### October16 fortress feedback intake
 
@@ -192,9 +193,59 @@ All34 Windows checks and native Linux combat checks pass, including both
 rosters, both AI seats, both attackers, misses, rejected hits and stale actor
 contexts. The other reported bosses remain unchecked pending their exact
 native attacks/reactions; this common correction does not prove all cases.
+Additional fortress qualification uses the exact native Zero attacks: fire
+type 35 triggers Frost's 1/10 reaction and ice type 33 triggers Jet's root phase 3.
+With the reversed roster, P2 X's AimLaser type 6 triggers Owl's weakness and
+reduces 48 HP to 44. Both rosters now have native weakness evidence; other
+boss-specific reports and Zero's combo rules remain independently open.
 Private evidence: `build-pr23/feedback30-owl-old-r2`,
 `build-pr23/feedback30-native-after/owl-attack-controls-result.json`,
 `build-pr23/feedback30-sigma23-20261016`. Tracking: `beads-eio.9.158`.
+
+### October16 fortress admission and open-door pause
+
+General 27 refight pads now use the entering hero throughout the original
+state machine and receive the same P2-view supplemental admission as doors,
+only in the fortress hub. The existing Boss doors setting also governs pads.
+Both waits for both living, present heroes on the same pad; Either remains
+unchanged by default. One canonical solid pass is retained. Native paired
+checks cover X-campaign Both (pair and P2 survivor) and Zero-campaign Either
+(P2 first and P1 survivor), reaching the actual Cyber refight checkpoint3
+with matching peer state through 19013, 21637, 5317 and 7968 respectively.
+
+Open Both-player doors permit native pause during free traversal only.
+Both owners' menus, resume, and completion of the real Frost door pass with
+matching peer state through 11109. Phase opening, admission, stale stage and
+other native scene guards are covered separately. Windows title checks and
+Linux lifecycle/split/combat tests pass. Private receipts:
+`build-pr23/feedback30-final-both`, `build-pr23/feedback30-final-either-zero`.
+
+### October16 diagnostic writer optimization
+
+Follow the bounded background methodology from SNES Mega Man X commit 235d40bc,
+shutdown follow-up 55cd11d5 and snesrecomp's a6be975 diagnostic writers.
+X4 retains its v2 replay format, session directories and initial sidecars.
+A portable C++ worker owns formatting, checksums and periodic input-file
+writes; only copies captured at the existing input boundary cross its fixed
+4096-slot queue. No worker reads live guest memory. Normal shutdown drains
+accepted inputs; a full queue or write error stops capture visibly, and
+wall-clock flushing also handles paused or hung gameplay.
+
+The 10,000-frame formatting/hash/write-submission microbenchmark produces
+byte-identical old/new output on each platform. Windows producer mean drops
+from 1.229 us to 0.141 us (p99: 7.3 us to 0.4 us); Linux mean drops from 1.116 us to 0.084 us.
+This excludes guest-memory sampling and does not establish an FPS gain.
+Its explicit asynchronous barriers increase total bulk-test elapsed time;
+the benefit is removing disk latency and this work from simulation updates.
+All 35 Windows checks plus Linux writer/replay-boundary checks pass, including
+queue wrap, owned-state mutation, stalled-worker saturation, idle flushing,
+ordered controller reads, failed paths, recovery and baseline segments.
+A real muted, hidden Zero-campaign co-op run records 2543 native inputs and
+2256 controller reads, exits normally, and replays all 2542 complete native
+intervals with matching state hashes. The standard replay helper omits the
+last interval, as it did before this change. Private receipts:
+`build-pr23/diagnostic30-native-capture`, `build-pr23/diagnostic30-native-replay`.
+Tracking: `beads-eio.9.161`.
 
 Playtest27 native evidence: the original-disc Frost comparisons cover both
 character assignments. The paired Split/Either Mushroom lift probe starts at

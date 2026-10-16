@@ -37,8 +37,9 @@ In the local launcher's **Mods** page, select **X + Zero Co-op** to open these
 settings in the right-hand panel. They work in local co-op as well as netplay;
 only **Netplay cameras** is online-only. Changes apply on the next fresh boot.
 
-- **Boss doors:** Either player is the default. Both players waits for both
-  living, present characters to touch a door; dead or withdrawn partners are exempt.
+- **Boss doors and refight teleporters:** Either player is the default. Both
+  players waits for both living, present characters to touch the same door or
+  fortress refight pad; dead or withdrawn partners are exempt.
 - **Fight Double and Iris:** off by default. Fight the campaign's usual boss,
   return through the inner door for the other encounter, then continue P1's story.
 - **Co-op boss scaling:** off by default. Double effective health with shorter
@@ -93,6 +94,13 @@ and startup log. The AppImage writes diagnostics outside its temporary mount.
 Local recordings support offline replay with the matching build and assets
 using [replay_mmx4_diagnostics.py](../tools/replay_mmx4_diagnostics.py).
 Netplay traces support diagnosis; full netplay replay is not currently supported.
+
+Recording uses a bounded background writer for checksums and input-file writes.
+It flushes about every 100 ms, including while the game is paused, and drains
+accepted inputs on normal exit. An abrupt process kill can lose the unflushed
+tail. If storage cannot keep up or a write fails, the display changes to
+**ERROR** and `diagnostics-location.txt` records the cause; capture stops
+without silently skipping inputs. Paths and the replay format are unchanged.
 
 Ordinary Linux settings and cards live under `~/.local/share/MegaManX4Recomp`
 unless overridden with `MMX4_RECOMP_DATA_DIR`; diagnostic recordings remain

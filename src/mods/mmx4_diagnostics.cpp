@@ -15,6 +15,7 @@ extern "C" {
 }
 #include "mmx4_diagnostics.h"
 #include "mmx4_diagnostic_paths.h"
+#include "mmx4_diagnostic_writer.h"
 #include <array>
 #include <algorithm>
 #include <chrono>
@@ -32,8 +33,9 @@ extern "C" {
 
 namespace {
 constexpr uint32_t PAD=0x80166C08u, FRAME=0x80141BD8u;
-using Row=std::array<int64_t,18>;
-std::ofstream recording;
+using mmx4_diagnostic::Row;
+using mmx4_diagnostic::State;
+mmx4_diagnostic::Writer<> recording;
 std::ifstream replay;
 std::array<uint16_t,2> replay_buttons{0xFFFFu,0xFFFFu};
 uint32_t sequence;
@@ -62,6 +64,16 @@ void recording_location(const std::string& message) {
     }catch(...) { /* Recording must not depend on this convenience pointer. */ }
 }
 
+void close_recording() {
+    recording.close();
+    if(!recording && !recording_failed) {
+        recording_failed=true;
+        recording_location(std::string("Recording FAILED: ")+recording.error_text());
+        fprintf(stderr,"mmx4.diagnostics: %s\n",recording.error_text());
+        fflush(stderr);
+    }
+}
+
 std::string plan_identity() {
     auto portable=PSXRecompV4::mod_runtime_plan_fingerprint_portable();
     return portable.empty()?PSXRecompV4::mod_runtime_fingerprint():portable;
@@ -80,17 +92,21 @@ void release_sources() {
     owns_sources=false;
 }
 
-uint32_t state_hash() {
-    uint32_t h=2166136261u;
-    auto bytes=[&](uint32_t address,unsigned size) {
-        for(unsigned i=0;i<size;++i)h=(h^psx_mod_read_byte(address+i))*16777619u;
+unsigned capture_state(State& state) {
+    unsigned size=0;
+    auto copy=[&](uint32_t address,unsigned count) {
+        for(unsigned i=0;i<count;++i)state[size++]=psx_mod_read_byte(address+i);
     };
-    bytes(MMX4_PLAY,0x61);bytes(MMX4_PLAYER,0xE4);bytes(0x8013E2E8u,2);
+    copy(MMX4_PLAY,0x61);copy(MMX4_PLAYER,0xE4);copy(0x8013E2E8u,2);
     if(mmx4_coop_ready()) {
         const uint8_t *p=mmx4_coop_second_body();
-        for(unsigned i=0;i<0xE4;++i)h=(h^p[i])*16777619u;
+        std::copy_n(p,0xE4,state.begin()+size);size+=0xE4;
     }
-    return h;
+    return size;
+}
+uint32_t state_hash() {
+    State state{};unsigned size=capture_state(state);
+    return mmx4_diagnostic::hash(state,size);
 }
 uint16_t live_input(unsigned seat) {
     if(mmx4_coop_ready()) {
@@ -99,7 +115,7 @@ uint16_t live_input(unsigned seat) {
     }
     return sio_get_pad_buttons_slot((int)seat);
 }
-Row sample() {
+Row sample(bool with_hash=true) {
     const uint8_t *p2=mmx4_coop_second_body();
     bool projected=mmx4_coop_projected()!=0;
     const uint8_t *p1=mmx4_coop_first_body();
@@ -114,7 +130,7 @@ Row sample() {
         psx_mod_read_word(MMX4_PLAY),psx_mod_read_half(MMX4_PLAY+0x0C),
         projected?p1[2]:psx_mod_read_byte(MMX4_PLAY+0x43),psx_mod_read_byte(MMX4_PLAY+0x59),
         first_byte(0x5C)&127u,p2[0x5C]&127u,first_half(10),first_half(14),
-        (int16_t)(p2[10]|p2[11]<<8),(int16_t)(p2[14]|p2[15]<<8),state_hash()};
+        (int16_t)(p2[10]|p2[11]<<8),(int16_t)(p2[14]|p2[15]<<8),with_hash?state_hash():0u};
 }
 bool parse_row(const std::string& line,Row& row) {
     std::string fields=line;
@@ -160,16 +176,21 @@ void begin() {
         return;
     }
     try {
+        // Register after startup logging is initialized, so accepted records
+        // drain and final close errors are reported before that logger exits.
+        // The writer destructor remains an idempotent early-exit fallback.
+        static const bool cleanup_registered=std::atexit(close_recording)==0;
+        if(!cleanup_registered)throw std::runtime_error("cannot register diagnostic shutdown");
         auto stamp=std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::system_clock::now().time_since_epoch()).count();
         auto folder=application_directory()/"saves"/"diagnostics"/("session-"+std::to_string(stamp));
         if(!std::filesystem::create_directories(folder))throw std::runtime_error("session directory unavailable");
-        recording.open(folder/"inputs.csv",std::ios::out|std::ios::trunc);
-        if(!recording)throw std::runtime_error("cannot create input recording");
-        recording<<"# mmx4-input-v2\n# execution "<<PSX_EXECUTION_ID
-            <<"\n# plan "<<plan_identity()<<"\n# build " MMX4_DIAGNOSTIC_BUILD_ID "\n";
+        recording.open(folder/"inputs.csv",std::string("# mmx4-input-v2\n# execution ")+PSX_EXECUTION_ID+
+            "\n# plan "+plan_identity()+"\n# build " MMX4_DIAGNOSTIC_BUILD_ID "\n");
+        if(!recording)throw std::runtime_error(recording.error_text());
         std::ofstream metadata(folder/"session.json");
         metadata<<"{\n  \"format_version\": 1,\n  \"input_format\": \"mmx4-input-v2\",\n"
+            <<"  \"writer\": \"bounded-background-v1\",\n  \"flush_interval_ms\": 100,\n"
             <<"  \"netplay\": "<<(psx_mod_netplay_is_active()?"true":"false")
             <<",\n  \"execution\": \""<<PSX_EXECUTION_ID
             <<"\",\n  \"build\": \"" MMX4_DIAGNOSTIC_BUILD_ID "\"";
@@ -209,8 +230,6 @@ void begin() {
                 if(!out)throw std::runtime_error("cannot mark absent card");
             }
         }
-        recording.flush();
-        if(!recording)throw std::runtime_error("cannot write recording header");
         recording_location("Recording: "+std::filesystem::absolute(folder).make_preferred().u8string()+
             "\nAfter reproducing the bug, quit normally and zip this entire session folder."
             "\nIt includes starting game saves; do not include the game disc or BIOS.");
@@ -247,10 +266,10 @@ void state_loaded(const uint8_t *image,uint32_t size) {
         return;
     }
     if(psx_mod_netplay_is_active()) {
-        if(recording.is_open())recording<<"# network state load\n";
+        if(recording.is_open() && !recording_failed)recording.state_load();
         return;
     }
-    recording.flush();recording.close();recording.clear();
+    close_recording();recording.clear();
     sequence=0;started=false;recording_failed=false;
     try {
         if(!image || !size)throw std::runtime_error("missing restored-state baseline");
@@ -288,7 +307,7 @@ int inputs(CPUState *cpu,uint32_t address) {
         inside=false;return mmx4_coop_finish(cpu,result);
     }
     if(!started)begin();
-    Row row=sample();
+    Row row=sample(replaying);
     if(replaying) {
         std::string line;
         Row expected{};
@@ -310,15 +329,13 @@ int inputs(CPUState *cpu,uint32_t address) {
             replay_buttons={(uint16_t)row[2],(uint16_t)row[3]};
             psx_mod_counter_add("mmx4.diagnostics.replayed-inputs",1);
         }
-    }else if(recording.is_open()) {
-        recording<<"N ";
-        for(unsigned i=0;i<row.size();++i)recording<<(i?",":"")<<row[i];
-        recording<<'\n';
-        if(!(sequence%60))recording.flush();
+    }else if(recording.is_open() && !recording_failed) {
+        State state{};unsigned size=capture_state(state);
+        recording.native(row,state,size);
         if(!recording) {
-            recording.close();psx_mod_counter_add("mmx4.diagnostics.recording-failed",1);
-            recording_failed=true;recording_location("Recording FAILED: input recording write failed");
-            fprintf(stderr,"mmx4.diagnostics: recording write failed\n");
+            psx_mod_counter_add("mmx4.diagnostics.recording-failed",1);
+            recording_failed=true;recording_location(std::string("Recording FAILED: ")+recording.error_text());
+            fprintf(stderr,"mmx4.diagnostics: %s\n",recording.error_text());
         }
     }
     auto first=input_line(0,(uint16_t)row[2]),second=input_line(1,(uint16_t)row[3]);
@@ -328,7 +345,7 @@ int inputs(CPUState *cpu,uint32_t address) {
 }
 void activate() {
     release_sources();
-    recording.close();replay.close();recording.clear();replay.clear();
+    close_recording();replay.close();recording.clear();replay.clear();
     started=inside=replaying=replay_failed=recording_failed=false;sequence=0;
     pending_baseline.clear();
     expected_baseline.clear();baseline_loaded=false;
@@ -381,7 +398,7 @@ extern "C" int mmx4_diagnostics_resolve_input(unsigned seat,uint16_t *buttons) {
             fail("co-op input read order diverged");return 0;
         }
         *buttons=(uint16_t)event[2];replay_buttons[seat]=*buttons;
-    }else if(recording.is_open())recording<<"C "<<sequence<<' '<<seat<<' '<<*buttons<<'\n';
+    }else if(recording.is_open() && !recording_failed)recording.controller(sequence,seat,*buttons);
     return replaying?1:0;
 }
 extern "C" void mmx4_diagnostics_reset(void) {activate();}

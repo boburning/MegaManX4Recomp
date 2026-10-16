@@ -94,6 +94,7 @@ set(MMX4_COOP_CONTRACT_FILES
     src/mods/mmx4_coop_balance.c
     src/mods/mmx4_coop_debug_protocol.c src/mods/mmx4_coop_debug_protocol.h
     src/mods/mmx4_diagnostics.cpp src/mods/mmx4_diagnostics.h src/mods/mmx4_diagnostic_paths.h
+    src/mods/mmx4_diagnostic_writer.h
     src/mods/mmx4_widescreen_plugin.c
     mods/preloaded/packages/mmx4.coop/0.0.1/manifest.toml)
 set(MMX4_COOP_CONTRACT "mmx4-coop-delay-v3\n")
@@ -191,7 +192,14 @@ if(BUILD_TESTING)
     add_test(NAME mmx4_coop_lifecycle_test COMMAND mmx4_coop_lifecycle_test)
     add_executable(mmx4_diagnostics_test tests/test_mmx4_diagnostics.cpp)
     target_include_directories(mmx4_diagnostics_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
+    target_link_libraries(mmx4_diagnostics_test PRIVATE Threads::Threads)
     add_test(NAME mmx4_diagnostics_test COMMAND mmx4_diagnostics_test "${CMAKE_CURRENT_BINARY_DIR}/diagnostics-qa")
+    add_executable(mmx4_diagnostic_writer_test tests/test_mmx4_diagnostic_writer.cpp)
+    target_include_directories(mmx4_diagnostic_writer_test PRIVATE src/mods)
+    target_link_libraries(mmx4_diagnostic_writer_test PRIVATE Threads::Threads)
+    add_test(NAME mmx4_diagnostic_writer_test COMMAND mmx4_diagnostic_writer_test
+        "${CMAKE_CURRENT_BINARY_DIR}/diagnostic-writer-qa")
+    set_tests_properties(mmx4_diagnostic_writer_test PROPERTIES TIMEOUT 15)
     add_executable(mmx4_coop_views_test tests/test_mmx4_coop_views.c src/mods/mmx4_coop_views.c)
     target_include_directories(mmx4_coop_views_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_coop_views_test COMMAND mmx4_coop_views_test)
