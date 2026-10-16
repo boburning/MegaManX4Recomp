@@ -1,4 +1,21 @@
-# Co-op playtest 27
+# Co-op playtest 28
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.28)
+with Windows ZIP and Linux x86_64 AppImage. Includes validated fixes for paired
+doors, independent scenery/capsules/water effects, Frost platforms/snow, X's
+Iris combat, and the surviving player's stage palette animation
+(items108,110,111,113-118,120).
+
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Both peers must update. Campaign memory-card saves carry forward.
+Reports107,109,112,119,121 and older unresolved entries remain on the checklist.
+
+Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.155`. Private package receipt:
+`build-pr23/release28-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 27
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.27)
 with Windows ZIP and Linux x86_64 AppImage. Adds independent floor momentum

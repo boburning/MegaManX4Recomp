@@ -1,4 +1,39 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.27
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.28
+
+**More reliable paired doors, independent cameras, and X versus Iris.**
+
+- **Both-player boss doors:** Keep each player's own camera and HUD while
+  crossing together. Fixed Frost Walrus's doorway trap and unwanted teleport.
+- **Web Spider:** Fixed broken-door exit scenery in Split, distant P2 water
+  ripples, and the waterfall animation freezing after P1 dies.
+- **Independent health pickups:** Full-health capsules now replenish their
+  collector without switching to the other player's camera or freezing them.
+  Unified cameras retain the original shared replenishment pause.
+- **Frost Walrus:** Opening ice platforms activate for a leading P2, and
+  both independent views keep their snowfall animated.
+- **Iris:** X can trigger her armor reaction, expose the crystal, and damage
+  it. Her native armor sequence and the selected boss-scaling rules remain.
+
+Includes all Playtest 27 fixes. **Windows ZIP and Linux x86_64 AppImage.**
+**Both netplay peers must update.** Unified cameras, Stacked lifebars and
+Either-player boss doors remain the defaults; Split is experimental.
+Boss scaling and Fight Double and Iris remain optional and default off.
+Scaling's cooldown method defaults to Separate for each player, with Reduced
+shared cooldowns available.
+
+Campaign memory-card saves carry forward. Use those when updating between
+playtests. Reports107,109,112,119 and121 remain open after bounded checks:
+missing Spider enemies, permanent Frost ice, Sigma enemy facing, and the
+reported Slash Beast survivor background freeze. They are not claimed fixed.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers. Include the stage area and camera mode.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.27
 
 **Ice physics, elevator cameras, and teammates returning at the next area.**
 

@@ -126,7 +126,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 116 | [x] | Both-player first/second door opening focuses the camera on P1 until both pass | Keep independent saved cameras, view selection and actual local presentation through paired phases1–3, sharing the authored door limits. Real boss introductions retain shared scenes. Composed Frost frames show separate X/Zero screens and HUDs with232px separation; peer state matches through8036. Cyber and Spider each cross both native doors, restore controls and retain both players with no transport or local-view state leaks. Windows34 checks and Linux lifecycle/split tests pass. `beads-eio.9.109` |
 | 117 | [x] | X attacks do not knock back Iris | Retail Iris rejects every X attack. Admit X through her existing native armor reaction without changing lasting armor HP or the eight-hit exposure sequence. Native X/P2 buster attacks alone now reduce the remaining armor hits from8 to0 and expose the real crystal; peers agree through7844. Both X seats and survivor cases pass combat units. Source after Playtest27, not yet released. `beads-eio.9.153` |
 | 118 | [x] | X attacks do not damage Iris's crystal | Give X collision-specific damage entries using Iris's own native damage units, retaining projectile identity, tokens, cooldowns and boss scaling. Native X/P2 buster hits now reduce the actual crystal48 to47 with scaling on; read-only trace identifies attack0 and the original HP store. Both players remain32HP and controllable, with matching peer state through31713. All34 Windows checks and Linux combat/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.153` |
-| 119 | [ ] | Sigma stage2 P2-triggered enemy respawns facing nearby off-camera P1 | Tester describes an enemy facing right when P2 triggers its spawn while P1 is nearby outside the displayed view. Enemy identity, exact location, native facing rule and matching recording segment remain unqualified. `beads-eio.9.154` |
+| 119 | [ ] | Sigma stage2 P2-triggered enemy respawns facing nearby off-camera P1 | Bounded Split/Both check: with healthy P1 ahead at1000 and P2 at560/458, newly spawned kind51 at702/410 faces the closer P2 left despite P1 being right. Original kinds51/58 choose facing during initialization; existing kind58 can retain its earlier right-facing pose. Peers agree through9248. This does not identify the reported enemy/respawn or establish a facing defect; keep open for a timestamp and diagnostics. `beads-eio.9.154` |
 | 120 | [x] | Web Spider background animation stops after P1 dies and P2 continues | Reproduced the opening waterfall freezing after native P1 death while P2 remains healthy. Shared palette controllers keep advancing, but survivor projection discards their upload bit1. Preserve stage palette uploads/rebuilds and canonical palette binding for that one stage pass. Fixed native composed water and VRAM colors animate before/after death; peers agree through8897. Windows34 and Linux lifecycle/split checks pass. Part2 survivor camera follow also passes separately. Source after Playtest27, not yet released. `beads-eio.9.108` |
 | 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Bounded current-source Split/Both probes do not reproduce this: at the second-section train floor and after real paired boss entry, saved scenery advances8px/tick and each composed background region changes in all4 alive and4 survivor captures. P2 stays32HP; peer checks match through16614 and33925. Exact reported mode/location/recording segment remains unbound; no Slash scrolling fix is claimed from the separate Spider palette fix120. `beads-eio.9.55` |
 
@@ -1837,3 +1837,25 @@ Private evidence: `build-pr23/feedback28-survivor-bg-20261016`
 P1's death and an early screenshot-file timing failure are excluded from the
 successful native comparisons. Tracking: `beads-eio.9.108` and
 `beads-eio.9.55`. The palette fix has not yet been packaged as a release.
+
+### October16 Sigma stage2 facing qualification
+
+Item119 remains open after a bounded hidden, muted Split/Both probe. Original
+placement table800F848C contains ordinary enemy kinds51 and58. Their native
+initializers compare PLAYER.x with their own X at80069B78..94 and80074494..B0.
+The shared co-op actor pass selects the nearest living hero for that original
+initialization. A newly spawned kind51 at702/410 faces left toward P2 at560/458
+while P1 is farther away on its right at1000. Both retain32HP, and peers agree
+through9248. This excludes a blanket canonical-P1 facing bias for that case.
+
+Existing kind58 actors can retain a right-facing initialization chosen when
+P1 first revealed them; arrival of a different nearer hero does not rerun the
+native initializer. That could explain the reported appearance, but the exact
+enemy and respawn have not been matched to a recording. Do not change shared
+world targeting to follow whichever peer's camera is being displayed. A new
+complete diagnostic session and timestamp are needed to qualify a recurrence.
+The first setup placed P1 below a raised platform at800/443 and killed them;
+it is excluded. A genuine team retry and jump/arrival from above produced the
+healthy qualified case. Private evidence:
+`build-pr23/feedback28-sigma-facing-20261016/sigma-facing-safe-result.json`
+and `build-pr23/sigma28-facing-native.txt`. Tracking: `beads-eio.9.154`.
