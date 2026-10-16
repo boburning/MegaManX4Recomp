@@ -477,6 +477,22 @@ static void jungle_backgrounds(CPUState *cpu) {
     invoke(cpu,0x800D8ED4u);
     CHECK(jungle_calls==calls+1 && psx_mod_read_byte(saved_camera(1,1)+4)==2);
     CHECK(psx_mod_read_half(saved_camera(1,1)+0x40)==512 && mmx4_coop_split_snapshot_ready());
+    /* Unified also needs the survivor's position: kind7 chooses its layer
+     * directly from PLAYER, outside the ordinary camera-follow helpers. */
+    split=0;psx_mod_write_byte(MMX4_PLAYER+4,2);
+    actor_position(MMX4_PLAYER,56,139);second_position(3001,1419);
+    actor_position(CAMERA,2841,1227);psx_mod_write_byte(actor+4,0);
+    calls=jungle_calls;private_calls=jungle_private_calls;
+    invoke(cpu,0x800D8ED4u);invoke(cpu,0x800D8ED4u);
+    CHECK(jungle_calls==calls+2 && jungle_private_calls==private_calls && !projected);
+    CHECK(psx_mod_read_byte(background+4)==5 && psx_mod_read_half(background+0x40)==2912);
+    CHECK(psx_mod_read_half(background+10)==3242 && psx_mod_read_half(background+14)==1241);
+    CHECK(psx_mod_read_half(MMX4_PLAYER+10)==56 && (second[10]|(unsigned)second[11]<<8)==3001);
+    /* Once P1 is active again, retain the ordinary canonical selection. */
+    psx_mod_write_byte(MMX4_PLAYER+4,1);
+    invoke(cpu,0x800D8ED4u);invoke(cpu,0x800D8ED4u);
+    CHECK(psx_mod_read_half(background+0x40)==40);
+    split=1;
 }
 static void storm_backgrounds(CPUState *cpu) {
     uint32_t actor=0x80169CB8u;

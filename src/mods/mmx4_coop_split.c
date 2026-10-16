@@ -275,11 +275,25 @@ static int moving_background(CPUState *cpu,uint32_t address) {
 }
 static int jungle_background(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
-    if(jungle_background_call || !available() || mmx4_coop_projected() ||
+    if(jungle_background_call || !mmx4_coop_ready() || mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6 ||
        psx_mod_read_byte(MMX4_PLAY+12)!=1 || psx_mod_read_byte(MMX4_PLAY+13)!=1 ||
        actor<TRAIN_POOL || actor>=TRAIN_POOL+TRAIN_SLOTS*TRAIN_ACTOR_BYTES ||
        (actor-TRAIN_POOL)%TRAIN_ACTOR_BYTES || psx_mod_read_byte(actor+1)!=1 ||
        psx_mod_read_byte(actor+4)>1)return 0;
+    if(!mmx4_coop_split_views()) {
+        /* This controller selects scenery directly from PLAYER's X/Y.
+         * Unified camera helpers already follow a surviving P2, but cannot
+         * correct this selection from the dead canonical body's old room. */
+        if(mmx4_coop_alive(0) || !mmx4_coop_alive(1) ||
+           mmx4_coop_lifecycle_script_owner()>=0)return 0;
+        jungle_background_call=1;mmx4_coop_enter_second();
+        uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+        mmx4_coop_leave_second();jungle_background_call=0;
+        psx_mod_counter_add("mmx4.coop.unified-survivor-jungle-background",1);
+        return mmx4_coop_finish(cpu,result);
+    }
+    if(!available())return 0;
     unsigned slot=(actor-TRAIN_POOL)/TRAIN_ACTOR_BYTES;
     if(mmx4_coop_lifecycle_script_owner()>=0) {
         /* Shared scenes replace complete camera records. Their mode/offset

@@ -772,6 +772,32 @@ static int safe_return_position(CPUState *cpu,unsigned seat) {
     if(seat)mmx4_coop_leave_second();
     return safe;
 }
+static void recover_warp_passenger(CPUState *cpu,unsigned seat) {
+    if(seat_was_dead(seat)) {warp_phase=0;return;}
+    position_return(cpu,seat,warp_origin_x,warp_origin_y,
+        warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
+    if(!safe_return_position(cpu,seat)) {
+        /* Terrain may have changed since departure. Keep the living body
+         * sheltered and retry its own origin rather than exposing it to a
+         * crush or choosing the dead partner's last position. */
+        if(seat)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);
+        if(seat)mmx4_coop_leave_second();
+        warp_phase=1;return;
+    }
+    if(seat)mmx4_coop_enter_second();
+    /* Position/visibility alone leave the outgoing beam's action0/1 active.
+     * Initialize the native controllable pose before releasing the warp. */
+    psx_mod_write_byte(PLAYER+0xBC,0);psx_mod_write_byte(PLAYER+0xBD,0);
+    mmx4_coop_call(cpu,0x800343A4u,PLAYER,0);
+    if(seat)mmx4_coop_leave_second();
+    warp_phase=0;warp_unlocked_ticks=0;
+    psx_mod_counter_add("mmx4.coop.warp-death-recoveries",1);
+    fprintf(stderr,"mmx4.coop: warp-death-recovery seat=%u stage=%u section=%u x=%d y=%d\n",
+        seat+1,psx_mod_read_byte(PLAY+12),psx_mod_read_byte(PLAY+13),
+        (int16_t)(seat?(body_word(mmx4_coop_second_body(),8)>>16):psx_mod_read_half(PLAYER+10)),
+        (int16_t)(seat?(body_word(mmx4_coop_second_body(),12)>>16):psx_mod_read_half(PLAYER+14)));
+}
 static void warp_tick(CPUState *cpu) {
     warp_begin(cpu);
     if(!warp_phase || mmx4_coop_projected())return;
@@ -796,12 +822,7 @@ static void warp_tick(CPUState *cpu) {
          * outgoing beam so the canonical body can release stage termination,
          * without treating the winner's departure as a death to rescue. */
         if(!departed && !mmx4_coop_alive(warp_owner) && !psx_mod_read_byte(PLAY+0x0F)) {
-            position_return(cpu,seat,warp_origin_x,warp_origin_y,
-                warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
-            if(seat)mmx4_coop_enter_second();
-            mmx4_coop_call(cpu,0x800343A4u,PLAYER,0);
-            if(seat)mmx4_coop_leave_second();
-            warp_phase=0;return;
+            recover_warp_passenger(cpu,seat);return;
         }
         if(seat)mmx4_coop_enter_second();
         mmx4_coop_call(cpu,0x80031540u,PLAYER,0);
@@ -816,18 +837,11 @@ static void warp_tick(CPUState *cpu) {
     if(warp_phase==2 && !mmx4_coop_alive(warp_owner)) {
         /* The incoming player is alive even if their partner dies before
          * the return pose finishes; release control before team-wipe checks. */
-        position_return(cpu,seat,warp_origin_x,warp_origin_y,
-            warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
-        if(seat)mmx4_coop_enter_second();
-        mmx4_coop_call(cpu,0x800343A4u,PLAYER,0);warp_phase=0;
-        if(seat)mmx4_coop_leave_second();
-        return;
+        recover_warp_passenger(cpu,seat);return;
     }
     if(warp_phase==1) {
         if(!mmx4_coop_alive(warp_owner)) {
-            position_return(cpu,seat,warp_origin_x,warp_origin_y,
-                warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible,0);
-            warp_phase=0;return;
+            recover_warp_passenger(cpu,seat);return;
         }
         /* Native walking/dashing has a different action from idle. A living
          * grounded leader already supplies a safe landing point; requiring

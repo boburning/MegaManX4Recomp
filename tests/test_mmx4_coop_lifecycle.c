@@ -205,6 +205,10 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     case 0x80035EA4:
         psx_mod_write_word(MMX4_PLAYER+0x68,
             psx_mod_read_byte(MMX4_PLAYER+2)?0x800F8BC8u:0x800F8BC4u);break;
+    case 0x800343A4:
+        /* Native idle entry must replace an outgoing beam's action0/1. */
+        psx_mod_write_byte(MMX4_PLAYER+5,2);psx_mod_write_byte(MMX4_PLAYER+6,0);
+        break;
     case 0x8002C614:
         ++terrain_calls[projected];
         psx_mod_write_byte(MMX4_PLAYER+0x70,
@@ -1602,6 +1606,53 @@ int main(void) {
     psx_mod_write_byte(PLAYER+0x89,8);psx_mod_write_byte(PLAYER+0x67,1);
     for(unsigned i=0;i<4;++i)warp_tick(&cpu);
     CHECK(warp_phase==1 && !p2[0] && !incoming_calls[1]);
+
+    /* A death while the passenger is hidden must restore both the departure
+     * position and a playable action. Keeping the outgoing action0/1 after
+     * clearing warp_phase strands a living survivor in its beam dispatcher. */
+    for(unsigned owner=0;owner<2;++owner)for(unsigned phase=1;phase<=3;++phase) {
+        reset();warp_owner=owner;warp_phase=phase;warp_active=warp_visible=1;
+        warp_origin_x=640u<<16;warp_origin_y=180u<<16;
+        unsigned passenger=owner^1u;
+        if(owner)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER+0x5C,0x80);psx_mod_write_byte(PLAYER+4,2);
+        if(owner)mmx4_coop_leave_second();
+        if(passenger)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);
+        psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+5,0);
+        if(passenger)mmx4_coop_leave_second();
+        warp_tick(&cpu);
+        CHECK(!warp_phase && !projected && mmx4_coop_alive(passenger));
+        CHECK((passenger?p2[5]:psx_mod_read_byte(PLAYER+5))==2);
+        CHECK((passenger?body_word(p2,8):psx_mod_read_word(PLAYER+8))==640u<<16);
+        CHECK((passenger?body_word(p2,12):psx_mod_read_word(PLAYER+12))==180u<<16);
+        CHECK(!mmx4_coop_alive(owner) && psx_mod_read_byte(PLAY+0x44)==2);
+    }
+
+    /* A genuine fatal hit on the passenger still belongs to native death;
+     * origin recovery must not turn a corpse into an idle visible body. */
+    reset();warp_phase=1;warp_owner=0;warp_active=warp_visible=1;
+    psx_mod_write_byte(PLAYER+0x5C,0);psx_mod_write_byte(PLAYER+4,2);
+    p2[0x5C]=0x80;p2[4]=2;p2[5]=1;
+    warp_tick(&cpu);CHECK(!warp_phase && p2[4]==2 && p2[5]==1 && !mmx4_coop_alive(1));
+
+    /* A changed departure area must pass native terrain admission before
+     * the survivor becomes visible, including the wider opposite hero. */
+    for(unsigned owner=0;owner<2;++owner) {
+        reset();warp_owner=owner;warp_phase=1;warp_active=warp_visible=1;
+        warp_origin_x=640u<<16;warp_origin_y=180u<<16;
+        unsigned passenger=owner^1u;
+        if(owner)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER+0x5C,0);psx_mod_write_byte(PLAYER+4,2);
+        if(owner)mmx4_coop_leave_second();
+        terrain_contact=12;warp_tick(&cpu);
+        CHECK(warp_phase==1 && !mmx4_coop_alive(passenger) && !projected);
+        CHECK(passenger?!p2[3]:!psx_mod_read_byte(PLAYER+3));
+        terrain_contact=8;warp_tick(&cpu);
+        CHECK(!warp_phase && mmx4_coop_alive(passenger));
+        CHECK((passenger?p2[5]:psx_mod_read_byte(PLAYER+5))==2);
+        CHECK(!mmx4_coop_alive(owner) && psx_mod_read_byte(PLAY+0x44)==2);
+    }
 
     /* Death during a committed arrival keeps the survivor in the new
      * room, rather than restoring the pre-door departure coordinates. */

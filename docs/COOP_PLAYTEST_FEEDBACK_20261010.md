@@ -109,8 +109,49 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 99 | [x] | Boss-scaling cooldown dropdown with independent player cooldowns | Default method is per-player full native cooldowns; reduced shared cooldowns remain selectable and scaling itself stays optional. Native Jet/Spider damage, overlapping attacker windows and death pass; Split Jet combat also passes with matching peer state. Preserve one native expiry tick for Spider's temporary hit-table cleanup. Timers reset on slot/stage reuse and persist in X4P8 snapshots/digests. `beads-eio.9.136` |
 | 100 | [x] | A returning P2 X is crushed after forced Ride Armor dismount | Native HP80 store80033C14 proves ceiling+floor crush at5558/683 after the scripted leader position5558/682. Preventing an extra8px descent alone was insufficient. Probe the returning body's terrain, try bounded same-height offsets, and defer if no safe landing exists. The native Zero-campaign case keeps X alive, returns him on foot when the leader reaches clear ground, and passes next-stage cleanup. `beads-eio.9.137` |
 | 101 | [x] | Second boss doors are missing in Split netplay with Both-player doors | Reproduced two-peer Cyber Peacock: General8 at992/2496 never spawned after the outer door. The supplemental scan now admits unflagged doors while preserving native eligibility and other scripted activation. Fixed native run crosses both doors without teleporting either player, restores both controls, and matches peer core/mod state through5892. `beads-eio.9.139` |
+| 102 | [x] | Web Spider part2 scenery breaks when P2 progresses alone in local Unified co-op | Metadata7 is Playtest25. Its scenery controller selected the dead P1's old region directly from the singleton body. Run that one canonical callback with the surviving P2; native recorded-position probes change the stale opening mode5/offset40 to the correct mode2/offset512 without repeating stage events. `beads-eio.9.141` |
+| 103 | [x] | A living player can remain stuck after teleporting as their partner dies | The hidden waiting phase restored position/visibility but retained outgoing action0. Recover to a terrain-checked departure point and initialize the native controllable pose for either seat; keep a committed arrival in its new room. Preserve genuine deaths, shared lives, voluntary withdrawal and victory/section transitions. Focused old-fail/new-pass cases and native door-death recovery pass; the full original Storm Owl replay was not completed. `beads-eio.9.142` |
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
+
+### Playtest25 Metadata7 survivor follow-up (2026-10-15)
+
+Metadata7 SHA256 `3633e429ea805c5e1bd2c347d93395cf2dcd2c9509d315eff1ecf07d1694caf7`
+contains a137491-input local co-op recording from Playtest25, with Both-player
+doors, boss scaling and the optional story-boss sequence enabled. During Web
+Spider1/1, P1 is dead at112/442 while P2 traverses the stage. The old Unified
+background callback continues selecting P1's opening-region mode5/offset40.
+Native before/after probes at the recorded upper/middle/lower positions show
+the survivor selecting mode2/offset512 instead. Split's existing per-view
+controller state and ordinary P1-owned Unified behavior remain covered.
+
+The same recording ends in Storm Owl7/1: P1 dies at2022/931 while P2 is hidden
+in warp phase1. Recovery exposes P2 at its own1947/647 departure point with40HP
+but action0. That phase omitted the native idle initialization already used
+by the outgoing/incoming rescue paths. All three now share terrain-checked
+origin recovery and initialize control; committed arrivals retain their new
+room's saved point. Genuine passenger deaths are left to native death, and a
+new diagnostic event identifies successful recovery.
+
+Lifecycle regression cases fail before and pass after for both passenger
+seats, all three warp phases, unsafe terrain, committed-room recovery and a
+genuine double death. A native Cyber door test exercises the waiting-phase
+recovery with actual outgoing animation, fatal owner health, preserved
+shared lives and subsequent survivor movement. Strict follow-up checks for
+both passenger seats require native idle/action2 and cleared door/script
+locks before sending movement input; automatic door walking does not count
+as player control. These use Either-player doors to exercise the real warp
+path; Both-player door policy is unchanged. The old build also proceeds
+through the separate scene-owner handoff, so that check qualifies integration
+and does not claim to reproduce Storm Owl's complete softlock. The attempted
+full original replay timed out before Web Spider after a bounded480 seconds;
+no full replay completion is claimed. An initial far-room teleport crossed
+an uninitialized camera boundary and is excluded from validation.
+
+All34 Windows CTests and native Linux lifecycle/split fixtures pass. Private
+evidence: `build-pr23/feedback25-20261015/qualification.json`, native before/after
+captures, runtime logs and regression receipts. No release is cut by this
+follow-up, and no new live netplay qualification is claimed.
 
 October11's bounded follow-up for item36 now includes the preceding native
 section ending. QA100 uses checkpoint skips/invulnerability, lowers the actual
