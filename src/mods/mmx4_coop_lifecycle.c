@@ -1187,7 +1187,11 @@ static int pickup_init(CPUState *cpu,uint32_t address) {
 }
 static int personal_health_refill(uint32_t actor) {
     unsigned kind=psx_mod_read_byte(actor+0x7C);
-    return mmx4_coop_split_views() && (kind==0 || kind==1 || kind==3);
+    /* C00BC maps0/1 to small/large health and5 to full health. The full
+     * capsule otherwise asserts C03BC's shared pause, which also forces
+     * the distant peer's renderer back to the canonical camera. Preserve
+     * the existing private large-weapon refill (kind3). */
+    return mmx4_coop_split_views() && (kind==0 || kind==1 || kind==3 || kind==5);
 }
 static uint32_t pickup_native_call(CPUState *cpu,uint32_t address,uint32_t actor) {
     uint8_t freeze[8];

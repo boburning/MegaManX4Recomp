@@ -114,10 +114,10 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 104 | [x] | P2 lacks slippery flooring in Frost Walrus | Native kind5/B60BC owns momentum outside PLAYER and previously updated P1 only. P2 now has private native controller state, included in snapshots/digests; the surviving P2's shared script pass cannot apply it twice. Original-disc before/after checks reproduce the abrupt stop and verify sliding for P2 X and Zero. `beads-eio.9.144` |
 | 105 | [x] | P2's Split camera stays behind on Mushroom part2's elevator | Reproduced with two connected peers at stage3/section1/checkpoint2. The lift released only the canonical camera's vertical targets. Publish its native limit changes to views in the same shaft while retaining separate origins; do not repeat the platform or panels. Both views now follow the ascent, with matching peer core/mod state. `beads-eio.9.145` |
 | 106 | [x] | A dead teammate does not return at the next stage section | Forward sections now revive either dead seat with initialized native HP while retaining the survivor's resources and shared lives. Same-section checkpoint deaths, whole-team retries and voluntary withdrawal retain their rules. Native Mushroom area-load checks revive either seat without spending a shared life; both-seat boundary fixtures and snapshot checks pass. The special Double/Iris-to-Sigma3 new-level policy remains. `beads-eio.9.146` |
-| 107 | [ ] | Web Spider part1 spiked platform enemy does not spawn for leading P2 | October16 report; archive A below, Playtest26 Split netplay. Distinct enemy-family check from the earlier Sigma placement fix80. Reported, not reproduced. `beads-eio.9.149` |
+| 107 | [ ] | Web Spider part1 spiked platform enemy does not spawn for leading P2 | Archive A, Playtest26 Split netplay. Current native probes spawn and update kind76 at1976/901 with P1 held at56/139, and the later platform enemy at3520/1384 with P1 at1856/1467. Inspected composed P2 image shows the first spiked enemy. Peer checks match through51397. The reported missing-enemy case remains unreproduced; unsafe initial teleports and an out-of-view approach are excluded. `beads-eio.9.149` |
 | 108 | [ ] | Web Spider part1 broken-door exit corrupts P2's background | Reported when P2 advances through the broken door at the end of part1; archive A. Qualify the transition separately from missing-player arrival74 and local survivor scenery102. `beads-eio.9.150` |
-| 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Archive A. Separate acceptance case from the spiked enemy107; no shared root cause established. `beads-eio.9.149` |
-| 110 | [ ] | Large health pickup shifts the displayed camera to P1 | Web Spider part2, P2 ahead, during health replenishment; archive A. Follow-up to independent-view pickup handling. Reported, not reproduced. `beads-eio.9.11` |
+| 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Archive A. With P1 held at112/443, safe native P2 approaches allocate and animate the first ground creatures, flying bugs and web turrets, plus the upper variant group. Inspected composed images show the early enemies; peer checks match through35970. Exact missing group/trigger remains unreproduced, so no fix is claimed. The first unsafe in-terrain teleport is excluded. `beads-eio.9.149` |
+| 110 | [x] | Large health pickup shifts the displayed camera to P1 | Archive A identifies the full-health capsule, native kind5, omitted from Split's private refill handling. Native baseline heals P2 while freezing the world and presenting P1's unified view. Include kind5: the real capsule now heals8 to32 with no shared freeze, P1 moves29.5px during replenishment, and P2's own redraw/HUD continues. Peer state matches through5987; all34 Windows checks and Linux lifecycle/split units pass. Unified retains the native shared pause. Source after Playtest27, not yet released. `beads-eio.9.11` |
 | 111 | [x] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Video samples locate the opening timed ice, distinct from the rising shaft. Native baseline keeps the cycle unarmed with P1 at144/347 and P2 at705/426; bringing P1 over creates ice. Allow either living hero to arm the original cycle and use both Split camera ranges for its tile sequences. Corrected native P2-ahead and distant-camera cases pass with visible ice, healthy players and matching peer CRCs through7398. Windows34 and Linux lifecycle/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.151` |
 | 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Opening timed-ice and rising-shaft controls continue changing phases, masks or positions after P1 dies; the permanent-platform symptom remains unreproduced. Keep this separate from the corrected P2 activation111 and personal ice momentum104. Archive B. `beads-eio.9.151` |
 | 113 | [ ] | P2 snowflakes animate only after P1 dies | Frost Walrus, archive B. Separate from floor physics104; the ice fix does not establish a snow-animation fix. `beads-eio.9.152` |
@@ -1613,3 +1613,32 @@ Private evidence: `build-pr23/feedback28-session3-20261016` (opening baseline),
 `feedback28-session5-20261016` (corrected native checks), and
 `feedback28-session2-20261016` (rising-shaft controls).
 Tracking: `beads-eio.9.151`. This change has not yet been packaged as a release.
+
+### October16 full-health capsule qualification
+
+Item110 is fixed in source after Playtest27. The original recording places
+P2 at3650/1449 and P1 at654/891 while a full-health capsule heals P2 from20
+to48. Native pickup dispatch maps kind5 to a full refill; the existing Split
+pause isolation covered small/large health and the prior large-weapon path,
+but omitted this form. Adding kind5 preserves its collector and native HP
+count while restoring only that pickup's shared freeze flags. Unified and
+preexisting scene locks retain their established behavior.
+
+The actual-disc baseline uses the authored Spider1/1 checkpoint4 and collects
+General2/variant5 at3632/1456. P2 heals8 to32 while PLAY+10 stays1, its private
+redraw counter stops, and the inspected composed image switches to P1's
+unified camera/HUD. The fixed run collects the same capsule: no shared freeze,
+P1 moves29.5px during the intermediate healing samples, and P2 commits30
+additional own-view redraws. The inspected intermediate image retains Zero's
+own camera and HUD. Both peers agree through5987. This proves the actual
+pickup path; it does not claim to replay the original long traversal exactly.
+
+The expanded small/large/full-health fixture fails on the old source and
+passes after the change for both collectors and both camera modes. It also
+covers owner death and preserved preexisting freeze flags. All34 Windows
+title checks and native Linux lifecycle/split units pass.
+
+Private evidence: `build-pr23/feedback28-pickup-session-20261016`
+(old8336b0d baseline), `build-pr23/feedback28-pickup-fixed-20261016`
+(fixed native run), and `build-pr23/pickup28-*.log`.
+Tracking: `beads-eio.9.11`. This change has not yet been packaged as a release.

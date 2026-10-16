@@ -1137,8 +1137,11 @@ int main(void) {
     /* Split refills remain owned after the collector moves away. Each native
      * update heals once, with no world pause or unrelated scene lock changes.
      * Unified keeps the original whole-world refill pause. */
-    for(unsigned split=0;split<2;++split)for(unsigned owner=0;owner<2;++owner) {
+    static const unsigned health_kinds[]={0,1,5}; /* small, large, full */
+    for(unsigned form=0;form<3;++form)
+      for(unsigned split=0;split<2;++split)for(unsigned owner=0;owner<2;++owner) {
         reset();split_views=(int)split;
+        psx_mod_write_byte(actor+0x7C,(uint8_t)health_kinds[form]);
         psx_mod_write_byte(actor+4,1);psx_mod_write_word(actor+8,owner?100:0);
         p2[8]=100;mmx4_coop_call(&cpu,0x800C00BCu,actor,0);
         CHECK(psx_mod_read_byte(PLAY+0x10)==!split);
@@ -1149,8 +1152,10 @@ int main(void) {
         CHECK(p2[0x5C]==(owner?14:12));
         CHECK(!psx_mod_read_byte(PLAY+0x10) && !pickup_record(actor,0));
     }
-    for(unsigned owner=0;owner<2;++owner)for(unsigned die=0;die<2;++die) {
+    for(unsigned form=0;form<3;++form)
+      for(unsigned owner=0;owner<2;++owner)for(unsigned die=0;die<2;++die) {
         reset();split_views=1;
+        psx_mod_write_byte(actor+0x7C,(uint8_t)health_kinds[form]);
         for(unsigned i=0x10;i<0x18;++i)psx_mod_write_byte(PLAY+i,(uint8_t)(i+1));
         psx_mod_write_byte(actor+4,1);psx_mod_write_word(actor+8,owner?100:0);p2[8]=100;
         mmx4_coop_call(&cpu,0x800C00BCu,actor,0);
