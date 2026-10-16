@@ -8,10 +8,23 @@ teammate revival at forward section boundaries (106).
 Unified cameras and Stacked HUD remain defaults; Split is experimental.
 Both peers must update. Campaign memory-card saves carry forward.
 
-Items53 and89 remain open. Package qualification will be recorded after both
-production artifacts pass. Release issue: `beads-eio.9.147`. Private package receipt:
+Items53 and89 remain open. Release issue: `beads-eio.9.147`. Private package receipt:
 `build-pr23/release27-qa/release-receipt-final.json`.
 Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+Compiled source `602949f`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows title checks pass; all 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `debd41bcdc3379a8e56ac4d45ad8f3c87564083d5a6b66b31d0371f0442e8a6d` |
+| Linux x86_64 AppImage | `e5a4c6837312ad176272b4b01468698cd56d6cb1e7c54199aae1ece9d543bde2` |
 
 ## Previous co-op playtest 26
 

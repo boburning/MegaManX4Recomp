@@ -115,6 +115,16 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 105 | [x] | P2's Split camera stays behind on Mushroom part2's elevator | Reproduced with two connected peers at stage3/section1/checkpoint2. The lift released only the canonical camera's vertical targets. Publish its native limit changes to views in the same shaft while retaining separate origins; do not repeat the platform or panels. Both views now follow the ascent, with matching peer core/mod state. `beads-eio.9.145` |
 | 106 | [x] | A dead teammate does not return at the next stage section | Forward sections now revive either dead seat with initialized native HP while retaining the survivor's resources and shared lives. Same-section checkpoint deaths, whole-team retries and voluntary withdrawal retain their rules. Native Mushroom area-load checks revive either seat without spending a shared life; both-seat boundary fixtures and snapshot checks pass. The special Double/Iris-to-Sigma3 new-level policy remains. `beads-eio.9.146` |
 
+Playtest27 native evidence: the original-disc Frost comparisons cover both
+character assignments. The paired Split/Either Mushroom lift probe starts at
+the authored stage3/section1/checkpoint2 and confirms both cameras follow the
+ascent with matching peer core/mod state through5283. The reverse fortress
+survivor case also passes: P1 X dies, P2 Zero defeats Double, and both players
+return healthy and controllable at Sigma3, then move, with matching peer
+core/mod state through9952. Mushroom revival checks use the native area loader
+after a forced seat death; they do not claim a complete midboss playthrough.
+The earlier authentic ceiling crush from undestroyed panels is unchanged.
+
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
 ### Playtest25 Metadata7 survivor follow-up (2026-10-15)
@@ -1479,3 +1489,25 @@ Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release26-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.143`. Existing items53 and89 remain open.
+
+### Playtest 27 package qualification (2026-10-15)
+
+Items104,105 and106 ship with production Windows ZIP and Linux x86_64 AppImage packages.
+The README acknowledgment and requested blog link are above the title and
+present in both packages. The README packaging revision matches the compiled-code snapshot.
+Compiled source `602949f`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows title checks pass; all 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `debd41bcdc3379a8e56ac4d45ad8f3c87564083d5a6b66b31d0371f0442e8a6d` |
+| Linux x86_64 AppImage | `e5a4c6837312ad176272b4b01468698cd56d6cb1e7c54199aae1ece9d543bde2` |
+
+Private receipt: `build-pr23/release27-qa/release-receipt-final.json`.
+Release tracking: `beads-eio.9.147`. Existing items53 and89 remain open.
