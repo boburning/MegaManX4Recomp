@@ -750,3 +750,27 @@ forced checkpoint reload with the old private harness were not successful
 qualifications and are not counted as a new gameplay defect. Private evidence:
 feedback21-metadata6-20261015/{storm-tail-replay,storm-arena-native,
 storm-arena-left,storm-solo-native-camera}. Playtest22 does not claim this fix.
+
+### Original solo checkpoint comparison (2026-10-16)
+
+A bounded hidden, muted comparison uses the current Playtest28 gameplay source
+and the original stage7/section1/checkpoint3 spawn list. One private process
+explicitly disables co-op; the other enables local Unified co-op and Both-player
+doors. Both enter from the native checkpoint at2640/512 and settle atY683.
+No actor phase, terrain, or camera bound is written by the test. Left controller
+input activates the original kind60 introduction, with native confirmation for
+dialogue. Both runs finish the introduction, restore normal movement, and lock
+the current and target horizontal camera limits to2240. Continued left input
+stops the player atX2248 rather than reaching the recordedX2154/2155 wall.
+Inspected composed images retain the same authored arena scenery in both runs.
+The co-op setup uses invulnerability after loading; the solo run retains native
+damage and ends with20HP. The tests use private cards/settings and stop their
+owned processes normally.
+
+This establishes that checkpoint3's current admission works, not that the older
+full-stage route has been fixed. The recorded0/2240 limits differ from both fresh
+entries; qualify the transition from the lower encounter/elevator before changing
+bounds. Item89 remains open. Private receipts:
+`build-pr23/storm29-{original-solo,current-coop}/report.json` and their
+`native-solo-end.png` captures. No gameplay source change or additional release
+is required by this comparison.
