@@ -1,4 +1,29 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.28
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.29
+
+**Storm Owl's boss arena now stays in place when the players arrive apart.**
+
+Fixed a trailing player reopening the arena's camera boundary just before
+the boss introduction. The fight now uses the original arena limits, avoiding
+the large wall scenery that could scroll into view. Validated in local Unified
+co-op and Split-camera netplay with either player leading.
+
+Includes all Playtest 28 fixes. **Windows ZIP and Linux x86_64 AppImage.**
+**Both netplay peers must update.** Unified cameras, Stacked lifebars and
+Either-player boss doors remain the defaults; Split is experimental.
+Boss scaling and Fight Double and Iris remain optional and default off.
+
+Campaign memory-card saves carry forward. Reports107,109,112,119 and121 remain
+open after bounded checks: missing Spider enemies, permanent Frost ice, Sigma
+enemy facing, and the reported Slash Beast survivor background freeze.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers and the stage area and camera mode.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.28
 
 **More reliable paired doors, independent cameras, and X versus Iris.**
 

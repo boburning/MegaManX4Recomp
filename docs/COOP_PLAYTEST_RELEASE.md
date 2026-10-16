@@ -1,4 +1,20 @@
-# Co-op playtest 28
+# Co-op playtest 29
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.29)
+with Windows ZIP and Linux x86_64 AppImage. Fixes Storm Owl's arena limit when
+a trailing hero releases it before the native boss introduction (item89).
+Native local Unified and two-peer Split checks pass with either leading seat.
+
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Both peers must update. Campaign memory-card saves carry forward.
+Reports107,109,112,119,121 and older unresolved entries remain on the checklist.
+
+Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.156`. Private package receipt:
+`build-pr23/release29-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 28
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.28)
 with Windows ZIP and Linux x86_64 AppImage. Includes validated fixes for paired
