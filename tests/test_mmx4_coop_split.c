@@ -920,6 +920,38 @@ static void train_backgrounds(CPUState *cpu) {
     CHECK(!mmx4_coop_split_camera_copy(1,view));
     psx_mod_write_byte(MMX4_PLAY+12,0);psx_mod_write_byte(MMX4_PLAY+13,0);
 }
+static void frost_ice_ranges(CPUState *cpu) {
+    mmx4_coop_split_reset();split=ready=1;projected=local_scope=0;script_owner=-1;
+    psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,2);
+    psx_mod_write_byte(MMX4_PLAY+13,0);
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+    psx_mod_write_byte(MMX4_PLAYER+0x14,0);second[0]=second[4]=1;second[0x14]=0;
+    mmx4_coop_split_camera_prepare(0);
+    actor_position(saved_camera(0,0),0,0);actor_position(saved_camera(1,0),2000,900);
+    const uint32_t point=0x800F5000u;cpu->gpr[4]=point;
+    static const int points[][3]={
+        {2600,1000,1},{1360,420,1},{2959,1619,1},{2960,900,0},
+        {1359,900,0},{2000,419,0},{2000,1620,0},{100,100,1},{4000,2000,0}
+    };
+    for(unsigned i=0;i<sizeof points/sizeof points[0];++i) {
+        psx_mod_write_half(point,(uint16_t)points[i][0]);
+        psx_mod_write_half(point+2,(uint16_t)points[i][1]);
+        CHECK(invoke(cpu,0x800B9E54u)==(unsigned)points[i][2]);
+    }
+    psx_mod_write_half(point,2600);psx_mod_write_half(point+2,1000);
+    script_owner=0;CHECK(!invoke(cpu,0x800B9E54u));
+    script_owner=1;CHECK(invoke(cpu,0x800B9E54u));script_owner=-1;
+    second[4]=2;CHECK(!invoke(cpu,0x800B9E54u));second[4]=1;
+    psx_mod_write_byte(MMX4_PLAYER+4,2);CHECK(invoke(cpu,0x800B9E54u));
+    second[4]=2;CHECK(!invoke(cpu,0x800B9E54u));second[4]=1;
+    second[0x14]=1;actor_position(saved_camera(1,1),4000,1800);
+    CHECK(!invoke(cpu,0x800B9E54u));
+    psx_mod_write_half(point,4600);psx_mod_write_half(point+2,1900);
+    uint8_t cameras[0xFC];memcpy(cameras,ram+(CAMERA&0x1FFFFFu),sizeof cameras);
+    CHECK(invoke(cpu,0x800B9E54u));
+    CHECK(!memcmp(cameras,ram+(CAMERA&0x1FFFFFu),sizeof cameras) && !projected);
+    CHECK(mmx4_coop_split_snapshot_ready());
+}
 int main(void) {
     CPUState cpu={0};cpu.gpr[29]=0x801FF000u;
     psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAYER,1);
@@ -1223,5 +1255,6 @@ int main(void) {
     four_aligned_placements(&cpu);
     stationary_second_door(&cpu);
     jungle_backgrounds(&cpu);
+    frost_ice_ranges(&cpu);
     puts("mmx4_coop_split_test: PASS");return 0;
 }

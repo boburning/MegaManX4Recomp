@@ -1445,6 +1445,20 @@ static void storm_survivor_exit(CPUState *cpu,uint32_t address) {
        !psx_mod_read_byte(PLAY+13) && !mmx4_coop_alive(0) && mmx4_coop_alive(1))
         cpu->gpr[2]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
 }
+static void frost_ice_activation(CPUState *cpu,uint32_t address) {
+    (void)address;
+    /* B9F38 starts the opening ice cycle when PLAYER.x enters673..3167.
+     * The shared timer and map edits still run once; either living hero
+     * can satisfy just this initial predicate. Survivor projection already
+     * supplies P2's native load when P1 is dead. */
+    if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12)!=2 ||
+       psx_mod_read_byte(PLAY+13) || !mmx4_coop_alive(1))return;
+    uint16_t first=(uint16_t)cpu->gpr[2];
+    uint16_t second=(uint16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+    if((!mmx4_coop_alive(0) || (uint16_t)(first-673u)>=2495u) &&
+       (uint16_t)(second-673u)<2495u)cpu->gpr[2]=second;
+}
 static void intro_survivor_crusher(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[16];
@@ -2047,6 +2061,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x80033BC8u,death_detection);
     psx_mod_register_function_filter_plugin(ID,0x8002166Cu,stage_scripts);
     psx_mod_register_function_filter_plugin(ID,0x800B60BCu,floor_controller);
+    psx_mod_register_instruction_plugin(ID,0x800B9F74u,0x2442FD5Fu,frost_ice_activation);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
     psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);

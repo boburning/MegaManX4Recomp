@@ -58,6 +58,7 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
     PSXModFunctionEntryCallback callback) {
     (void)id;(void)callback;
     assert((address==0x800DA44Cu && expected==0x284218D0u) ||
+           (address==0x800B9F74u && expected==0x2442FD5Fu) ||
            (address==0x800C0574u && expected==0x00041100u) ||
            (address==0x800D0580u && expected==0x14620006u) ||
            (address==0x80081250u && expected==0x14620005u));return 1;
@@ -1235,6 +1236,26 @@ int main(void) {
     CHECK(cpu.gpr[2]==6353);
     psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,12);
     cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
+    /* Either living hero can arm the original opening-ice cycle, including
+     * both exact interval edges. The clock and shared world are untouched. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+        for(unsigned test=0;test<12;++test) {
+            reset();split_views=mode;psx_mod_write_byte(PLAY+12,2);
+            psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+            unsigned x=test==1?672u:test==2?673u:test==3?3167u:test==4?3168u:705u;
+            p2[10]=(uint8_t)x;p2[11]=(uint8_t)(x>>8);cpu.gpr[2]=144;
+            if(test==5)p2[0x5C]=0;
+            if(test==6)projected=1;
+            if(test==7)local_view=1;
+            if(test==8)psx_mod_write_byte(PLAY+12,1);
+            if(test==9)psx_mod_write_byte(PLAY+13,1);
+            if(test==10)cpu.gpr[2]=900;
+            if(test==11)ready=0;
+            frost_ice_activation(&cpu,0x800B9F74u);
+            unsigned wanted=test==0 || test==2 || test==3?x:test==10?900u:144u;
+            CHECK(cpu.gpr[2]==wanted);
+        }
+    reset();
     /* The recorded P1 corpse stays at Y394 while P2 reaches the crusher
      * floor at Y955. Only that survivor may satisfy the native Y predicate. */
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned ineligible=0;ineligible<9;++ineligible) {

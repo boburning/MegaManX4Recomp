@@ -118,8 +118,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 108 | [ ] | Web Spider part1 broken-door exit corrupts P2's background | Reported when P2 advances through the broken door at the end of part1; archive A. Qualify the transition separately from missing-player arrival74 and local survivor scenery102. `beads-eio.9.150` |
 | 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Archive A. Separate acceptance case from the spiked enemy107; no shared root cause established. `beads-eio.9.149` |
 | 110 | [ ] | Large health pickup shifts the displayed camera to P1 | Web Spider part2, P2 ahead, during health replenishment; archive A. Follow-up to independent-view pickup handling. Reported, not reproduced. `beads-eio.9.11` |
-| 111 | [ ] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Archive B, Playtest26 Split netplay. Platform activation is separate from personal ice momentum104. `beads-eio.9.151` |
-| 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Archive B. Preserve the reported lifetime symptom; whether this means missing disappearance, movement or another phase needs qualification. `beads-eio.9.151` |
+| 111 | [x] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Video samples locate the opening timed ice, distinct from the rising shaft. Native baseline keeps the cycle unarmed with P1 at144/347 and P2 at705/426; bringing P1 over creates ice. Allow either living hero to arm the original cycle and use both Split camera ranges for its tile sequences. Corrected native P2-ahead and distant-camera cases pass with visible ice, healthy players and matching peer CRCs through7398. Windows34 and Linux lifecycle/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.151` |
+| 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Opening timed-ice and rising-shaft controls continue changing phases, masks or positions after P1 dies; the permanent-platform symptom remains unreproduced. Keep this separate from the corrected P2 activation111 and personal ice momentum104. Archive B. `beads-eio.9.151` |
 | 113 | [ ] | P2 snowflakes animate only after P1 dies | Frost Walrus, archive B. Separate from floor physics104; the ice fix does not establish a snow-animation fix. `beads-eio.9.152` |
 | 114 | [x] | Frost Both-player boss door teleports P2 and can trap P1 walking left | Reproduced in native Split/Both at checkpoint4. Midboss52218 starts its scene during pair phase2; defer its whole admission until physical clearance. Also fix the permanent camera6080/minimum6032 equality wait by accepting the authored room interval. Both leading arrangements now cross, keep both players healthy/visible and restore controls without transport; peer state matches through8514. The supplied pair2 trace confirms Both was active despite saved Either settings. `beads-eio.9.109` |
 | 115 | [ ] | P2 water ripples appear only when P1 is nearby | Web Spider distance-conditioned effect, archive C. Recheck the earlier water-effect fix in Split netplay with P1 far away. `beads-eio.9.28` reopened for this case. |
@@ -1581,3 +1581,35 @@ as passing tests. These changes are not yet in a published playtest.
 Private evidence: `build-pr23/feedback28-frost-20261016/doors-before`,
 `doors-after`, `doors-camera-fixed`, and
 `build-pr23/feedback28-session2-20261016`.
+
+### October16 opening ice-platform qualification
+
+Item111 is fixed in source after Playtest27. Samples from the supplied Frost
+video and its on-screen notes identify the opening timed ice near the Heart
+Tank route, not the later rising shaft. The native baseline leaves the cycle's
+region, timer and allocation mask at zero while P2 reaches705/426 and P1 stays
+at144/347. Bringing P1 to the same ledge starts the cycle and creates visible
+ice. The post-load activation predicate now admits either living hero inside
+the authored673..3167 interval. Its pure proximity query uses either living
+Split view with retail's unsigned16 bounds. The original shared timer, mask,
+tile-edit queue and allocation logic continue running once.
+
+The corrected two-peer Split run shows ice with P1 still at spawn, then checks
+P2 at3246/361 while P1 remains144/347. Both retain health, and recorded core/mod
+checks agree through7398. P1-death continuation also advances the cycle.
+All34 Windows title checks and Linux lifecycle/split units pass. Exact interval
+edges, absent/dead players, real script ownership and alternate camera layers
+are covered. A reviewed intermediate candidate hooked the pre-load instruction
+and failed native activation; it was corrected to the post-load comparison and
+is excluded from the success claim.
+
+Item112 stays unchecked: native opening-cycle and rising-shaft controls keep
+updating after P1 dies, so they do not establish the reported permanent ice.
+The initial direct shaft/upper-route teleports were also excluded because they
+did not follow a safe authored route. Native movement from checkpoint3 does
+spawn and animate the rising platforms for P2, including after P1 death.
+
+Private evidence: `build-pr23/feedback28-session3-20261016` (opening baseline),
+`feedback28-session5-20261016` (corrected native checks), and
+`feedback28-session2-20261016` (rising-shaft controls).
+Tracking: `beads-eio.9.151`. This change has not yet been packaged as a release.

@@ -758,7 +758,31 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
     write_bytes(CAMERA,canonical,CAMERA_BYTES);bounds_call=0;
     return mmx4_coop_finish(cpu,result);
 }
+static int frost_ice_range(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!available() || psx_mod_read_byte(MMX4_PLAY+12)!=2 ||
+       psx_mod_read_byte(MMX4_PLAY+13))return 0;
+    initialize_cameras();
+    /* B9E54 is a pure proximity query for the opening ice tile sequences.
+     * Use its exact unsigned16 extents for each living view. The shared
+     * cycle keeps its native clock, allocation mask and tile-edit queue. */
+    Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+    uint32_t point=cpu->gpr[4];
+    int owner=mmx4_coop_lifecycle_script_owner();
+    for(unsigned seat=0;seat<2;++seat) {
+        if(!actors[seat].active || (owner>=0 && owner!=(int)seat))continue;
+        unsigned layer=seat?mmx4_coop_second_body()[0x14]:
+            psx_mod_read_byte(MMX4_PLAYER+0x14);
+        if(layer>=3)continue;
+        uint32_t camera=state+16u+seat*CAMERA_BYTES+layer*0x54u;
+        uint16_t x=(uint16_t)(psx_mod_read_half(point)-psx_mod_read_half(camera+10)+640u);
+        uint16_t y=(uint16_t)(psx_mod_read_half(point+2)-psx_mod_read_half(camera+14)+480u);
+        if(x<1600u && y<1200u)return mmx4_coop_finish(cpu,1);
+    }
+    return mmx4_coop_finish(cpu,0);
+}
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800B9E54u,frost_ice_range);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800257BCu,draw_armor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B7078u,mushroom_stage_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800BA57Cu,mushroom_stage_camera);
