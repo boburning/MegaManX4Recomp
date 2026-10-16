@@ -69,6 +69,7 @@ static unsigned stair_calls;
 static int mushroom_x,mushroom_y;
 static unsigned train_calls,train_foreground_calls;
 static unsigned destructible_calls;
+static unsigned lift_calls;
 static unsigned jungle_calls,jungle_private_calls;
 int mmx4_coop_combat_actor_context(void) {return (int)actor_context;}
 int mmx4_coop_lifecycle_script_owner(void) {return script_owner;}
@@ -275,6 +276,13 @@ static uint32_t invoke(CPUState *cpu,uint32_t address) {
         ++checkpoint_calls;
         if((int16_t)psx_mod_read_half(MMX4_PLAYER+14)>=(int16_t)psx_mod_read_half(actor+14))
             psx_mod_write_byte(MMX4_PLAY+0x1D,2);
+        return 0;
+    }
+    if(address==0x800C3880u) {
+        ++lift_calls;
+        psx_mod_write_half(CAMERA+0x28,720);psx_mod_write_half(CAMERA+0x2A,720);
+        psx_mod_write_byte(CAMERA+0x47,1);
+        psx_mod_write_byte(actor+5,1); /* One shared lift step, never per view. */
         return 0;
     }
     if(address==0x800B7078u || address==0x800BA57Cu) {
@@ -1173,6 +1181,31 @@ int main(void) {
     CHECK(psx_mod_read_half(saved_camera(1,1)+10)==0);
     unsigned before=stair_calls;
     psx_mod_write_byte(MMX4_PLAY+0x10,1);invoke(&cpu,0x800B7078u);CHECK(stair_calls==before);
+    CHECK(mmx4_coop_split_snapshot_ready());
+    /* The shared lift releases each rider's vertical camera without
+     * replacing independent origins or an absent partner's room limits. */
+    mmx4_coop_split_reset();psx_mod_write_byte(MMX4_PLAY+12,3);
+    psx_mod_write_byte(MMX4_PLAY+0x10,0);
+    const uint32_t lift=0x80165A30u;
+    psx_mod_write_byte(lift,1);psx_mod_write_byte(lift+1,14);
+    actor_position(MMX4_PLAYER,6048,2200);second_position(6072,2199);
+    psx_mod_write_half(CAMERA+0x1C,5888);psx_mod_write_half(CAMERA+0x1E,5888);
+    psx_mod_write_half(CAMERA+0x24,5888);psx_mod_write_half(CAMERA+0x26,5888);
+    psx_mod_write_half(CAMERA+0x28,2048);psx_mod_write_half(CAMERA+0x2A,2048);
+    mmx4_coop_split_camera_prepare(0);
+    psx_mod_write_half(saved_camera(1,0)+14,2000);
+    cpu.gpr[4]=lift;lift_calls=0;invoke(&cpu,0x800C3880u);
+    CHECK(lift_calls==1 && psx_mod_read_byte(lift+5)==1);
+    for(unsigned seat=0;seat<2;++seat) {
+        CHECK(psx_mod_read_half(saved_camera(seat,0)+0x28)==720);
+        CHECK(psx_mod_read_half(saved_camera(seat,0)+0x2A)==720);
+    }
+    CHECK(psx_mod_read_half(saved_camera(1,0)+14)==2000);
+    psx_mod_write_half(saved_camera(1,0)+0x26,0);
+    psx_mod_write_half(saved_camera(1,0)+0x28,512);
+    psx_mod_write_half(CAMERA+0x28,2048);
+    invoke(&cpu,0x800C3880u);CHECK(lift_calls==2);
+    CHECK(psx_mod_read_half(saved_camera(1,0)+0x28)==512);
     CHECK(mmx4_coop_split_snapshot_ready());
     destructible_camera_unlocks(&cpu);
     four_aligned_placements(&cpu);

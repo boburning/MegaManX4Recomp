@@ -18,12 +18,13 @@ static uint32_t state;
 static unsigned scanning,bounds_call,supplemental,spatial_call,background_call;
 static unsigned mushroom_camera_call;
 static unsigned destructible_camera_call;
+static unsigned lift_camera_call;
 static unsigned jungle_background_call;
 static uint32_t background_actor,background_dx;
 static unsigned background_parallax;
 
 int mmx4_coop_split_snapshot_ready(void) {
-    return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || destructible_camera_call || jungle_background_call || background_call ||
+    return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || destructible_camera_call || lift_camera_call || jungle_background_call || background_call ||
         background_actor || background_dx || background_parallax);
 }
 int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
@@ -105,7 +106,7 @@ void mmx4_coop_split_project_intro_boss(void) {
 void mmx4_coop_split_reset(void) {
     if(!state || mmx4_coop_projected() || psx_mod_local_view_scope())return;
     for(unsigned offset=0;offset<STATE_BYTES;offset+=4)psx_mod_write_word(state+offset,0);
-    scanning=bounds_call=supplemental=spatial_call=mushroom_camera_call=destructible_camera_call=jungle_background_call=background_call=0;
+    scanning=bounds_call=supplemental=spatial_call=mushroom_camera_call=destructible_camera_call=lift_camera_call=jungle_background_call=background_call=0;
     background_actor=background_dx=background_parallax=0;
 }
 int mmx4_coop_split_activate(void) {
@@ -184,6 +185,42 @@ static int destructible_camera_unlock(CPUState *cpu,uint32_t address) {
     }
     destructible_camera_call=0;
     psx_mod_counter_add("mmx4.coop.split-destructible-camera-unlocks",1);
+    return mmx4_coop_finish(cpu,result);
+}
+static int mushroom_lift_camera(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(lift_camera_call || !available() || psx_mod_read_byte(MMX4_PLAY+12)!=3 ||
+       actor<0x80165A30u || actor>=0x80166BB0u || (actor-0x80165A30u)%0x8Cu ||
+       !psx_mod_read_byte(actor) || psx_mod_read_byte(actor+1)!=14)return 0;
+    initialize_cameras();
+    uint8_t before[CAMERA_BYTES];read_bytes(CAMERA,before,sizeof before);
+    lift_camera_call=1;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    /* Native C3B40 releases the lift's vertical targets from2048 to720.
+     * C3BA4/C3C9C subsequently change the current limits at its top. Apply
+     * those authored writes to every view in this shaft, once, without
+     * repeating the lift, panels, sound, checkpoint or collision update.
+     * Each camera keeps its own origin and ordinary native follow. A view
+     * in another horizontal room retains its independent limits. */
+    static const unsigned horizontal[]={0x1C,0x1E,0x24,0x26};
+    static const unsigned vertical[]={0x20,0x22,0x28,0x2A,0x2C};
+    for(unsigned seat=0;seat<2;++seat)if(mmx4_coop_alive(seat)) {
+        uint32_t shadow=state+16u+seat*CAMERA_BYTES;
+        unsigned same_room=1;
+        for(unsigned i=0;i<4;++i)if(psx_mod_read_half(shadow+horizontal[i])!=
+            (uint16_t)(before[horizontal[i]]|(uint16_t)before[horizontal[i]+1]<<8))same_room=0;
+        if(!same_room)continue;
+        for(unsigned i=0;i<5;++i) {
+            unsigned offset=vertical[i];
+            uint16_t old=(uint16_t)(before[offset]|(uint16_t)before[offset+1]<<8);
+            uint16_t next=psx_mod_read_half(CAMERA+offset);
+            if(next!=old)psx_mod_write_half(shadow+offset,next);
+        }
+        if(before[0x47]!=psx_mod_read_byte(CAMERA+0x47))
+            psx_mod_write_byte(shadow+0x47,psx_mod_read_byte(CAMERA+0x47));
+    }
+    lift_camera_call=0;
+    psx_mod_counter_add("mmx4.coop.split-lift-camera",1);
     return mmx4_coop_finish(cpu,result);
 }
 static int train_foreground(CPUState *cpu,uint32_t address) {
@@ -719,6 +756,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800DA298u,moving_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D964Cu,train_foreground);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800C0D98u,destructible_camera_unlock);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800C3880u,mushroom_lift_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8ED4u,jungle_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B56F4u,spatial_stage_actor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B6A0Cu,spatial_stage_actor);

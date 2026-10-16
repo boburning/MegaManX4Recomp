@@ -1,4 +1,19 @@
-# Co-op playtest 26
+# Co-op playtest 27
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.27)
+with Windows ZIP and Linux x86_64 AppImage. Adds independent floor momentum
+for P2 (104), Mushroom lift camera limits for both Split views (105), and
+teammate revival at forward section boundaries (106).
+
+Unified cameras and Stacked HUD remain defaults; Split is experimental.
+Both peers must update. Campaign memory-card saves carry forward.
+
+Items53 and89 remain open. Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.147`. Private package receipt:
+`build-pr23/release27-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 26
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.26)
 with Windows ZIP and Linux x86_64 AppImage. Adds terrain-checked recovery when

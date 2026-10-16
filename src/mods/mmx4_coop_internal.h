@@ -65,6 +65,7 @@ void mmx4_coop_flip_second(void);
 unsigned mmx4_coop_split_view_seat(unsigned seat);
 void mmx4_coop_lifecycle_view_save(void);
 void mmx4_coop_lifecycle_view_restore(void);
+void mmx4_coop_lifecycle_surface(CPUState *cpu);
 void mmx4_widescreen_view_save(void);
 void mmx4_widescreen_view_restore(void);
 int mmx4_coop_alive(unsigned seat);

@@ -69,6 +69,10 @@ static unsigned initial_arrival;
 static unsigned direct_initial_spawn;
 static uint8_t warp_active,warp_visible,warp_vehicle_active,warp_vehicle_visible;
 static uint32_t warp_origin_x,warp_origin_y;
+/* Native stage kind5 owns floor momentum outside the player body. Retain
+ * P2's own controller state without allocating another world actor. */
+static uint8_t surface_valid[32],surface_second[32][0x30];
+static unsigned surface_call;
 /* Logging history is host-only and never influences simulation decisions. */
 static struct { unsigned valid,stage,section,hp[2],second_active,second_hidden; } trace_previous;
 static void start_arrival(CPUState *cpu,unsigned seat);
@@ -78,7 +82,7 @@ int mmx4_coop_lifecycle_snapshot_ready(void) {
     return !(inventory_projected || menu_projecting || normal_guard || menu_guard || world_guard ||
         pickup_guard || collect_guard || save_guard || reward_guard || death_guard || death_check_guard ||
         capsule_guard || scene_guard || script_pool_guard || command_guard || control_guard || text_guard ||
-        text_init_guard || flip_guard || warp_guard || door_wait || door_terrain_guard);
+        text_init_guard || flip_guard || warp_guard || door_wait || door_terrain_guard || surface_call);
 }
 static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
     MMX4_SNAPSHOT_BOOL(s,inventory->character);MMX4_SNAPSHOT_U8(s,inventory->hp);
@@ -137,6 +141,10 @@ int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
     if(s->mode==MMX4_SNAPSHOT_READ)both_door.phase=(uint8_t)door_phase;
     MMX4_SNAPSHOT_BOOL(s,both_door.owner);
     MMX4_SNAPSHOT_U8(s,both_door.stage);MMX4_SNAPSHOT_U8(s,both_door.section);
+    for(unsigned i=0;i<32;++i) {
+        MMX4_SNAPSHOT_BOOL(s,surface_valid[i]);
+        mmx4_snapshot_bytes(s,surface_second[i],sizeof surface_second[i]);
+    }
     if(s->mode==MMX4_SNAPSHOT_READ) {
         memset(&view_second_inventory,0,sizeof view_second_inventory);
         memset(&view_saved_inventory,0,sizeof view_saved_inventory);
@@ -211,6 +219,7 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     memset(&saved_inventory,0,sizeof saved_inventory);
     memset(pickups,0,sizeof pickups);
     memset(scenes,0,sizeof scenes);
+    memset(surface_valid,0,sizeof surface_valid);memset(surface_second,0,sizeof surface_second);
     memset(&both_door,0,sizeof both_door);
     memset(menu_previous,0,sizeof menu_previous);
     memset(story_pad,0,sizeof story_pad);
@@ -317,7 +326,7 @@ void mmx4_coop_lifecycle_reset(void) {
     unsigned life_preserved=lives>=last_lives && !(last_lives==0 && lives==255);
     /* Retail packs the story boss (Final Weapon2) and Sigma stage3 into
      * slot11's two sections. This is a new level after Double/Iris, not an
-     * ordinary mid-stage transfer that should keep a teammate dead. */
+     * ordinary mid-stage transfer with resources carried forward. */
     unsigned fortress_stage=stage_known && stage==11 && last_stage==11 &&
         last_section==0 && section==1;
     /* Invoked before the core clears its second body. A section transfer
@@ -327,14 +336,17 @@ void mmx4_coop_lifecycle_reset(void) {
         !team_was_dead && (!full_stage_load || section!=last_section);
     if(fortress_stage && (first_was_dead || second_was_dead))
         psx_mod_counter_add("mmx4.coop.fortress-stage-rejoins",1);
-    carry_dead=carry_resources && second_was_dead;
-    carry_first_dead=carry_resources && first_was_dead;
+    unsigned forward_area=carry_resources && section>last_section;
+    carry_dead=carry_resources && second_was_dead && !forward_area;
+    carry_first_dead=carry_resources && first_was_dead && !forward_area;
+    if(forward_area && (first_was_dead || second_was_dead))
+        psx_mod_counter_add("mmx4.coop.forward-area-rejoins",1);
     /* Original 80035240 refills HP for spawn policies0 and-2. A living
      * counterpart follows that policy when advancing to the next section;
      * same-section checkpoints and carried deaths retain their resources. */
     unsigned spawn_policy=psx_mod_read_byte(PLAY+0x1E);
     carry_refill=carry_resources && section!=last_section && !carry_dead && !departed &&
-        (spawn_policy==0 || spawn_policy==254);
+        (spawn_policy==0 || spawn_policy==254 || (forward_area && second_was_dead));
     first_before_clear_valid=0;
     carry_departure=carry_resources && departed;
     if(carry_dead)psx_mod_counter_add("mmx4.coop.carried-p2-deaths",1);
@@ -350,6 +362,7 @@ void mmx4_coop_lifecycle_reset(void) {
     reward_committed=0;
     memset(pickups,0,sizeof pickups);
     memset(scenes,0,sizeof scenes);script_active=0;
+    memset(surface_valid,0,sizeof surface_valid);memset(surface_second,0,sizeof surface_second);
     memset(&both_door,0,sizeof both_door);
     warp_pending=warp_phase=warp_unlocked_ticks=0;
     initial_arrival=direct_initial_spawn=0;
@@ -962,6 +975,7 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
     if(!mmx4_coop_ready() || mmx4_coop_projected())return;
     const uint8_t *second=mmx4_coop_second_body();
     unsigned stage=psx_mod_read_byte(PLAY+0x0C),section=psx_mod_read_byte(PLAY+0x0D);
+    if(!mmx4_coop_alive(1))memset(surface_valid,0,sizeof surface_valid);
     unsigned hp[2]={psx_mod_read_byte(PLAYER+0x5C)&127u,second[0x5C]&127u};
     unsigned hidden=mmx4_coop_lifecycle_hidden(1);
     if(!psx_mod_local_view_scope() && trace_previous.valid &&
@@ -1370,6 +1384,42 @@ static int gameplay_scene(void) {
      * gameplay script and cached pad must not replace P1's frontend input
      * or project the surviving body over its presentation actors. */
     return mode==6 || mode==10 || mode==11;
+}
+static int floor_controller(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[4];
+    /* A surviving P2 also owns the shared stage-script pass. Its floor
+     * controller already ran with private momentum before terrain; leave
+     * P1's canonical controller intact instead of applying it a second time. */
+    if(!surface_call && mmx4_coop_ready() && mmx4_coop_projected() &&
+       actor>=0x80142F98u && actor<0x80143598u &&
+       !((actor-0x80142F98u)%0x30u) && psx_mod_read_byte(actor+1)==5)
+        return mmx4_coop_finish(cpu,0);
+    return 0;
+}
+void mmx4_coop_lifecycle_surface(CPUState *cpu) {
+    if(surface_call || !mmx4_coop_ready() || !mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || psx_mod_read_byte(PLAY)!=6 ||
+       mmx4_coop_lifecycle_hidden(1) || !mmx4_coop_alive(1))return;
+    surface_call=1;
+    for(unsigned slot=0;slot<32;++slot) {
+        uint32_t actor=0x80142F98u+slot*0x30u;
+        unsigned active=psx_mod_read_byte(actor);
+        if(!active || psx_mod_read_byte(actor+1)!=5) {surface_valid[slot]=0;continue;}
+        if(psx_mod_read_byte(PLAY+0x15) && !(active&8u))continue;
+        uint8_t canonical[0x30];read_bytes(actor,canonical,sizeof canonical);
+        if(!surface_valid[slot] || body_word(surface_second[slot],0x10)!=body_word(canonical,0x10)) {
+            memcpy(surface_second[slot],canonical,sizeof canonical);
+            surface_second[slot][4]=0; /* Native initialization clears momentum. */
+            surface_valid[slot]=1;
+        }
+        write_bytes(actor,surface_second[slot],sizeof canonical);
+        mmx4_coop_call(cpu,0x800B60BCu,actor,0);
+        read_bytes(actor,surface_second[slot],sizeof canonical);
+        write_bytes(actor,canonical,sizeof canonical);
+        psx_mod_counter_add("mmx4.coop.p2-floor-ticks",1);
+    }
+    surface_call=0;
 }
 static int stage_scripts(CPUState *cpu,uint32_t address) {
     if(script_pool_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected() ||
@@ -1959,6 +2009,10 @@ uint32_t mmx4_coop_lifecycle_digest(uint32_t seed) {
     seed=hash_word(seed,both_door.right);seed=hash_byte(seed,both_door.phase);
     seed=hash_byte(seed,both_door.owner);seed=hash_byte(seed,both_door.stage);
     seed=hash_byte(seed,both_door.section);
+    for(unsigned i=0;i<32;++i) {
+        seed=hash_byte(seed,surface_valid[i]);
+        for(unsigned j=0;j<sizeof surface_second[i];++j)seed=hash_byte(seed,surface_second[i][j]);
+    }
     return seed;
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
@@ -1980,6 +2034,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x80035A6Cu,death_animation);
     psx_mod_register_function_filter_plugin(ID,0x80033BC8u,death_detection);
     psx_mod_register_function_filter_plugin(ID,0x8002166Cu,stage_scripts);
+    psx_mod_register_function_filter_plugin(ID,0x800B60BCu,floor_controller);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
     psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);

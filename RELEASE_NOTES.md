@@ -1,4 +1,33 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.26
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.27
+
+**Ice physics, elevator cameras, and teammates returning at the next area.**
+
+- **Frost Walrus:** Player 2 now slides on ice with their own momentum, for
+  both X and Zero. Their movement no longer depends on Player 1's floor controller.
+- **Split Mushroom:** Fixed Player 2's Split camera staying behind as the
+  second-section elevator rises. Each view follows its rider.
+- **Area transitions:** A dead teammate returns when the survivor advances
+  to the next stage section. The survivor's resources and shared lives carry
+  forward. Same-area checkpoints and voluntary drop-out keep their existing rules.
+
+Includes all Playtest 26 fixes. **Windows ZIP and Linux x86_64 AppImage.**
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. Boss scaling and Fight Double and Iris
+remain optional and default off. Scaling's cooldown method defaults to Separate
+for each player, with Reduced shared cooldowns available.
+
+Campaign memory-card saves carry forward. Use those when updating between
+playtests. The earlier unconfirmed intro-door crash (item53) and Storm Owl arena
+wall/camera report (item89) remain open.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.26
 
 **Safer teleport recovery and correct scenery when Player 2 continues alone.**
 

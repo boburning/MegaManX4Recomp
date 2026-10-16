@@ -560,7 +560,8 @@ static void second_tick(CPUState *cpu,uint32_t address) {
         psx_mod_write_half(PAD,raw);psx_mod_write_half(PAD+2,previous_input);
         psx_mod_write_half(PAD+4,(uint16_t)(raw&~previous_input));previous_input=raw;
         guest(cpu,0x80035EF0,0,0);guest(cpu,0x80021C14,0,0);guest(cpu,0x800311EC,0,0);
-        guest(cpu,0x80021340,0,0);guest(cpu,0x8002C614,PLAYER,0);
+        guest(cpu,0x80021340,0,0);mmx4_coop_lifecycle_surface(cpu);
+        guest(cpu,0x8002C614,PLAYER,0);
         guest(cpu,0x80021D84,0,0);guest(cpu,0x80021CC8,0,0);
         leave_second();project(PAD,input,sizeof input);++frames;
         if(own_camera)for(unsigned layer=0;layer<3;++layer)
@@ -1342,7 +1343,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x38503458u); /* X4P8, per-player boss immunity */
+    mmx4_snapshot_fixed(s,0x39503458u); /* X4P9, private floor momentum */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);

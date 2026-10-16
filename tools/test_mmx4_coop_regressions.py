@@ -109,7 +109,9 @@ class Scenarios:
         after=self.wait('owl-section2',lambda v:v['stage']==7 and v['section']==1 and
             v['mode'][:2]==[6,0] and v['players'][1]['state']==1 and
             v['players'][1]['action']==2 and v['players'][1]['hp']>0,30)
-        assert after['players'][0]['hp']==0 and after['players'][0]['state']==3,after
+        after=self.wait('owl-teammate-revived',lambda v:all(
+            p['hp']and p['state']==1 and p['visible']for p in v['players']),20)
+        assert after['lives']==before['lives'],after
         self.sample('owl-exit-after',True)
         return dict(before=before,after=after)
 
