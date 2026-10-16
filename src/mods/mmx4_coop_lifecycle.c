@@ -607,6 +607,10 @@ static int both_door_scope(void) {
     return both_door.phase && both_door.stage==psx_mod_read_byte(PLAY+0x0C) &&
         both_door.section==psx_mod_read_byte(PLAY+0x0D);
 }
+int mmx4_coop_lifecycle_paired_door(void) {
+    return both_door_scope() && both_door.phase<=3 && script_active &&
+        both_door.serial==script_serial;
+}
 static void both_door_gate(unsigned seat,uint8_t value) {
     if(seat==(unsigned)(mmx4_coop_projected()!=0))psx_mod_write_byte(PLAYER+0xC4,value);
     else {
@@ -1576,7 +1580,14 @@ static int both_door_traversal(CPUState *cpu,uint32_t address) {
     if(!both_door_cleared())return mmx4_coop_finish(cpu,0);
     psx_mod_write_half(0x801419D6u,both_door.target_min);
     both_door.phase=3;
-    if(psx_mod_read_half(0x801419BAu)!=both_door.target_min)
+    /* Free movement can put the opener farther inside the new room than
+     * retail's auto-walk, especially when P2 leads. An exact minimum-X
+     * wait then never finishes (Frost: camera6080, minimum6032). Require
+     * arrival inside the authored interval, after both boxes clear. */
+    int camera_x=(int16_t)psx_mod_read_half(0x801419BAu);
+    int minimum=(int16_t)both_door.target_min;
+    int maximum=(int16_t)psx_mod_read_half(0x801419D4u);
+    if(camera_x<minimum || camera_x>maximum)
         return mmx4_coop_finish(cpu,0);
     both_door_gate(0,0);both_door_gate(1,0);
     mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
@@ -1588,13 +1599,14 @@ static int both_door_traversal(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.both-door-crossings",1);
     return mmx4_coop_finish(cpu,0);
 }
-static int paired_colonel_admission(CPUState *cpu,uint32_t address) {
+static int paired_boss_admission(CPUState *cpu,uint32_t address) {
     (void)address;
     if(!mmx4_coop_ready() || !both_door_scope() ||
        both_door.serial!=script_serial || both_door.phase>3)return 0;
-    /* Colonel's 80085F8C and Storm Owl's General 80088D30 start admission
-     * without waiting for C4/camera arrival. A leading player can reach that trigger while the partner
-     * is still in the aperture. That command aborts the crossing, restores
+    /* Colonel's 80085F8C, Storm Owl's General 80088D30 and Frost's
+     * midboss 80052218 start admission without waiting for C4/camera arrival.
+     * A leading player can reach that trigger with the partner still in the
+     * aperture. That command aborts the crossing, restores
      * the sealed map's collision and crushes the leader. Defer the entire
      * admission (including its actor allocation) until physical clearance
      * and camera arrival, then let the original introduction run once. */
@@ -2045,8 +2057,9 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C1994u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
     psx_mod_register_function_filter_plugin(ID,0x800C1D90u,both_door_traversal);
-    psx_mod_register_function_filter_plugin(ID,0x80085F8Cu,paired_colonel_admission);
-    psx_mod_register_function_filter_plugin(ID,0x80088D30u,paired_colonel_admission);
+    psx_mod_register_function_filter_plugin(ID,0x80052218u,paired_boss_admission);
+    psx_mod_register_function_filter_plugin(ID,0x80085F8Cu,paired_boss_admission);
+    psx_mod_register_function_filter_plugin(ID,0x80088D30u,paired_boss_admission);
     psx_mod_register_instruction_plugin(ID,0x800D0580u,0x14620006u,paired_intro_camera);
     psx_mod_register_instruction_plugin(ID,0x80081250u,0x14620005u,paired_iris_camera);
     psx_mod_register_function_filter_plugin(ID,0x8002D7E4u,both_door_map);

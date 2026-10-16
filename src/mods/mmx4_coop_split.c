@@ -134,7 +134,7 @@ void mmx4_coop_split_actors(Mmx4CoopViewActor actors[2]) {
 unsigned mmx4_coop_split_view_seat(unsigned seat) {
     if(seat>1)seat=0;
     int owner=mmx4_coop_lifecycle_script_owner();
-    if(owner>=0)return (unsigned)owner;
+    if(owner>=0 && !mmx4_coop_lifecycle_paired_door())return (unsigned)owner;
     if(!mmx4_coop_alive(seat))return mmx4_coop_alive(seat^1u)?seat^1u:0;
     return seat;
 }
@@ -444,13 +444,21 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     unsigned other=owner^1u;
     /* PLAY+10 also freezes the world while a native pickup counts health.
      * That pause must not copy room bounds or clamp the distant partner. */
-    if(mmx4_coop_lifecycle_script_owner()>=0 ||
-       (psx_mod_read_byte(MMX4_PLAY+0x1C) && !mmx4_coop_lifecycle_nova_active()) || !mmx4_coop_alive(other)) {
+    unsigned paired=mmx4_coop_lifecycle_paired_door();
+    if((mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
+       (psx_mod_read_byte(MMX4_PLAY+0x1C) && !paired && !mmx4_coop_lifecycle_nova_active()) || !mmx4_coop_alive(other)) {
         copy_camera(state+16u+other*CAMERA_BYTES,state+16u+owner*CAMERA_BYTES);
         mmx4_coop_lifecycle_camera_bounds(cpu,owner);
         return;
     }
     uint32_t shadow=state+16u+other*CAMERA_BYTES;
+    /* Both participants share the door's authored room limits while it is
+     * opening, but remain independently controlled through the aperture.
+     * Retain each origin and run ordinary follow for the other body rather
+     * than substituting the opener's whole camera/HUD until they cross. */
+    if(paired)for(unsigned offset=0x1C;offset<0x2C;offset+=2)
+        psx_mod_write_half(shadow+offset,(uint16_t)(canonical[offset]|
+            (uint16_t)canonical[offset+1]<<8));
     /* Current/target limits, dead zones and authored room metadata belong
      * to the individual view. Shared scripts synchronize whole records above. */
     for(unsigned offset=0;offset<8u;++offset)psx_mod_write_byte(shadow+offset,canonical[offset]);
@@ -463,6 +471,7 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     if(other)mmx4_coop_leave_second();
     write_bytes(CAMERA,canonical,CAMERA_BYTES);
     psx_mod_counter_add("mmx4.coop.split-camera-ticks",1);
+    if(paired)psx_mod_counter_add("mmx4.coop.split-paired-door-camera-ticks",1);
 }
 static int ram_range(uint32_t address,unsigned bytes) {
     return address>=0x80010000u && address<0x80200000u && bytes<=0x80200000u-address;
@@ -623,7 +632,8 @@ static unsigned eligible_regions(PSXPlacementRect regions[2]) {
         views[seat]=(Mmx4CoopView){(int16_t)psx_mod_read_half(shadow+10),
             (int16_t)psx_mod_read_half(shadow+14)};
     }
-    return mmx4_coop_view_regions(views,actors,mmx4_coop_lifecycle_script_owner(),
+    int owner=mmx4_coop_lifecycle_paired_door()?-1:mmx4_coop_lifecycle_script_owner();
+    return mmx4_coop_view_regions(views,actors,owner,
         psx_mod_widescreen_x_margin(),regions);
 }
 static uint32_t placement_table(void) {
@@ -700,7 +710,7 @@ static int scan_players(CPUState *cpu,uint32_t address) {
     }
     uint8_t canonical[CAMERA_BYTES];read_bytes(CAMERA,canonical,CAMERA_BYTES);
     Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
-    int owner=mmx4_coop_lifecycle_script_owner();scanning=1;
+    int owner=mmx4_coop_lifecycle_paired_door()?-1:mmx4_coop_lifecycle_script_owner();scanning=1;
     uint32_t result=0;
     for(unsigned seat=0;seat<2;++seat) {
         if(!actors[seat].active || (owner>=0 && owner!=(int)seat))continue;
@@ -733,7 +743,8 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
     initialize_cameras();
     uint8_t canonical[CAMERA_BYTES];read_bytes(CAMERA,canonical,CAMERA_BYTES);
     Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
-    int owner=mmx4_coop_lifecycle_script_owner();unsigned visible=0;
+    int owner=mmx4_coop_lifecycle_paired_door()?-1:mmx4_coop_lifecycle_script_owner();
+    unsigned visible=0;
     uint32_t result=draw?0:1;bounds_call=1;
     for(unsigned seat=0;seat<2;++seat) {
         if(!actors[seat].active || (owner>=0 && owner!=(int)seat))continue;

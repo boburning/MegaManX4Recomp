@@ -1251,12 +1251,13 @@ static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     return !failed;
 }
 static int present_local_view(CPUState *cpu,uint32_t address) {
+    unsigned paired=mmx4_coop_lifecycle_paired_door();
     if(!split_views || local_view_call || projected || inside || !mmx4_coop_ready() ||
        psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+1)!=0 ||
-       cpu->gpr[31]!=0x80012080u || mmx4_coop_lifecycle_script_owner()>=0 ||
+       cpu->gpr[31]!=0x80012080u || (mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
        psx_mod_read_byte(PLAY+0x0F) || psx_mod_read_byte(PLAY+0x10) ||
        (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
-        !mmx4_coop_lifecycle_nova_active()))return 0;
+        !mmx4_coop_lifecycle_nova_active() && !paired))return 0;
     uint32_t buffer=psx_mod_read_word(0x80142F80u);
     if(cpu->gpr[4]!=buffer+0x9Cu)return 0;
     local_view_call=1;

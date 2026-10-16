@@ -428,6 +428,14 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         cpu->gpr[31]=0x80085FE4u;
         mmx4_coop_call(cpu,0x80036AE4u,0x15,0);
         break;
+    case 0x80052218:
+        /* The Frost admission retires non-door General actors and enters
+         * its introduction substate before starting the shared action. */
+        for(unsigned i=0;i<32;++i)if(psx_mod_read_byte(0x80165A31u+i*0x8Cu)!=8)
+            psx_mod_write_byte(0x80165A30u+i*0x8Cu,0);
+        psx_mod_write_byte(a0+6,1);cpu->gpr[31]=0x8005228Cu;
+        mmx4_coop_call(cpu,0x80036AE4u,0x15,0);
+        break;
     case 0x80036AE4:
         psx_mod_write_byte(MMX4_PLAYER+0xC0,1);psx_mod_write_byte(MMX4_PLAY+0x1C,1);break;
     case 0x80036B18:
@@ -637,6 +645,7 @@ static int open_both_door(CPUState *cpu,uint32_t actor) {
         psx_mod_write_byte(0x800F8BC4u+character*4u+3u,16);
     }
     psx_mod_write_half(0x801419D6u,128);psx_mod_write_half(0x801419BAu,128);
+    psx_mod_write_half(0x801419D4u,608);
     psx_mod_write_word(PLAYER+8,512u<<16);psx_mod_write_byte(PLAYER+0x89,8);
     mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
     mmx4_coop_enter_second();psx_mod_write_word(PLAYER+8,512u<<16);
@@ -2040,7 +2049,11 @@ int main(void) {
     mmx4_coop_call(&cpu,0x800C1994u,actor,0);
     CHECK(both_door.phase==3 && psx_mod_read_byte(actor+5)==3);
     CHECK(psx_mod_read_half(0x801419D6u)==512 && !both_door_crossings);
-    psx_mod_write_half(0x801419BAu,512);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    psx_mod_write_half(0x801419BAu,511);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==3 && !both_door_crossings);
+    psx_mod_write_half(0x801419BAu,609);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
+    CHECK(both_door.phase==3 && !both_door_crossings);
+    psx_mod_write_half(0x801419BAu,560);mmx4_coop_call(&cpu,0x800C1994u,actor,0);
     CHECK(both_door.phase==4 && both_door_crossings==1 && psx_mod_read_byte(actor+5)==4);
     CHECK(!script_active && !psx_mod_read_byte(PLAYER+0xC4) && !p2[0xC4]);
     CHECK(psx_mod_read_word(PLAYER+8)==paired_x && body_word(p2,8)==paired_x);
@@ -2066,20 +2079,23 @@ int main(void) {
     /* Colonel's WARNING must not cancel an in-progress physical crossing.
      * The native initializer advances its actor and starts action15 once;
      * both projections defer all of that until the door/camera are ready. */
-    for(unsigned admission=0;admission<2;++admission)for(unsigned seat=0;seat<2;++seat) {
+    for(unsigned admission=0;admission<3;++admission)for(unsigned seat=0;seat<2;++seat) {
         CHECK(!open_both_door(&cpu,actor));
         uint32_t colonel=0x8013BED0u;
-        uint32_t entry=admission?0x80088D30u:0x80085F8Cu;
+        static const uint32_t admissions[]={0x80085F8Cu,0x80088D30u,0x80052218u};
+        uint32_t entry=admissions[admission];
         if(seat)mmx4_coop_enter_second();
         for(unsigned phase=1;phase<=3;++phase) {
             both_door.phase=(uint8_t)phase;
+            CHECK(mmx4_coop_lifecycle_paired_door());
             mmx4_coop_call(&cpu,entry,colonel,0);
-            CHECK(!psx_mod_read_byte(colonel+5) && !warp_pending && !warp_phase);
+            CHECK(!psx_mod_read_byte(colonel+5) && !psx_mod_read_byte(colonel+6) && !warp_pending && !warp_phase);
             CHECK(both_door.phase==phase && !psx_mod_read_byte(PLAYER+0xC0));
         }
         both_door.phase=4;
+        CHECK(!mmx4_coop_lifecycle_paired_door());
         mmx4_coop_call(&cpu,entry,colonel,0);
-        CHECK(psx_mod_read_byte(colonel+5)==1 && psx_mod_read_byte(PLAYER+0xC0));
+        CHECK(psx_mod_read_byte(colonel+(admission==2?6:5))==1 && psx_mod_read_byte(PLAYER+0xC0));
         CHECK(both_door.phase==5 && script_owner==seat && !warp_pending && !warp_phase);
         if(seat)mmx4_coop_leave_second();
     }

@@ -121,9 +121,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 111 | [ ] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Archive B, Playtest26 Split netplay. Platform activation is separate from personal ice momentum104. `beads-eio.9.151` |
 | 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Archive B. Preserve the reported lifetime symptom; whether this means missing disappearance, movement or another phase needs qualification. `beads-eio.9.151` |
 | 113 | [ ] | P2 snowflakes animate only after P1 dies | Frost Walrus, archive B. Separate from floor physics104; the ice fix does not establish a snow-animation fix. `beads-eio.9.152` |
-| 114 | [ ] | Frost Both-player boss door teleports P2 and can trap P1 walking left | P1 leads/P2 stands still, or both walk together: P2 teleports away and P1 walks left against an invisible door. P2 leads: passage works but P2 still teleports out/in. Archive B; reported Both setting conflicts with saved Either snapshots, so verify the active setting. `beads-eio.9.109` reopened for this case. |
+| 114 | [x] | Frost Both-player boss door teleports P2 and can trap P1 walking left | Reproduced in native Split/Both at checkpoint4. Midboss52218 starts its scene during pair phase2; defer its whole admission until physical clearance. Also fix the permanent camera6080/minimum6032 equality wait by accepting the authored room interval. Both leading arrangements now cross, keep both players healthy/visible and restore controls without transport; peer state matches through8514. The supplied pair2 trace confirms Both was active despite saved Either settings. `beads-eio.9.109` |
 | 115 | [ ] | P2 water ripples appear only when P1 is nearby | Web Spider distance-conditioned effect, archive C. Recheck the earlier water-effect fix in Split netplay with P1 far away. `beads-eio.9.28` reopened for this case. |
-| 116 | [ ] | Both-player first/second door opening focuses the camera on P1 until both pass | Archive C. Track camera ownership separately from physical traversal114; retain the reported Both-versus-recorded-Either settings discrepancy. `beads-eio.9.109` |
+| 116 | [x] | Both-player first/second door opening focuses the camera on P1 until both pass | Keep independent saved cameras, view selection and actual local presentation through paired phases1–3, sharing the authored door limits. Real boss introductions retain shared scenes. Composed Frost frames show separate X/Zero screens and HUDs with232px separation; peer state matches through8036. Cyber and Spider each cross both native doors, restore controls and retain both players with no transport or local-view state leaks. Windows34 checks and Linux lifecycle/split tests pass. `beads-eio.9.109` |
 | 117 | [ ] | X attacks do not knock back Iris | Archive C. Qualify boss-body reaction, attack type and player assignment; earlier Iris graphics/loading fixes84/85 do not establish combat correctness. `beads-eio.9.153` |
 | 118 | [ ] | X attacks do not damage Iris's crystal | Archive C. Separate crystal HP/collision acceptance case from Iris body knockback117. `beads-eio.9.153` |
 | 119 | [ ] | Sigma stage2 P2-triggered enemy respawns facing nearby off-camera P1 | Tester describes an enemy facing right when P2 triggers its spawn while P1 is nearby outside the displayed view. Enemy identity, exact location, native facing rule and matching recording segment remain unqualified. `beads-eio.9.154` |
@@ -142,8 +142,8 @@ The earlier authentic ceiling crush from undestroyed panels is unchanged.
 
 ### October16 P2-ahead and survivor feedback intake
 
-Tracking: `beads-eio.9.148`. Items107–121 are queued reports, not newly
-reproduced or fixed outcomes. Existing item104 remains checked: the supplied
+Tracking: `beads-eio.9.148`. Items107–121 were queued reports at intake; the rows above now record
+subsequent qualification and fixes. Existing item104 remains checked: the supplied
 Frost ice-physics recording predates its Playtest27 fix. If it persists in27,
 that would be a new qualification; no such current-build evidence is established here.
 
@@ -163,8 +163,9 @@ are not yet tied to a specific session or video timestamp.
 | B | `Forst Walrus stage bugs.zip` | [Frost Walrus feedback](https://youtu.be/UYdwjNHgfGc) | `c1dd9d67479d9324b03d4a19c70ad0bf844322c5d57dff59072e081cab4f387f` |
 | C | `Web Spider water ripple effects boss door focused on player 1 camera X attack Iris no knock back or cyrstal damage.zip` | [Water effects, doors and Iris feedback](https://youtu.be/leHSU7f0uKU) | `593bace0fcc03a8b07950cae7b1ec0f277966e3bfaa458cd27aea7cf7d98bb5e` |
 
-Archive metadata was inspected for this intake. Videos are linked as supplied;
-no frame-by-frame review or gameplay reproduction is claimed. Prioritize
+Archive metadata was inspected for the initial intake. Videos are linked as
+supplied; no frame-by-frame review or gameplay reproduction was claimed then.
+Subsequent native qualification is recorded in the individual rows. Prioritize
 blocked progression at the Frost doors/platforms, then missing combat/spawns
 and transition/camera faults, then cosmetic animation. Keep all individual
 acceptance cases visible even where they share an owning issue.
@@ -1555,3 +1556,28 @@ Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release27-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.147`. Existing items53 and89 remain open.
+
+### October16 paired-door follow-up
+
+Items114 and116 are fixed in source after Playtest27. Frost checkpoint4's
+native midboss admission now waits for both bodies and the camera to clear
+the doorway before retiring other stage actors or starting action15. An
+opener can freely move beyond the new scrolling minimum, so completion
+accepts the authored camera interval rather than exact minimum equality.
+Both-door Split presentation keeps each hero's own camera/HUD during the
+physical crossing; ordinary scripted introductions still share their view.
+
+Native before/after validation covers both leading arrangements in Frost,
+plus complete two-door Cyber Peacock and Web Spider entries. Composed images
+verify separate X/Zero views while one waits and the other advances. Both
+players retain health and controls without a partner beam. Peer core/mod
+state agrees; no private-render state leak is recorded. All34 Windows title
+checks and the native Linux lifecycle/split units pass. Negative camera
+interval, deferred admission, real-scene sharing and snapshot cases are covered.
+The failed intermediate P2-first equality wait and the incomplete initial
+presentation correction remain in private evidence, rather than being counted
+as passing tests. These changes are not yet in a published playtest.
+
+Private evidence: `build-pr23/feedback28-frost-20261016/doors-before`,
+`doors-after`, `doors-camera-fixed`, and
+`build-pr23/feedback28-session2-20261016`.

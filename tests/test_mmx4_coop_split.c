@@ -13,6 +13,8 @@ static unsigned split=1,projected,local_scope,ready=1,capacity=16,allocations,sc
 static unsigned native_directional_scans,scan_direction;
 static uint32_t native_table=TABLE;
 static int script_owner=-1;
+static unsigned paired_door;
+int mmx4_coop_lifecycle_paired_door(void) {return (int)paired_door;}
 static unsigned nova_active;
 static unsigned rider_armor_calls;
 int mmx4_coop_render_rider_armor(CPUState *cpu,uint32_t address) {
@@ -1002,6 +1004,16 @@ int main(void) {
     CHECK(invoke(&cpu,0x8002B1E8u));local_scope=0;
     script_owner=0;CHECK(invoke(&cpu,0x8002B1E8u));
     CHECK(mmx4_coop_split_camera_copy(1,view) && view[10]==0 && view[11]==0);script_owner=-1;
+    /* A physical paired crossing keeps separate camera origins, including
+     * the native opening lock. Real boss scenes still share their view. */
+    script_owner=0;paired_door=1;psx_mod_write_byte(MMX4_PLAY+0x1C,1);
+    CHECK(mmx4_coop_split_view_seat(1)==1);
+    mmx4_coop_split_camera(&cpu,0);
+    CHECK(mmx4_coop_split_camera_copy(1,view));
+    CHECK((view[10]|(unsigned)view[11]<<8)==1040);
+    CHECK(psx_mod_read_half(CAMERA+10)==0 && !projected);
+    paired_door=0;CHECK(mmx4_coop_split_view_seat(1)==0);
+    psx_mod_write_byte(MMX4_PLAY+0x1C,0);script_owner=-1;
     psx_mod_write_word(0x800F43C8u,TABLE);
     placement(0,100,140,0);placement(1,1200,2000,0);
     placement(2,600,1000,0);placement(3,100,2000,0);placement(4,1300,2100,3);

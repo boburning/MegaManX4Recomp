@@ -107,6 +107,8 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu);
 int mmx4_coop_lifecycle_can_tick(void);
 /* -1 during ordinary play; otherwise the native shared script's seat. */
 int mmx4_coop_lifecycle_script_owner(void);
+/* Both players retain their own views during an unfinished paired door. */
+int mmx4_coop_lifecycle_paired_door(void);
 int mmx4_coop_lifecycle_hidden(unsigned seat);
 int mmx4_coop_lifecycle_arriving(unsigned seat);
 int mmx4_coop_lifecycle_initial_arrival(void);
