@@ -1,4 +1,22 @@
-# Co-op playtest 25
+# Co-op playtest 26
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.26)
+with Windows ZIP and Linux x86_64 AppImage. Adds terrain-checked recovery when
+a living teleport passenger loses their partner (103), and corrects Web Spider
+part2 scenery when P2 continues alone in local Unified co-op (102).
+
+Both passenger seats pass targeted native recovery, idle and movement checks.
+The original full Storm Owl recording has not been replayed to completion;
+the isolated missing-pose regression and native recovery integration pass.
+Unified cameras and Stacked HUD remain defaults; Split is experimental.
+Both peers must update. Campaign memory-card saves carry forward.
+
+Items53 and89 remain open. Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.143`. Private package receipt:
+`build-pr23/release26-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 25
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.25)
 with Windows ZIP and Linux x86_64 AppImage. Restores inner boss doors in

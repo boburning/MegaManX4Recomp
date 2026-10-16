@@ -1,4 +1,33 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.25
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.26
+
+**Safer teleport recovery and correct scenery when Player 2 continues alone.**
+
+- **Teleport safety:** If a player is teleporting when their partner dies,
+  the living player now recovers near their departure point with working
+  controls. Landing positions are checked against terrain. An arrival that
+  already committed to the next room stays in that room; shared lives and
+  genuine deaths are preserved.
+- **Web Spider:** Fixed incorrect scenery in the second section during local
+  Unified co-op when Player 1 is dead and Player 2 continues alone.
+
+Includes all Playtest 25 fixes. **Windows ZIP and Linux x86_64 AppImage.**
+**Both netplay peers must update.** Unified cameras and Stacked lifebars remain
+the defaults; Split is experimental. Boss scaling and Fight Double and Iris
+remain optional and default off. Scaling's cooldown method defaults to Separate
+for each player, with Reduced shared cooldowns available.
+
+Campaign memory-card saves carry forward. Use those when updating between
+playtests. The earlier unconfirmed intro-door crash (item53) and Storm Owl arena
+wall/camera report (item89) remain open.
+
+Leave **Input Display and Recording** enabled and look for **REC**. If a bug
+recurs, note its video timestamp, quit normally, and send the complete
+`saves/diagnostics` folder beside the executable or AppImage. For netplay,
+include folders from both peers.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.25
 
 **Boss doors restored in Split netplay, and both heroes return for Sigma stage 3.**
 
