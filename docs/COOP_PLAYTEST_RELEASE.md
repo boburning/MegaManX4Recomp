@@ -10,10 +10,23 @@ Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
 experimental. Both peers must update. Campaign memory-card saves carry forward.
 Reports107,109,112,119,121 and older unresolved entries remain on the checklist.
 
-Package qualification will be recorded after both
-production artifacts pass. Release issue: `beads-eio.9.155`. Private package receipt:
+Release issue: `beads-eio.9.155`. Private package receipt:
 `build-pr23/release28-qa/release-receipt-final.json`.
 Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+Compiled source `cc12940`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows title checks pass; all 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `7b83b6e7953437c687944c325ab69d043826aaf9b8b3be54b54a8a735c24eabf` |
+| Linux x86_64 AppImage | `7f62629763d19ae411bb3b779622db92422d67e432f18e3c0b7883e932c2373d` |
 
 ## Previous co-op playtest 27
 
