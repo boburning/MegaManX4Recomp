@@ -132,7 +132,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 
 | 122 | [x] | P2 cannot activate Sigma3 boss-refight teleporters | Admit the native General27 actor in P2's Split view and retain the actual entering hero through its state machine. Split/Either P2 X enters alone and brings both healthy heroes to Cyber's refight; genuine P1/P2 survivor cases also pass. `beads-eio.9.160` |
 | 123 | [x] | Offer Both-player activation for boss-refight teleporters | Existing door selector now also controls refight pads. Native Split/Both holds P2 alone, admits the pair together, and exempts a genuinely dead partner; Either remains the default. Both campaigns and both survivor seats pass. `beads-eio.9.160` |
-| 124 | [ ] | Magma Dragoon needs an extra walk forward before the refight triggers | Reported; distinguish authored entrance threshold from wrong-seat activation. `beads-eio.9.157` |
+| 124 | [x] | Magma Dragoon needs an extra walk forward before the refight triggers | Checked through the actual P2-led hub pad: both arrive healthy, P2 advances into the authored admission, and Dragoon's fight starts without P1 having to lead. Peer state matches through27968. The retail walk-in remains; no additional seat gate reproduced. `beads-eio.9.157` |
 | 125 | [x] | P2 weakness does not affect Storm Owl | Reproduced on current29: native Zero/P2 Rakuhouha (R2, action58/type36) damages Owl but never reaches weakness phase11. Select the accepted hit's character at the original reaction branch instead of P1's campaign. Patched Split/Both native peers enter phase11;722 core/mod samples match through23136. Windows34 and Linux combat checks pass. Fortress-specific admission/grab/transport reports remain separate. `beads-eio.9.158` |
 | 126 | [ ] | Storm Owl leaves P1 grabbed until P2 dies | Not reproduced in bounded native low-HP grabs: approaching with P2 or interrupting with P2 Rakuhouha releases P1 normally, alive with controls restored. Exact reported failure remains open. `beads-eio.9.157` |
 | 127 | [x] | P2 weakness does not affect Jet Stingray | Actual P2 Zero ice attack type33 enters Jet's native rootphase3 after the attacker-selector correction;48 to46HP, paired core/mod state agrees through30016. `beads-eio.9.158` |
@@ -140,17 +140,17 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 129 | [ ] | P2 weakness may not affect Slash Beast | Tester explicitly uncertain; confirmation pending. `beads-eio.9.157` |
 | 130 | [ ] | Web Spider weakness may have no effect | Tester explicitly uncertain; attacker and reaction need qualification. `beads-eio.9.157` |
 | 131 | [x] | P2 weakness does not affect Frost Walrus | Actual P2 Zero fire attack type35 enters native weakness phase1/10 after the attacker-selector correction;48 to46HP, paired core/mod state agrees through27138. Combo cooldowns remain separate. `beads-eio.9.158` |
-| 132 | [ ] | P2 Zero cannot combo Frost Walrus because immunity occurs between hits | Compare native chain eligibility with the selected per-player scaling cooldowns. `beads-eio.9.157` |
+| 132 | [x] | P2 Zero cannot combo Frost Walrus because immunity occurs between hits | Per-player scaling now gives the first two accepted ground-saber strikes4-tick timers, retaining the finisher's full timer. Native Split/Either emits all three classes24/25/26, damages actual Frost48 to45, and keeps both heroes healthy; peers match through6946. Shared mode is unchanged. `beads-eio.9.164` |
 | 133 | [ ] | Death animations lose sprites or disappear | The report does not identify whether this is a hero or boss; actor and exact event need binding to the video/recording before a fix is claimed. `beads-eio.9.157` |
 | 134 | [ ] | P2 teleports away after the final hit on Jet Stingray | Reported fortress refight; distinguish expected return from an interrupted death/transport. `beads-eio.9.157` |
 | 135 | [ ] | Lightning Web sometimes fails to trigger wall-mounted Split Mushroom's weakness | Reported conditional weakness failure. `beads-eio.9.157` |
 | 136 | [ ] | Room before Sigma lacks P1's intro after death or Continue | Exact missing animation/event requires video qualification. `beads-eio.9.157` |
 | 137 | [x] | Pause does not open while a Both-player boss door is open | Permit each seat's native pause during free door traversal. Opening/admission/intro locks remain enforced. Native Split/Both Frost door: both owners pause/resume then complete crossing, with matching peers through11109. `beads-eio.9.159` |
-| 138 | [ ] | Lightning Web may not trigger Sigma phase2 weakness | Tester explicitly uncertain; compare native damage/reaction tables. `beads-eio.9.157` |
-| 139 | [ ] | P2 Zero cannot combo Sigma phase2 because immunity occurs between hits | Compare native Zero combo rules with per-player scaling cooldowns. `beads-eio.9.157` |
+| 138 | [x] | Lightning Web may not trigger Sigma phase2 weakness | Checked current native second form (kind68/variant1): actual Lightning Web reduces48HP to46 and creates the authored weakness effect type32/variant6. Peer state matches through15809. No additional Web-specific fix needed. `beads-eio.9.157` |
+| 139 | [x] | P2 Zero cannot combo Sigma phase2 because immunity occurs between hits | Same opening-strike timer correction as132. Actual P2 Zero generates classes24/25/26 against the native second form, its combo counter advances, and HP46 to44; peers match through15809. `beads-eio.9.164` |
 | 140 | [ ] | Sigma phase1 targets P2 except during the scythe attack | Reported target bias; positions and native phase-specific targeting need qualification. `beads-eio.9.157` |
-| 141 | [ ] | P2 teleports out and back during Sigma phase2 | Reported unexpected transport during the fight. `beads-eio.9.157` |
-| 142 | [ ] | P2 teleports out and back during Sigma phase3 | Reported unexpected transport during the fight. `beads-eio.9.157` |
+| 141 | [x] | P2 teleports out and back during Sigma phase2 | Reproduced native85CA8 presentation withdrawing nearby P2 with32HP. Nearby living heroes now remain for stationary fortress boss scenes. Fixed native complete first-to-second form transition retains both visible bodies and controls; peers match through9920. Actual transport commands remain enabled. `beads-eio.9.163` |
+| 142 | [x] | P2 teleports out and back during Sigma phase3 | Same-arena boss presentations use141's correction. Native second-form defeat still carries both heroes to the lower room; both arrive healthy, enter the actual kind74 fight, and survive its admission without a missing partner. Genuine upper-to-lower-room transport is preserved. `beads-eio.9.163` |
 | 143 | [x] | Adopt the SNES Mega Man X diagnostic file optimization before release | Bounded background formatting, hashes and writes preserve the v2 format and remove disk waits from steady-state input recording. Windows/Linux writer and replay checks pass; a real co-op recording replays all2542 complete native inputs. `beads-eio.9.161` |
 
 ### October16 fortress feedback intake
@@ -246,6 +246,36 @@ intervals with matching state hashes. The standard replay helper omits the
 last interval, as it did before this change. Private receipts:
 `build-pr23/diagnostic30-native-capture`, `build-pr23/diagnostic30-native-replay`.
 Tracking: `beads-eio.9.161`.
+
+### Playtest30 fortress scenes and Zero combos
+
+The native stationary/facing scene command14 previously withdrew the other
+hero for every fortress presentation. Keep both nearby, living, visible
+heroes on the same layer for those boss calls. Actual command15 transports,
+portal callers, distant/absent/dead partners and active door/warp gates keep
+the ordinary carry path. No new persistent snapshot state is introduced.
+The native baseline withdraws P2 during85CA8's refill between Sigma forms;
+the fixed full transition retains both bodies and controls at32HP, with
+matching peer state through9920. The actual final kind74 room also admits
+both healthy heroes (matching through21281). A genuine team death/retry
+restores both native arrivals at528/459 and552/458 (matching through21634).
+This checks arrival/retry and does not establish what the older report136
+meant by missing intro dialogue or animation.
+
+Separate per-player boss cooldowns cap Zero's first two accepted grounded
+saber strikes (native classes24/25) at4 ticks. The third strike, other moves,
+X, and the legacy shared method keep their previous durations. Native P2
+Zero produces the complete24/25/26 chain against Frost and Sigma's second
+form, damages both, and advances the new combo counter. Peer checks match
+through6946 and15809. Actual Lightning Web also produces Sigma's authored
+type32/variant6 weakness effect and reduces48HP to46.
+
+Windows35 title checks and Linux lifecycle/balance checks pass. Private
+evidence: `build-pr23/feedback30-native-final`; baseline:
+`build-pr23/feedback30-finish-split`. Some exploratory checkpoint/teleport
+setups failed before their intended observation (including placing a hero
+inside Mushroom's wall); those are excluded from gameplay defect claims.
+Tracking: `beads-eio.9.163`, `beads-eio.9.164`, release `beads-eio.9.162`.
 
 Playtest27 native evidence: the original-disc Frost comparisons cover both
 character assignments. The paired Split/Either Mushroom lift probe starts at

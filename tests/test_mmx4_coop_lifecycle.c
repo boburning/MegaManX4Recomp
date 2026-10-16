@@ -575,6 +575,9 @@ void mmx4_coop_armor_dismount(CPUState *cpu,unsigned seat) {
 }
 #include "../src/mods/mmx4_coop_lifecycle.c"
 #define CHECK(x) do {if(!(x)) {fprintf(stderr,"line %d: %s\n",__LINE__,#x);return 1;}}while(0)
+static void put32(uint8_t *p,uint32_t value) {
+    for(unsigned i=0;i<4;++i)p[i]=(uint8_t)(value>>(8*i));
+}
 static void reset(void) {
     stage_palette_phase=palette_swap_model=palette_uploads=0;palette_uploaded=0;
     stage_animation_destination=stage_animation_frame=0;palette_uploaded_world=0;
@@ -2488,6 +2491,32 @@ int main(void) {
         CHECK(portal_continuations[owner]==1 && !portal_continuations[owner^1u]);
         CHECK(psx_mod_read_byte(PLAY+0x43)==0 && !projected && !door_wait);
     }
+    /* Nearby fortress presentations retain both heroes for either owner.
+     * Actual transports and unsafe/nonparticipating partners keep carries. */
+    for(unsigned section=0;section<2;++section)for(unsigned owner=0;owner<2;++owner)
+    for(unsigned gate=0;gate<10;++gate) {
+        reset();psx_mod_write_byte(PLAY+12,12);psx_mod_write_byte(PLAY+13,(uint8_t)section);
+        psx_mod_write_byte(PLAYER+3,1);psx_mod_write_byte(PLAYER+4,1);
+        p2[3]=p2[4]=1;
+        psx_mod_write_word(PLAYER+8,1000u<<16);put32(p2+8,1024u<<16);
+        psx_mod_write_word(PLAYER+12,400u<<16);put32(p2+12,400u<<16);
+        cpu.gpr[31]=0x80085CA8u;
+        if(gate==1)put32(p2+8,1500u<<16);
+        if(gate==2)put32(p2+12,650u<<16);
+        if(gate==3)p2[3]=0;
+        if(gate==4)p2[0x5C]=0;
+        if(gate==5)p2[0x14]^=1;
+        if(gate==6)psx_mod_write_byte(PLAY+12,11);
+        if(gate==7)cpu.gpr[31]=0x800C1678u;
+        if(gate==8)psx_mod_write_byte(PLAYER+0xC4,1);
+        if(owner)mmx4_coop_enter_second();
+        mmx4_coop_call(&cpu,0x80036AE4u,gate==9?0x15:0x14,0x40);
+        if(owner)mmx4_coop_leave_second();
+        CHECK(script_active && script_owner==owner && !projected);
+        if(gate==0)CHECK(!warp_pending && !warp_phase);
+        else if(gate!=4)CHECK(warp_pending);
+    }
+    reset();
     CHECK(!personal_floor_momentum(&cpu));
     CHECK(!colonel_palette_refreshes(&cpu));
     CHECK(!survivor_palette_animation(&cpu));

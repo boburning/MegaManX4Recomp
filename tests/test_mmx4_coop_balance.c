@@ -7,6 +7,7 @@
 #define SAVE_BYTES (8+48*3+48*3*2)
 static uint8_t ram[0x200000];
 static int enabled,local,ready=1,per_player,projected;
+static unsigned shot_type=255,hero;
 static struct {uint32_t address;PSXModFunctionEntryCallback fn;} hooks[32];
 static unsigned count;
 uint8_t psx_mod_read_byte(uint32_t a){return ram[a&0x1fffff];}
@@ -52,6 +53,8 @@ static unsigned timed_hit(unsigned seat,unsigned amount,unsigned ticks) {
     projected=(int)seat;
     unsigned hp=psx_mod_read_byte(BOSS+0x5C);
     CPUState cpu={0};cpu.gpr[4]=cpu.gpr[16]=BOSS;cpu.gpr[2]=amount;cpu.gpr[3]=hp-amount;
+    cpu.gpr[5]=0x801406F8u;psx_mod_write_byte(cpu.gpr[5]+1,(uint8_t)shot_type);
+    psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)hero);
     mmx4_coop_balance_begin(BOSS);hook(&cpu,0x8002DF08u);
     psx_mod_write_byte(BOSS+0x5C,(uint8_t)cpu.gpr[3]);
     cpu.gpr[2]=ticks;hook(&cpu,0x8008CEC0u);
@@ -137,6 +140,29 @@ int main(void){
     CHECK(mmx4_coop_balance_snapshot(&io) && digest==mmx4_coop_balance_digest(1));
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,1));
     mmx4_coop_balance_forget(BOSS);CHECK(mmx4_coop_balance_hit_allowed(BOSS,1));
+    /* Independent timers retain Zero's short first/second saber chain,
+     * followed by full immunity after the finisher. Both seats qualify. */
+    for(unsigned seat=0;seat<2;++seat)for(unsigned kind=57;kind<=68;kind+=11) {
+        actor(kind,48);hero=1;shot_type=24;
+        CHECK(timed_hit(seat,2,64)==1);
+        for(unsigned tick=0;tick<3;++tick) {
+            mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+            CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
+            CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat^1u));
+        }
+        mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+        CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
+        shot_type=25;CHECK(timed_hit(seat,2,64)==1);
+        for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+        CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
+        shot_type=26;CHECK(timed_hit(seat,4,64)==1);
+        for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+        CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
+        CHECK(psx_mod_read_byte(BOSS+0x5C)==44);
+    }
+    actor(57,48);shot_type=24;hero=0;CHECK(timed_hit(0,2,64)==1);
+    for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+    CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0));shot_type=255;hero=0;
     per_player=0;mmx4_coop_balance_activate();
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
     CHECK(!mmx4_coop_balance_snapshot(&io));

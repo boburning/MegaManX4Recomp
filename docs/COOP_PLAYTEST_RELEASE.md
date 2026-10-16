@@ -1,4 +1,21 @@
-# Co-op playtest 29
+# Co-op playtest 30
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.30)
+with Windows ZIP and Linux x86_64 AppImage. Includes fortress refight-pad
+admission/Both policy, attacker-owned weakness reactions, Zero's ground-combo
+cooldowns, nearby-partner fortress scenes, open-door pause, and background
+diagnostic recording. Detailed native evidence is in the numbered checklist.
+
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Both peers must update. Campaign memory-card saves carry forward.
+Unconfirmed reports remain tracked and are not presented as fixed.
+
+Package qualification will be recorded after both
+production artifacts pass. Release issue: `beads-eio.9.162`. Private receipt:
+`build-pr23/release30-qa/release-receipt-final.json`.
+Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 29
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.29)
 with Windows ZIP and Linux x86_64 AppImage. Fixes Storm Owl's arena limit when

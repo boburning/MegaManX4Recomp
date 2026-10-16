@@ -1,4 +1,37 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.29
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.30
+
+**Fortress co-op fixes, chainable Zero combos, and lighter diagnostic recording.**
+
+- Either hero can activate the fortress boss-refight teleporters. The existing
+  Both-player door option now also lets you require both living heroes on a pad.
+- Corrected boss weakness reactions to use the hero who actually landed the hit.
+  Native checks cover Storm Owl, Jet Stingray, Frost Walrus and Sigma's second form.
+- Zero can chain his opening ground slashes with separate per-player boss
+  cooldowns. The finisher keeps its full cooldown; the earlier shared method remains available.
+- Nearby living partners stay present through stationary fortress boss scenes,
+  including Sigma's phase changes. Actual room changes still transport the party.
+- Either player can pause while moving freely through an open Both-player door.
+- Diagnostic checksums and input-file writes run on a bounded background worker.
+  Recording locations and replay format are unchanged; failures remain visible.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+
+The numbered checklist distinguishes validated fixes, current native checks,
+and reports still awaiting a matching reproduction. Unconfirmed death-sprite,
+conditional weakness, targeting and older stage reports remain tracked; this
+release does not claim every historical report is fixed.
+
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders. An abrupt process kill can lose the unflushed tail.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.29
 
 **Storm Owl's boss arena now stays in place when the players arrive apart.**
 

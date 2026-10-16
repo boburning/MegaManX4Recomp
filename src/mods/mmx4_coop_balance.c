@@ -17,6 +17,7 @@ static uint32_t current_actor;
 static uint8_t saved_fraction[3];
 static unsigned accepted_damage;
 static unsigned damage_owner;
+static unsigned saber_chain;
 
 static int slot(uint32_t actor) {
     if(actor<POOL || actor>=POOL+SLOTS*STRIDE || (actor-POOL)%STRIDE)return -1;
@@ -44,7 +45,7 @@ static unsigned bank(uint32_t actor) {
 void mmx4_coop_balance_reset(void) {
     memset(fraction,0,sizeof fraction);memset(saved_fraction,0,sizeof saved_fraction);
     memset(immunity,0,sizeof immunity);
-    current_actor=0;accepted_damage=damage_owner=0;
+    current_actor=0;accepted_damage=damage_owner=saber_chain=0;
 }
 void mmx4_coop_balance_activate(void) {
     char value[32];
@@ -69,7 +70,7 @@ void mmx4_coop_balance_begin(uint32_t actor) {
     if(!enabled || psx_mod_local_view_scope() || slot(actor)<0)return;
     if(!psx_mod_read_byte(actor+4))mmx4_coop_balance_forget(actor);
     current_actor=actor;
-    accepted_damage=damage_owner=0;
+    accepted_damage=damage_owner=saber_chain=0;
     if(per_player)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         if(immunity[slot(actor)][b][seat])--immunity[slot(actor)][b][seat];
     memcpy(saved_fraction,fraction[slot(actor)],sizeof saved_fraction);
@@ -77,7 +78,7 @@ void mmx4_coop_balance_begin(uint32_t actor) {
 void mmx4_coop_balance_end(void) {
     if(current_actor && !psx_mod_read_byte(current_actor+0x5C))
         fraction[slot(current_actor)][bank(current_actor)]=0;
-    current_actor=0;accepted_damage=damage_owner=0;memset(saved_fraction,0,sizeof saved_fraction);
+    current_actor=0;accepted_damage=damage_owner=saber_chain=0;memset(saved_fraction,0,sizeof saved_fraction);
 }
 int mmx4_coop_balance_snapshot_ready(void) {return !current_actor;}
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
@@ -120,6 +121,15 @@ static void damage(CPUState *cpu,uint32_t address) {
     if(!hp || hp>=127 || !amount || amount>255)return;
     /* This site follows SUBU, after the separate damage-multiplier hook. */
     cpu->gpr[3]=scaled_damage(actor,amount);
+    /* Keep Zero's first two grounded strikes chainable in the independent
+     * cooldown mode. The finisher and other moves retain their full timer.
+     * A1 is the native projectile accepted by 2DE30, after overlap/tokens. */
+    uint32_t shot=cpu->gpr[5];
+    if(current_actor==actor) {
+        saber_chain=shot>=0x801406F8u && shot<0x801406F8u+16u*0x9Cu &&
+            !((shot-0x801406F8u)%0x9Cu) && psx_mod_read_byte(MMX4_PLAYER+2)==1 &&
+            (psx_mod_read_byte(shot+1)==24 || psx_mod_read_byte(shot+1)==25);
+    }
 }
 static void cut_web(CPUState *cpu,uint32_t address) {
     (void)address;
@@ -138,7 +148,7 @@ static void rejected_hit(CPUState *cpu,uint32_t address) {
      * A discarded hit must also discard its fractional damage. */
     if(enabled && current_actor==actor && !psx_mod_local_view_scope()) {
         memcpy(fraction[slot(actor)],saved_fraction,sizeof saved_fraction);
-        accepted_damage=damage_owner=0;
+        accepted_damage=damage_owner=saber_chain=0;
     }
 }
 static void damage_reaction(CPUState *cpu,uint32_t address) {
@@ -155,6 +165,10 @@ static void cooldown(CPUState *cpu,uint32_t address) {
     if(ticks>1 && ticks<255) {
         if(per_player) {
             if(current_actor!=actor || !damage_owner)return;
+            if(saber_chain && ticks>4) {
+                ticks=4;
+                psx_mod_counter_add("mmx4.coop.zero-combo-cooldown",1);
+            }
             uint8_t *timers=immunity[slot(actor)][bank(actor)];
             timers[damage_owner-1u]=(uint8_t)ticks;
             /* Native collision/flash gates see the earliest available seat.

@@ -1913,6 +1913,24 @@ static int partner_victory_pose(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.paired-victory-poses",1);
     return mmx4_coop_finish(cpu,0);
 }
+static int fortress_shared_scene(CPUState *cpu) {
+    /* Native 14 is a stationary/facing scene command, not a room warp.
+     * Refight defeat scenes and Sigma's phase presentations can retain two
+     * nearby heroes. A distant, absent or still-transferring partner must
+     * keep the ordinary carry path; native 15 transport is never bypassed. */
+    if(cpu->gpr[4]!=0x14u || cpu->gpr[31]<0x80048000u || cpu->gpr[31]>=0x80094000u ||
+       psx_mod_read_byte(PLAY+12)!=12 || psx_mod_read_byte(PLAY+13)>1 ||
+       psx_mod_local_view_scope() || departed || warp_pending || warp_phase ||
+       !mmx4_coop_alive(0) || !mmx4_coop_alive(1))return 0;
+    uint8_t current[0xE4];read_bytes(PLAYER,current,sizeof current);
+    const uint8_t *first=mmx4_coop_projected()?mmx4_coop_first_body():current;
+    const uint8_t *second=mmx4_coop_projected()?current:mmx4_coop_second_body();
+    if(!first[3] || !second[3] || first[4]!=1 || second[4]!=1 ||
+       first[0x14]!=second[0x14] || first[0xC4] || second[0xC4])return 0;
+    int x=(int16_t)(body_word(first,8)>>16)-(int16_t)(body_word(second,8)>>16);
+    int y=(int16_t)(body_word(first,12)>>16)-(int16_t)(body_word(second,12)>>16);
+    return x>=-240 && x<=240 && y>=-160 && y<=160;
+}
 static int script_command(CPUState *cpu,uint32_t address) {
     if(command_guard || !mmx4_coop_ready() || !gameplay_scene())return 0;
     /* Owl's upper entry area8010AC70 sets minX2240; the adjacent rear area
@@ -1941,6 +1959,7 @@ static int script_command(CPUState *cpu,uint32_t address) {
         both_door.serial==script_serial && both_door.phase>=4 &&
         cpu->gpr[31]>=0x80048000u && cpu->gpr[31]<0x80094000u &&
         (cpu->gpr[4]==0x14u || cpu->gpr[4]==0x15u);
+    unsigned fortress_pair=address==0x80036AE4u && fortress_shared_scene(cpu);
     /* Only the first retail boss admission after this physical crossing and
      * its still-active conversation inherit the pair. A portal, stage warp,
      * later victory, or another command must retain the existing departure. */
@@ -1954,7 +1973,7 @@ static int script_command(CPUState *cpu,uint32_t address) {
             both_door.phase=5;both_door.owner=(uint8_t)owner;both_door.serial=script_serial;
         }
     }else {script_active=0;memset(&both_door,0,sizeof both_door);}
-    if(!paired_boss)request_script_departure(owner);
+    if(!paired_boss && !fortress_pair)request_script_departure(owner);
     if(redirect)mmx4_coop_leave_second();
     return mmx4_coop_finish(cpu,result);
 }

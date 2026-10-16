@@ -1,6 +1,6 @@
 # Playing and reporting co-op
 
-Use the [current playtest release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.19)
+Use the [current playtest release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.30)
 on both computers. The launcher and netplay UI are included on Windows and Linux.
 
 ## Local co-op
@@ -42,8 +42,10 @@ only **Netplay cameras** is online-only. Changes apply on the next fresh boot.
   fortress refight pad; dead or withdrawn partners are exempt.
 - **Fight Double and Iris:** off by default. Fight the campaign's usual boss,
   return through the inner door for the other encounter, then continue P1's story.
-- **Co-op boss scaling:** off by default. Double effective health with shorter
-  shared hit cooldowns. Invulnerability timers are not separate per player.
+- **Co-op boss scaling:** off by default. Double effective health. Its default
+  **Separate per-player cooldowns** lets each hero damage independently and lets
+  Zero chain his opening ground slashes. The finisher keeps its full cooldown.
+  **Reduced shared cooldowns** retains the earlier shared-timer method.
 - **Ultimate Armor X Code / Black Zero:** off by default and compatible with
   each other. X's code makes a capsule grant Ultimate Armor; it does not grant
   the armor immediately. Both codes are available under **X + Zero Co-op** for
