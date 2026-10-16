@@ -1290,6 +1290,43 @@ int main(void) {
     CHECK(cpu.gpr[2]==6353);
     psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,12);
     cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
+    /* Owl's adjacent entry/release areas can observe different heroes: the
+     * rear hero at2680 releases the minimum after the leader crossed2648.
+     * The real boss introduction must own its authored enclosure, including
+     * P2-led/survivor entries. Ordinary backtracking and other scenes retain
+     * their native bounds. No current camera position is teleported. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+        for(unsigned owner=0;owner<2;++owner)for(unsigned survivor=0;survivor<2;++survivor) {
+            reset();split_views=(int)mode;
+            psx_mod_write_byte(PLAY+12,7);psx_mod_write_byte(PLAY+13,1);
+            psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+            if(survivor) {
+                if(owner)psx_mod_write_byte(PLAYER+0x5C,0);
+                else p2[0x5C]=0;
+            }
+            psx_mod_write_half(0x801419D4u,2240);psx_mod_write_half(0x801419D6u,0);
+            psx_mod_write_half(0x801419CEu,0);psx_mod_write_half(0x801419BAu,2300);
+            if(owner)mmx4_coop_enter_second();
+            cpu.gpr[31]=0x80075104u;
+            mmx4_coop_call(&cpu,0x80036AE4u,0x14,0);
+            if(owner)mmx4_coop_leave_second();
+            CHECK(psx_mod_read_half(0x801419D6u)==2240);
+            CHECK(psx_mod_read_half(0x801419D4u)==2240);
+            CHECK(psx_mod_read_half(0x801419CEu)==0);
+            CHECK(psx_mod_read_half(0x801419BAu)==2300);
+        }
+    for(unsigned test=0;test<8;++test) {
+        reset();psx_mod_write_byte(PLAY+12,7);psx_mod_write_byte(PLAY+13,1);
+        cpu.gpr[31]=0x80075104u;
+        if(test==0)psx_mod_write_byte(PLAY+12,12); /* Boss rush. */
+        if(test==1)psx_mod_write_byte(PLAY+13,0);
+        if(test==2)cpu.gpr[31]+=4;
+        if(test==3)local_view=1;
+        if(test==4)ready=0;
+        if(test==5)psx_mod_write_byte(PLAY,7);
+        mmx4_coop_call(&cpu,0x80036AE4u,test==6?0x15:0x14,test==7?0x40:0);
+        CHECK(psx_mod_read_half(0x801419D6u)==0);
+    }
     /* Either living hero can arm the original opening-ice cycle, including
      * both exact interval edges. The clock and shared world are untouched. */
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)

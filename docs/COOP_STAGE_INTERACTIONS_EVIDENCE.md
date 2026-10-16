@@ -774,3 +774,45 @@ bounds. Item89 remains open. Private receipts:
 `build-pr23/storm29-{original-solo,current-coop}/report.json` and their
 `native-solo-end.png` captures. No gameplay source change or additional release
 is required by this comparison.
+
+### Storm Owl arena admission fix (2026-10-16)
+
+Item89 is now reproduced and fixed on current source. Native stage7/section1
+camera area3 at8010AC70 covers X2640..2656 and supplies minimum2240; adjacent
+area4 at8010AC7C covers X2672..2688 and releases that minimum to0 for ordinary
+backtracking. A trailing player can activate the release after the leader
+crosses the entry. The boss introduction then transports that partner past
+the entry trigger, leaving the live fight at0..2240. A private original-disc
+checkpoint3 run reproduces those wrong limits with P1 at2640/683 and P2 placed
+at2680/683, without writing actor phases, terrain or camera fields. Normal
+Left input and native dialogue confirmation start the actual kind60 fight.
+This explains the retained Metadata6 wall state without inventing extra tiles.
+
+At the original750FC admission call, recommit the authored target minimum2240
+for this stage/section and command only. Keep the current camera origin and
+native limit movement; other admissions, boss rush and ordinary backtracking
+remain unchanged. No persistent state or extra native stage update is added.
+The development checkpoint whitelist also admits the four verified original
+Storm Owl section1 entries, allowing synchronized setup on both peers.
+
+The old source fails the new ownership-boundary regression. The fix passes
+both campaigns, Unified/Split, both owners and either survivor, plus eight
+negative contexts. All34 Windows checks and the Linux lifecycle check pass.
+In local Unified/Both, the same native rear-release setup still produces0
+before admission, then locks the arena at2240; continued Left input brings
+both players toX2248 with32HP, clear locks and normal controls. In a hidden,
+muted two-peer Split/Both match, both leading seats finish the real introduction
+and partner return. The views start with independent rear/entry minima0/2240,
+then retain current/target arena bounds2240..2240 during movement. Players
+remain visible and32HP nearX2271..2275, and inspected composed views retain
+the authored arena. Core/mod checks match through6390 for P1 leading and8938
+for P2 leading. These native checks use the X campaign; the reverse campaign
+has boundary-test coverage. Owned processes are stopped normally.
+
+Private evidence: `build-pr23/storm29-rear-partner-{before,after}`,
+`build-pr23/storm29-split-session/owl-arena-result.json`, the composed PNGs,
+`build-pr23/storm29-unit-{before,after}.log`, `storm29-windows-tests.log`,
+`storm29-plugin-audit.log`, and `storm29-linux-test.log`. Stalled ladder
+navigation and an initial Split setup assertion that incorrectly expected
+both cameras to share a minimum are excluded. Tracking: `beads-eio.9.121`.
+This fix is newer than Playtest28 and has not yet been packaged.

@@ -1885,6 +1885,17 @@ static int partner_victory_pose(CPUState *cpu,uint32_t address) {
 }
 static int script_command(CPUState *cpu,uint32_t address) {
     if(command_guard || !mmx4_coop_ready() || !gameplay_scene())return 0;
+    /* Owl's upper entry area8010AC70 sets minX2240; the adjacent rear area
+     * 8010AC7C releases it to0 for backtracking. A trailing hero can occupy
+     * that release after the leader crosses the entry, then warp past the
+     * entry during the boss introduction. Commit its authored enclosure
+     * only when the native Owl admission actually starts (750FC). Keep the
+     * current camera position/limit easing and ordinary area scripts intact. */
+    if(address==0x80036AE4u && cpu->gpr[31]==0x80075104u &&
+       cpu->gpr[4]==0x14u && !cpu->gpr[5] && !psx_mod_local_view_scope() &&
+       psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+12)==7 &&
+       psx_mod_read_byte(PLAY+13)==1)
+        psx_mod_write_half(0x801419D6u,2240);
     unsigned owner=mmx4_coop_projected()?1u:0u;
     fprintf(stderr,"mmx4.coop: scene-command stage=%u section=%u address=%08X caller=%08X "
         "command=%u seat=%u pair=%u serial=%u/%u\n",
