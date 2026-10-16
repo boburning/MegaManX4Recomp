@@ -58,6 +58,10 @@ int mmx4_coop_lifecycle_arriving(unsigned seat) {return seat==1 && arriving;}
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {return actor==deferred_portal;}
 static unsigned target_camera_mode=1;
 static PSXModFunctionEntryCallback redirects[2],actor_dispatch,double_admission;
+static PSXModFunctionEntryCallback reaction_hooks[7];
+static const uint32_t reaction_sites[]={0x80050998u,0x80071DE4u,0x80072514u,
+    0x800753FCu,0x80082644u,0x800850DCu,0x80091344u};
+static unsigned reaction_model,reaction_expected,reaction_checks;
 static unsigned pool_updates,actor_updates[2],bounds_updates,ai_contact,ai_solid;
 static unsigned ai_direct_write,ai_canonical;
 static uint8_t saved_campaign;
@@ -114,6 +118,9 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
     CHECK(!strcmp(id,"mmx4.coop"));
     if(address==0x8002DE84u) {
         CHECK(word==0xA0820063u);double_admission=callback;return 1;
+    }
+    for(unsigned i=0;i<7;++i)if(address==reaction_sites[i]) {
+        CHECK(!word);reaction_hooks[i]=callback;return 1;
     }
     CHECK(word==0x0040F809u);
     CHECK(address==0x80021300u || address==0x80021518u);
@@ -386,6 +393,18 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         CHECK(mmx4_coop_combat_actor_context());
         ++actor_updates[seat];
         ai_target_x[seat]=psx_mod_read_word(MMX4_PLAYER+8);
+        if(reaction_model) {
+            uint32_t actor=cpu->gpr[4];
+            CHECK(filter(HIT)(cpu,HIT));
+            for(unsigned i=0;i<7;++i) {
+                CPUState reaction={.gpr={[2]=psx_mod_read_byte(MMX4_PLAY+0x43),[16]=actor}};
+                reaction_hooks[i](&reaction,reaction_sites[i]);
+                CHECK(reaction.gpr[2]==reaction_expected);++reaction_checks;
+                reaction.gpr[2]=9;reaction.gpr[16]=actor+0x9Cu;
+                reaction_hooks[i](&reaction,reaction_sites[i]);CHECK(reaction.gpr[2]==9);
+            }
+            return 0;
+        }
         if(double_model) {
             uint32_t result=double_tick();
             CHECK(projected==seat && mmx4_coop_combat_actor_context());
@@ -436,7 +455,7 @@ static void setup(void) {
     hit_result[0]=hit_result[1]=0;boss_immunity[0]=boss_immunity[1]=0;
     allocated_actor=ACTOR;
     mount_accept[0]=mount_accept[1]=0;
-    token_model=double_model=local_view=0;attack_present[0]=attack_present[1]=0;
+    token_model=double_model=local_view=reaction_model=0;attack_present[0]=attack_present[1]=0;
     attack_type[0]=attack_type[1]=0;
     attack_token[0]=attack_token[1]=0;
     psx_mod_write_byte(MMX4_PLAY,6);
@@ -1197,6 +1216,27 @@ int main(void) {
     CHECK(invoke(HIT)==1 && native_calls[1]==1 && consumed==2);
     psx_mod_write_byte(MMX4_PLAYER+0xBC,5);second[0xBC]=0;
     CHECK(invoke(HIT)==1 && native_calls[0]==3 && native_calls[1]==2);
+    /* The native caller chooses reactions after the hit wrapper has restored
+     * its original AI projection. Hit owner, AI owner and campaign may all
+     * differ. Misses/rejected attacks cannot reuse a previous character. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned ai=0;ai<2;++ai)
+    for(unsigned hitter=0;hitter<2;++hitter)for(unsigned outcome=0;outcome<3;++outcome) {
+        setup();reaction_model=1;reaction_checks=0;
+        psx_mod_write_byte(MMX4_PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)campaign);second[2]=(uint8_t)(campaign^1u);
+        uint32_t enemy=0x8013BED0u;
+        psx_mod_write_byte(enemy,1);psx_mod_write_byte(enemy+1,61);
+        psx_mod_write_word(enemy+8,(ai?30u:10u)<<16);
+        psx_mod_write_word(enemy+12,(ai?40u:20u)<<16);
+        hit_result[hitter]=outcome==0?7u:outcome==1?0u:0x7Fu;
+        reaction_expected=outcome==0?(campaign^hitter):campaign;
+        invoke(0x80021234u);
+        CHECK(reaction_checks==7 && actor_updates[ai]==1);
+        CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==campaign && !projected);
+        CHECK(mmx4_coop_combat_snapshot_ready());
+        CPUState outside={.gpr={[2]=9,[16]=enemy}};
+        reaction_hooks[0](&outside,reaction_sites[0]);CHECK(outside.gpr[2]==9);
+    }
     puts("X4 co-op combat boundary checks passed");
     return 0;
 }

@@ -60,6 +60,11 @@ static unsigned survivor_pool_call;
 static unsigned actor_call,actor_suspended,actor_owner;
 static uint32_t actor_function,actor_pending,actor_pool;
 static uint8_t actor_campaign,pool_first_freeze;
+/* Valid only within one shared actor update, after an accepted player hit.
+ * Boss reactions must use that attacker, independently of the AI target and
+ * P1's campaign. No state survives the actor boundary or enters snapshots. */
+static uint32_t reaction_actor;
+static unsigned reaction_character;
 static HitContact hits[SOLID_CAPACITY];
 static unsigned hit_count;
 
@@ -67,7 +72,8 @@ int mmx4_coop_combat_snapshot_ready(void) {
     return !(combat_call || solid_call || allocation_call || aim_call || effect_allocation_call ||
         personal_effect_call || particle_allocation_call || particle_init_call || armor_call ||
         survivor_pool_call || actor_call || actor_suspended || actor_owner || actor_function ||
-        actor_pending || actor_pool || actor_campaign || pool_first_freeze);
+        actor_pending || actor_pool || actor_campaign || pool_first_freeze ||
+        reaction_actor || reaction_character);
 }
 int mmx4_coop_combat_snapshot(Mmx4SnapshotIO *s) {
     unsigned count=mmx4_snapshot_integer(s,solid_count,4,SOLID_CAPACITY);
@@ -176,6 +182,8 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
     combat_call=1;
     uint32_t actor=cpu->gpr[4], arg=cpu->gpr[5];
     uint32_t result=0;
+    unsigned attacker=0;
+    if(address==ENEMY_HIT)reaction_actor=reaction_character=0;
     HitContact *history=address==ENEMY_HIT?hit_record(actor,1):NULL;
     uint8_t first_token=history?history->token[0]:0;
     if (history) psx_mod_write_byte(actor+0x65,first_token);
@@ -186,6 +194,7 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
     if (mmx4_coop_alive(0) && !psx_mod_read_byte(MMX4_PLAYER+0xBC) &&
         (address!=ENEMY_HIT || mmx4_coop_balance_hit_allowed(actor,0))) {
         result=mmx4_coop_call(cpu,address,actor,arg);
+        if(result)attacker=1;
         if (history) {
             first_token=psx_mod_read_byte(actor+0x65);
             history=hit_record(actor,0);
@@ -197,6 +206,7 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
         if (history) psx_mod_write_byte(actor+0x65,history->token[1]);
         mmx4_coop_enter_second();
         result=mmx4_coop_call(cpu,address,actor,arg);
+        if(result)attacker=2;
         mmx4_coop_leave_second();
         if (history) {
             uint8_t second_token=psx_mod_read_byte(actor+0x65);
@@ -207,10 +217,26 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
         if (result) psx_mod_counter_add(address==CONTACT?
             "mmx4.coop.p2-contact":"mmx4.coop.p2-enemy-hit",1);
     }
+    if(address==ENEMY_HIT && actor_call && attacker && result && result<0x7Fu) {
+        reaction_actor=actor;
+        reaction_character=attacker==1?psx_mod_read_byte(MMX4_PLAYER+2)+1u:
+            mmx4_coop_second_body()[2]+1u;
+    }
     combat_call=0;
     /* The original actor caller applies the selected result and advances its
      * state once. In particular, one consumable attack cannot hit both seats. */
     return mmx4_coop_finish(cpu,result);
+}
+
+static void attack_reaction_character(CPUState *cpu,uint32_t address) {
+    (void)address;
+    /* These NOPs follow the retail load of PLAY+43 and precede its branch.
+     * Change only the loaded character, retaining native attack result,
+     * damage, reaction tables and every shared story/AI field. */
+    if(actor_call && !actor_suspended && !combat_call && mmx4_coop_ready() &&
+       !psx_mod_local_view_scope() && reaction_actor==cpu->gpr[16] &&
+       reaction_character && reaction_character<=2)
+        cpu->gpr[2]=reaction_character-1u;
 }
 
 static int spider_web(uint32_t actor) {
@@ -676,7 +702,7 @@ static void update_actor(CPUState *cpu,uint32_t address) {
     uint32_t actor=actor_pending,function=actor_function;
     actor_pending=actor_function=0;
     if(!actor || !function || actor_call || !survivor_pool_call)return;
-    actor_call=1;
+    actor_call=1;reaction_actor=reaction_character=0;
     psx_mod_write_byte(MMX4_PLAYER+0xBC,pool_first_freeze);
     Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
     int owner=mmx4_coop_lifecycle_script_owner();
@@ -729,6 +755,7 @@ static void update_actor(CPUState *cpu,uint32_t address) {
     pool_first_freeze=psx_mod_read_byte(MMX4_PLAYER+0xBC);
     psx_mod_write_byte(MMX4_PLAYER+0xBC,0);
     actor_campaign=0;actor_call=actor_owner=0;
+    reaction_actor=reaction_character=0;
     mmx4_coop_finish(cpu,result);
 }
 
@@ -765,6 +792,7 @@ void mmx4_coop_combat_reset(void) {
     actor_call=actor_suspended=actor_owner=0;
     actor_function=actor_pending=actor_pool=0;
     actor_campaign=pool_first_freeze=0;
+    reaction_actor=reaction_character=0;
 }
 
 static uint32_t digest_byte(uint32_t seed, uint8_t value) {
@@ -841,6 +869,13 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800419B8u,aim_at_participant);
     psx_mod_register_function_filter_plugin(COOP_ID,0x80042824u,aim_at_participant);
     psx_mod_register_instruction_plugin(COOP_ID,0x8002DE84u,0xA0820063u,counterpart_hit);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80050998u,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80071DE4u,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80072514u,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800753FCu,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80082644u,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800850DCu,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80091344u,0,attack_reaction_character);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021300u,0x0040F809u,redirect_actor);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021518u,0x0040F809u,redirect_actor);
     psx_mod_register_guest_function_plugin(COOP_ID,ACTOR_DISPATCH,update_actor);

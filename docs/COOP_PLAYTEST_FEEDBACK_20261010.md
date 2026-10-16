@@ -130,6 +130,72 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 120 | [x] | Web Spider background animation stops after P1 dies and P2 continues | Reproduced the opening waterfall freezing after native P1 death while P2 remains healthy. Shared palette controllers keep advancing, but survivor projection discards their upload bit1. Preserve stage palette uploads/rebuilds and canonical palette binding for that one stage pass. Fixed native composed water and VRAM colors animate before/after death; peers agree through8897. Windows34 and Linux lifecycle/split checks pass. Part2 survivor camera follow also passes separately. Included in Playtest28. `beads-eio.9.108` |
 | 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Bounded current-source Split/Both probes do not reproduce this: at the second-section train floor and after real paired boss entry, saved scenery advances8px/tick and each composed background region changes in all4 alive and4 survivor captures. P2 stays32HP; peer checks match through16614 and33925. Exact reported mode/location/recording segment remains unbound; no Slash scrolling fix is claimed from the separate Spider palette fix120. `beads-eio.9.55` |
 
+| 122 | [ ] | P2 cannot activate Sigma3 boss-refight teleporters | New fortress batch, Playtest26 Split LAN. Native admission needs qualification on current source. `beads-eio.9.157` |
+| 123 | [ ] | Offer Both-player activation for boss-refight teleporters | Elective enhancement requested with122; preserve the ordinary Either behavior unless Both is selected. `beads-eio.9.157` |
+| 124 | [ ] | Magma Dragoon needs an extra walk forward before the refight triggers | Reported; distinguish authored entrance threshold from wrong-seat activation. `beads-eio.9.157` |
+| 125 | [x] | P2 weakness does not affect Storm Owl | Reproduced on current29: native Zero/P2 Rakuhouha (R2, action58/type36) damages Owl but never reaches weakness phase11. Select the accepted hit's character at the original reaction branch instead of P1's campaign. Patched Split/Both native peers enter phase11;722 core/mod samples match through23136. Windows34 and Linux combat checks pass. Fortress-specific admission/grab/transport reports remain separate. `beads-eio.9.158` |
+| 126 | [ ] | Storm Owl leaves P1 grabbed until P2 dies | Reported control/progression failure; investigate captured-player ownership. `beads-eio.9.157` |
+| 127 | [ ] | P2 weakness does not affect Jet Stingray | Reported fortress refight. `beads-eio.9.157` |
+| 128 | [ ] | P1 teleports away after the final hit on Split Mushroom | Reported fortress refight; inspect departure and return against the authored room exit. `beads-eio.9.157` |
+| 129 | [ ] | P2 weakness may not affect Slash Beast | Tester explicitly uncertain; confirmation pending. `beads-eio.9.157` |
+| 130 | [ ] | Web Spider weakness may have no effect | Tester explicitly uncertain; attacker and reaction need qualification. `beads-eio.9.157` |
+| 131 | [ ] | P2 weakness does not affect Frost Walrus | Reported fortress refight. `beads-eio.9.157` |
+| 132 | [ ] | P2 Zero cannot combo Frost Walrus because immunity occurs between hits | Compare native chain eligibility with the selected per-player scaling cooldowns. `beads-eio.9.157` |
+| 133 | [ ] | Player death animations lose sprites or disappear | Actor and exact event need binding to the video/recording before a fix is claimed. `beads-eio.9.157` |
+| 134 | [ ] | P2 teleports away after the final hit on Jet Stingray | Reported fortress refight; distinguish expected return from an interrupted death/transport. `beads-eio.9.157` |
+| 135 | [ ] | Lightning Web sometimes fails to trigger wall-mounted Split Mushroom's weakness | Reported conditional weakness failure. `beads-eio.9.157` |
+| 136 | [ ] | Room before Sigma lacks P1's intro after death or Continue | Exact missing animation/event requires video qualification. `beads-eio.9.157` |
+| 137 | [ ] | Pause does not open while a Both-player boss door is open | Check safe free traversal separately from the actual locked opening/intro. `beads-eio.9.157` |
+| 138 | [ ] | Lightning Web may not trigger Sigma phase2 weakness | Tester explicitly uncertain; compare native damage/reaction tables. `beads-eio.9.157` |
+| 139 | [ ] | P2 Zero cannot combo Sigma phase2 because immunity occurs between hits | Compare native Zero combo rules with per-player scaling cooldowns. `beads-eio.9.157` |
+| 140 | [ ] | Sigma phase1 targets P2 except during the scythe attack | Reported target bias; positions and native phase-specific targeting need qualification. `beads-eio.9.157` |
+| 141 | [ ] | P2 teleports out and back during Sigma phase2 | Reported unexpected transport during the fight. `beads-eio.9.157` |
+| 142 | [ ] | P2 teleports out and back during Sigma phase3 | Reported unexpected transport during the fight. `beads-eio.9.157` |
+
+### October16 fortress feedback intake
+
+The archive `Sigma stage 2 and 3 bugs.zip` passes CRC validation for all184
+files (SHA256 `7f7839ebeaf3372943e1e699329c0340f31d6fa78d224ba5e5eb1c4a26d3d8d4`).
+Its newest paired input sessions contain388233/388236 frames and identify
+Playtest26, co-op profile `c342aa784feabf6c0417ab57ba5424bd8a2693f9`,
+execution `93f56a5e8f8d35fdee77384cb5e3772b5dfbd9b973dcbcd76206bba14f883dc5`.
+Both recordings enter stage12/section0 at frame45426 and section1 at238598.
+The saved mod snapshots select Split cameras, scaling and the optional
+Double/Iris sequence; saved Either doors do not establish the negotiated
+door policy during every encounter. The guest startup log confirms LAN.
+Items122–142 preserve each report and the elective teleporter request.
+They are intake items, not claims of21 reproduced current-build defects.
+Video reference: https://youtu.be/gm8QSDn5Uqg . Central intake: `beads-eio.9.157`.
+
+The newest peer recordings match byte-for-byte across all388233 common rows;
+the guest contains three additional tail rows. This does not indicate a
+divergence in those samples. A coarse visual review covers all6503 seconds
+of the supplied video through five timestamped contact sheets; it is not a
+frame-by-frame qualification of every reported symptom.
+
+### October16 attacker-owned boss reactions
+
+Retail post-hit branches at80050994,80071DE0,80072510,800753F8,80082640,
+800850D8 and80091340 load the campaign byte PLAY+43. The shared co-op actor
+keeps that byte canonical even when its collision wrapper accepts P2's shot.
+Retain only that hit's character during the current actor callback and
+override the loaded reaction selector at the exact guarded sites. The
+campaign, enemy AI target, attack ID, damage table and native update count
+remain unchanged. A miss or rejected overlap clears the selector; the actor
+boundary clears it before snapshots and the next enemy update.
+
+Native qualification for125 compares actual R2 Rakuhouha (type36/action58):
+the old build accepts a damaging hit without Owl's phase11; the patched
+Split peers enter that original weakness reaction. The initial Triangle
+probes produced Raijingeki and are explicitly excluded as weakness evidence.
+All34 Windows checks and native Linux combat checks pass, including both
+rosters, both AI seats, both attackers, misses, rejected hits and stale actor
+contexts. The other reported bosses remain unchecked pending their exact
+native attacks/reactions; this common correction does not prove all cases.
+Private evidence: `build-pr23/feedback30-owl-old-r2`,
+`build-pr23/feedback30-native-after/owl-attack-controls-result.json`,
+`build-pr23/feedback30-sigma23-20261016`. Tracking: `beads-eio.9.158`.
+
 Playtest27 native evidence: the original-disc Frost comparisons cover both
 character assignments. The paired Split/Either Mushroom lift probe starts at
 the authored stage3/section1/checkpoint2 and confirms both cameras follow the
