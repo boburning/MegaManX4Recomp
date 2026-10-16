@@ -28,9 +28,13 @@ static uint8_t saved_palette_dirty;
 static unsigned stage_palette_phase,palette_swap_model,palette_uploads;
 static uint32_t saved_palette_resource;
 static uint16_t palette_uploaded;
+static uint16_t palette_uploaded_world;
+static uint32_t stage_animation_destination;
+static unsigned stage_animation_frame;
 #define PALETTE_SOURCE 0x801F4000u
 #define SECOND_PALETTE_SOURCE 0x801F4100u
 #define WORKING_PALETTE_COLOR 0x80141F72u
+#define STAGE_PALETTE_OFFSET 0x9A0u
 static int split_views;
 static int both_door_players;
 int mmx4_coop_both_door_players(void) {return both_door_players;}
@@ -343,6 +347,17 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     case 0x8002166C:
         ++stage_script_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         stage_script_projected=projected;
+        if(stage_animation_frame) {
+            /* Native kind3 B5DCC caches its destination from SCRATCH+28;
+             * B5C60 copies the next palette frame and requests dirty bit1.
+             * Cover both an existing destination and initialization after
+             * the campaign player has died. */
+            if(!stage_animation_destination)
+                stage_animation_destination=psx_mod_read_word(0x1F800028u)+STAGE_PALETTE_OFFSET;
+            psx_mod_write_half(stage_animation_destination,(uint16_t)stage_animation_frame);
+            psx_mod_write_byte(0x80166BB0u,(uint8_t)(psx_mod_read_byte(0x80166BB0u)|1u));
+            break;
+        }
         if(stage_palette_phase) {
             /* Actual type37 BD5AC/BD5CC writes: two white ticks, then zero
              * RGB additions plus dirty |=5 to rebuild the shared palette. */
@@ -374,6 +389,7 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             ++palette_uploads;palette_uploaded=psx_mod_read_byte(0x80166BB0u)&1u?
                 psx_mod_read_half(psx_mod_read_word(0x1F800028u)+2):
                 psx_mod_read_half(WORKING_PALETTE_COLOR);
+            palette_uploaded_world=psx_mod_read_half(psx_mod_read_word(0x1F800028u)+STAGE_PALETTE_OFFSET);
         }
         psx_mod_write_byte(0x80166BB0u,0);break;
     case 0x800C2BE0:
@@ -544,6 +560,7 @@ void mmx4_coop_armor_dismount(CPUState *cpu,unsigned seat) {
 #define CHECK(x) do {if(!(x)) {fprintf(stderr,"line %d: %s\n",__LINE__,#x);return 1;}}while(0)
 static void reset(void) {
     stage_palette_phase=palette_swap_model=palette_uploads=0;palette_uploaded=0;
+    stage_animation_destination=stage_animation_frame=0;palette_uploaded_world=0;
     both_door_players=0;
     both_door_crossings=0;
     door_map_queries=0;door_map_kind=0x38;
@@ -624,15 +641,47 @@ static int colonel_palette_refreshes(CPUState *cpu) {
         CHECK(psx_mod_read_byte(PLAY+0x43)==campaign);
         CHECK((survivor==1)==!mmx4_coop_alive(0) && (survivor==2)==!mmx4_coop_alive(1));
     }
-    /* The special retention is limited to a shared rebuild. A private P2
-     * character upload and ordinary projection keep their prior ownership. */
+    /* Shared stage palette uploads retain bit1 as well as flash rebuild4.
+     * Ordinary private character projections keep their prior ownership. */
     reset();palette_swap_model=1;psx_mod_write_word(0x1F800028u,PALETTE_SOURCE);
     psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
     stage_palette_phase=3;psx_mod_write_byte(0x80166BB0u,2);
-    mmx4_coop_call(cpu,0x8002166Cu,0,0);CHECK(psx_mod_read_byte(0x80166BB0u)==2);
+    mmx4_coop_call(cpu,0x8002166Cu,0,0);CHECK(psx_mod_read_byte(0x80166BB0u)==3);
     CHECK(psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE && !projected);
+    psx_mod_write_byte(0x80166BB0u,2);
     mmx4_coop_enter_second();psx_mod_write_byte(0x80166BB0u,7);mmx4_coop_leave_second();
     CHECK(psx_mod_read_byte(0x80166BB0u)==2 && psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE);
+    return 0;
+}
+static int survivor_palette_animation(CPUState *cpu) {
+    for(unsigned campaign=0;campaign<2;++campaign)
+    for(unsigned split=0;split<2;++split)
+    for(unsigned late=0;late<2;++late) {
+        reset();split_views=(int)split;palette_swap_model=1;
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_word(0x1F800028u,PALETTE_SOURCE);
+        psx_mod_write_half(SECOND_PALETTE_SOURCE+2,0x2E7);
+        psx_mod_write_half(SECOND_PALETTE_SOURCE+STAGE_PALETTE_OFFSET,0x4567);
+        if(!late)stage_animation_destination=PALETTE_SOURCE+STAGE_PALETTE_OFFSET;
+        psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
+        for(unsigned frame=1;frame<=4;++frame) {
+            stage_animation_frame=0x1200u+frame;
+            mmx4_coop_call(cpu,0x8002166Cu,0,0);
+            CHECK(stage_script_calls==frame && stage_script_projected && !projected);
+            CHECK(stage_animation_destination==PALETTE_SOURCE+STAGE_PALETTE_OFFSET);
+            CHECK(psx_mod_read_half(PALETTE_SOURCE+STAGE_PALETTE_OFFSET)==stage_animation_frame);
+            CHECK(psx_mod_read_byte(0x80166BB0u)&1u);
+            CHECK(psx_mod_read_word(0x1F800028u)==PALETTE_SOURCE);
+            CHECK(psx_mod_read_half(SECOND_PALETTE_SOURCE+2)==0x2E7);
+            CHECK(psx_mod_read_half(SECOND_PALETTE_SOURCE+STAGE_PALETTE_OFFSET)==0x4567);
+            mmx4_coop_call(cpu,0x8002A484u,0,0);
+            mmx4_coop_call(cpu,0x80016004u,0,0);
+            CHECK(palette_uploads==frame && palette_uploaded_world==stage_animation_frame);
+            CHECK(!psx_mod_read_byte(0x80166BB0u));
+            CHECK(psx_mod_read_byte(PLAY+0x43)==campaign && mmx4_coop_alive(1));
+        }
+    }
     return 0;
 }
 static int open_both_door(CPUState *cpu,uint32_t actor) {
@@ -2330,5 +2379,6 @@ int main(void) {
     initial_arrival=0;CHECK(!mmx4_coop_lifecycle_initial_arrival());
     CHECK(!personal_floor_momentum(&cpu));
     CHECK(!colonel_palette_refreshes(&cpu));
+    CHECK(!survivor_palette_animation(&cpu));
     puts("co-op lifecycle ownership checks passed");return 0;
 }

@@ -127,8 +127,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 117 | [x] | X attacks do not knock back Iris | Retail Iris rejects every X attack. Admit X through her existing native armor reaction without changing lasting armor HP or the eight-hit exposure sequence. Native X/P2 buster attacks alone now reduce the remaining armor hits from8 to0 and expose the real crystal; peers agree through7844. Both X seats and survivor cases pass combat units. Source after Playtest27, not yet released. `beads-eio.9.153` |
 | 118 | [x] | X attacks do not damage Iris's crystal | Give X collision-specific damage entries using Iris's own native damage units, retaining projectile identity, tokens, cooldowns and boss scaling. Native X/P2 buster hits now reduce the actual crystal48 to47 with scaling on; read-only trace identifies attack0 and the original HP store. Both players remain32HP and controllable, with matching peer state through31713. All34 Windows checks and Linux combat/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.153` |
 | 119 | [ ] | Sigma stage2 P2-triggered enemy respawns facing nearby off-camera P1 | Tester describes an enemy facing right when P2 triggers its spawn while P1 is nearby outside the displayed view. Enemy identity, exact location, native facing rule and matching recording segment remain unqualified. `beads-eio.9.154` |
-| 120 | [ ] | Web Spider background animation stops after P1 dies and P2 continues | Later October16 text report. Distinguish frozen animation from the earlier region-selection/corruption fixes78/102. Exact build/mode and matching segment for this follow-up are not independently bound. `beads-eio.9.108` reopened. |
-| 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Later October16 text report; opposite P1-death behavior to Frost snow113. Earlier parallax/panorama fixes28/95 do not qualify this condition. Exact build/mode and matching segment remain unqualified. `beads-eio.9.55` reopened. |
+| 120 | [x] | Web Spider background animation stops after P1 dies and P2 continues | Reproduced the opening waterfall freezing after native P1 death while P2 remains healthy. Shared palette controllers keep advancing, but survivor projection discards their upload bit1. Preserve stage palette uploads/rebuilds and canonical palette binding for that one stage pass. Fixed native composed water and VRAM colors animate before/after death; peers agree through8897. Windows34 and Linux lifecycle/split checks pass. Part2 survivor camera follow also passes separately. Source after Playtest27, not yet released. `beads-eio.9.108` |
+| 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Bounded current-source Split/Both probes do not reproduce this: at the second-section train floor and after real paired boss entry, saved scenery advances8px/tick and each composed background region changes in all4 alive and4 survivor captures. P2 stays32HP; peer checks match through16614 and33925. Exact reported mode/location/recording segment remains unbound; no Slash scrolling fix is claimed from the separate Spider palette fix120. `beads-eio.9.55` |
 
 Playtest27 native evidence: the original-disc Frost comparisons cover both
 character assignments. The paired Split/Either Mushroom lift probe starts at
@@ -1784,3 +1784,56 @@ Private evidence: `build-pr23/feedback28-iris-before-20261016`
 `build-pr23/iris28-title-tests4.log`, `build-pr23/iris28-linux-units4.log`,
 and the private native table/disassembly captures. Tracking:
 `beads-eio.9.153`. This change has not yet been packaged as a release.
+
+### October16 survivor background animation qualification
+
+Item120 is fixed in source after Playtest27. In a hidden, muted two-peer
+Split/Both match, X/P1 stays at56/139 and Zero/P2 waits at432/394 by Jungle's
+opening waterfall. An isolated water strip changes across three sampled
+frames while both players live, then retains exactly the last uploaded frame
+across four captures after a native P1 death. P2 stays healthy and controllable;
+peers agree through13351. Larger image regions also contain moving enemy
+effects, so their changing hashes alone do not establish water animation.
+
+The native stage pool's kind3 palette clocks continue advancing. B5DCC caches
+their destination in the shared stage palette, and B5C60 copies the new colors
+and requests palette upload bit1 at B5CB4. The survivor's stage projection
+restores P1's pending palette flags and retained only flash-rebuild bit4,
+discarding that upload request. Preserve shared stage bits1/4, and keep the
+canonical stage palette bound during that single world stage pass so controllers
+initialized later also get the proper destination. Other character projections
+keep their private resources and upload ownership. No extra animation tick or
+stage event is introduced.
+
+The fixed native run keeps both the composed water and the actual VRAM CLUT
+moving after P1 dies. Six settled captures contain four distinct water states
+alive and five after death; the water CLUT at208/484 has four distinct states
+in each phase. P2 retains32HP, the renderer stays enabled, no local-view state
+leak is recorded, and peer core/mod checks agree through8897. The lifecycle
+regression fails on the original source and passes with the fix. It covers
+both campaigns, Unified/Split, cached/late palette destinations, repeated
+world-color uploads, unchanged private counterpart colors, ordinary private
+projection ownership and the retained Colonel white/clear sequence. All34
+Windows checks and Linux lifecycle/split checks pass. Native after coverage is
+Split with X/P1 and Zero/P2; other combinations have boundary-test coverage.
+
+Separate bounded probes keep item121 open. In Slash Beast section1, the actual
+settled checkpoint2 positions are P1 at7728/363 and P2 at7656/362. Then native
+paired checkpoint3 boss entry reaches Slash kind54/48HP with both players
+at9472 and normal controls. Both probes keep scrolling after P1 dies: camera
+origins advance at the native8px/tick and inspected background regions change
+across all four captures in each alive/dead window. P2 stays32HP; peer checks
+agree through16614 and33925. The reported frozen Slash condition remains
+unreproduced; this is not evidence that every mode/location is clear.
+Web Spider part2 also retains survivor parallax: moving P2 from1094 to1076
+changes the saved background from1446 to1428 without a renderer failure.
+
+Private evidence: `build-pr23/feedback28-survivor-bg-20261016`
+(`spider-survivor-before`, `spider-waterfall-retry`, `waterfall-native-trace`,
+`slash-survivor-before`, `slash-boss-survivor-before`),
+`build-pr23/feedback28-survivor-bg-fixed-20261016`
+(`waterfall-survivor-fixed2`), `build-pr23/survivor28-tests2.log`, and
+`build-pr23/survivor28-linux-units.log`. A reverse-section setup that retained
+P1's death and an early screenshot-file timing failure are excluded from the
+successful native comparisons. Tracking: `beads-eio.9.108` and
+`beads-eio.9.55`. The palette fix has not yet been packaged as a release.

@@ -1366,18 +1366,26 @@ static SceneOwner *scene_record(uint32_t actor,int create) {
 static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t actor,uint32_t arg) {
     uint8_t pad[6];read_bytes(PAD,pad,sizeof pad);
     uint8_t campaign=psx_mod_read_byte(PLAY+0x43);
+    uint32_t stage_palette=psx_mod_read_word(0x1F800028u);
     mmx4_coop_enter_second();
     uint8_t character=psx_mod_read_byte(PLAY+0x43);
     psx_mod_write_byte(PLAY+0x43,campaign);
+    /* The stage pool owns shared colors, even when P2 supplies its triggers.
+     * Kind3 B5DCC caches palette destinations during initialization; late
+     * controllers must bind the native stage palette, not P2's character
+     * palette. Character/controller and other story projections stay private. */
+    if(address==0x8002166Cu)psx_mod_write_word(0x1F800028u,stage_palette);
     for(unsigned i=0;i<3;++i)psx_mod_write_half(PAD+i*2,story_pad[i]);
     uint32_t result=mmx4_coop_call(cpu,address,actor,arg);
     /* Native stage flash BD5CC clears the shared RGB additions and requests
      * palette bit4. 2A484 otherwise skips the zero-addition rebuild, leaving
      * the bright working palette resident after a P2 survivor projection.
-     * Publish only that shared rebuild request after restoring P1's palette
-     * source; private character upload requests still belong to the view. */
+     * Kind2/3 palette animation B5C60 also requests upload bit1. Dropping it
+     * leaves the waterfall on its last uploaded frame after P1 dies, despite
+     * advancing the animation clock and shared source colors. Retain these
+     * shared stage requests; ordinary character projections stay private. */
     uint8_t shared_palette_refresh=address==0x8002166Cu?
-        (uint8_t)(psx_mod_read_byte(0x80166BB0u)&4u):0;
+        (uint8_t)(psx_mod_read_byte(0x80166BB0u)&5u):0;
     /* Projected inventory reads on leave must see the counterpart identity,
      * even though shared story selection remained canonical throughout. */
     psx_mod_write_byte(PLAY+0x43,character);
