@@ -217,21 +217,38 @@ static int spider_web(uint32_t actor) {
     return actor>=SECONDARY_POOL && actor<SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE &&
         !((actor-SECONDARY_POOL)%SECONDARY_STRIDE) && psx_mod_read_byte(actor+1)==22;
 }
-/* Double's normal table has authored Zero damage but marks all Zero entries
- * as deflections: retail only admits X to this encounter. Admit those existing
- * damage entries for the actual Zero collision pass. The native duplicate-hit
- * gate has already run. DE84 follows the admission LBU's delay slot and
- * precedes its reaction-byte store. The all-FF cooldown table is untouched. */
-static void double_counterpart_hit(CPUState *cpu,uint32_t address) {
+/* Admit the counterpart to these campaign-specific bosses. The native
+ * duplicate-hit gate has already run. DE84 follows the admission LBU's delay
+ * slot and precedes its reaction-byte store. Cooldown tables stay untouched. */
+static void counterpart_hit(CPUState *cpu,uint32_t address) {
     (void)address;
     if(!combat_call || !mmx4_coop_ready() || psx_mod_local_view_scope() ||
        psx_mod_read_byte(MMX4_PLAY)!=6 || psx_mod_read_byte(MMX4_PLAY+0x0C)!=11 ||
-       psx_mod_read_byte(MMX4_PLAY+0x0D) || psx_mod_read_byte(MMX4_PLAYER+2)!=1 ||
-       cpu->gpr[2]!=0xFFu || cpu->gpr[7]!=0x80108204u)return;
+       psx_mod_read_byte(MMX4_PLAY+0x0D) ||
+       cpu->gpr[2]!=0xFFu)return;
     uint32_t actor=cpu->gpr[4],type=cpu->gpr[6];
     if(actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
-       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
-       psx_mod_read_byte(actor+1)!=73 ||
+       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor))return;
+    if(!psx_mod_read_byte(MMX4_PLAYER+2) && psx_mod_read_byte(actor+1)==66 &&
+       psx_mod_read_byte(actor+2)<=1 && type<=23 &&
+       (cpu->gpr[7]==0x80107DFCu || cpu->gpr[7]==0x80107E84u)) {
+        /* Retail Iris has no X entries. Reuse her own Zero reactions and
+         * damage units: armor5/0 retains its eight-hit exposure sequence;
+         * the core takes buster1/partial2/charged3, neutral weapon2,
+         * fire/Nova4. Native800F25D8 identifies buster0/9/18..21/23,
+         * normal weapons1..8, charged weapons10..17 and Nova22.
+         * Keep X's actual attack identity for native consumption/tokens.
+         * In particular the all-FF cooldown table is never admitted. */
+        unsigned entry=(type==0 || type==23)?32u:
+            (type>=19 && type<=21)?26u:
+            (type==5 || type==14 || type==22)?35u:24u;
+        cpu->gpr[2]=psx_mod_read_byte(cpu->gpr[7]+entry*2u);
+        cpu->gpr[7]+=(entry-type)*2u;
+        psx_mod_counter_add("mmx4.coop.iris-x-hits",1);
+        return;
+    }
+    if(psx_mod_read_byte(MMX4_PLAYER+2)!=1 ||
+       psx_mod_read_byte(actor+1)!=73 || cpu->gpr[7]!=0x80108204u ||
        !((type>=25 && type<=32) || type==34))return;
     /* Kuuenzan (34) has no retail Double damage entry. Reuse his authored
      * two-point saber damage for this collision only. Keep S0/A2 and the
@@ -823,7 +840,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x80040CCCu,aim_at_participant);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800419B8u,aim_at_participant);
     psx_mod_register_function_filter_plugin(COOP_ID,0x80042824u,aim_at_participant);
-    psx_mod_register_instruction_plugin(COOP_ID,0x8002DE84u,0xA0820063u,double_counterpart_hit);
+    psx_mod_register_instruction_plugin(COOP_ID,0x8002DE84u,0xA0820063u,counterpart_hit);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021300u,0x0040F809u,redirect_actor);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021518u,0x0040F809u,redirect_actor);
     psx_mod_register_guest_function_plugin(COOP_ID,ACTOR_DISPATCH,update_actor);

@@ -124,8 +124,8 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 114 | [x] | Frost Both-player boss door teleports P2 and can trap P1 walking left | Reproduced in native Split/Both at checkpoint4. Midboss52218 starts its scene during pair phase2; defer its whole admission until physical clearance. Also fix the permanent camera6080/minimum6032 equality wait by accepting the authored room interval. Both leading arrangements now cross, keep both players healthy/visible and restore controls without transport; peer state matches through8514. The supplied pair2 trace confirms Both was active despite saved Either settings. `beads-eio.9.109` |
 | 115 | [x] | P2 water ripples appear only when P1 is nearby | Reproduced in current native Split: P2's active water effects at432/394 are hidden with P1 at56/139, appear when P1 approaches400/395, then hide again when P1 leaves. Their owner projection excluded Split's two-view visibility query. Admit attached-effect context to that existing query. Fixed far/near/far native checks retain P2's pair in all15 samples; inspected composed images and matching peer state through4964. Windows34 and Linux combat/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.28` |
 | 116 | [x] | Both-player first/second door opening focuses the camera on P1 until both pass | Keep independent saved cameras, view selection and actual local presentation through paired phases1–3, sharing the authored door limits. Real boss introductions retain shared scenes. Composed Frost frames show separate X/Zero screens and HUDs with232px separation; peer state matches through8036. Cyber and Spider each cross both native doors, restore controls and retain both players with no transport or local-view state leaks. Windows34 checks and Linux lifecycle/split tests pass. `beads-eio.9.109` |
-| 117 | [ ] | X attacks do not knock back Iris | Archive C. Qualify boss-body reaction, attack type and player assignment; earlier Iris graphics/loading fixes84/85 do not establish combat correctness. `beads-eio.9.153` |
-| 118 | [ ] | X attacks do not damage Iris's crystal | Archive C. Separate crystal HP/collision acceptance case from Iris body knockback117. `beads-eio.9.153` |
+| 117 | [x] | X attacks do not knock back Iris | Retail Iris rejects every X attack. Admit X through her existing native armor reaction without changing lasting armor HP or the eight-hit exposure sequence. Native X/P2 buster attacks alone now reduce the remaining armor hits from8 to0 and expose the real crystal; peers agree through7844. Both X seats and survivor cases pass combat units. Source after Playtest27, not yet released. `beads-eio.9.153` |
+| 118 | [x] | X attacks do not damage Iris's crystal | Give X collision-specific damage entries using Iris's own native damage units, retaining projectile identity, tokens, cooldowns and boss scaling. Native X/P2 buster hits now reduce the actual crystal48 to47 with scaling on; read-only trace identifies attack0 and the original HP store. Both players remain32HP and controllable, with matching peer state through31713. All34 Windows checks and Linux combat/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.153` |
 | 119 | [ ] | Sigma stage2 P2-triggered enemy respawns facing nearby off-camera P1 | Tester describes an enemy facing right when P2 triggers its spawn while P1 is nearby outside the displayed view. Enemy identity, exact location, native facing rule and matching recording segment remain unqualified. `beads-eio.9.154` |
 | 120 | [ ] | Web Spider background animation stops after P1 dies and P2 continues | Later October16 text report. Distinguish frozen animation from the earlier region-selection/corruption fixes78/102. Exact build/mode and matching segment for this follow-up are not independently bound. `beads-eio.9.108` reopened. |
 | 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Later October16 text report; opposite P1-death behavior to Frost snow113. Earlier parallax/panorama fixes28/95 do not qualify this condition. Exact build/mode and matching segment remain unqualified. `beads-eio.9.55` reopened. |
@@ -1737,3 +1737,50 @@ Private evidence: `build-pr23/feedback28-exit-fixed-20261016`
 `build-pr23/feedback28-snow-atlas-20261016` (final native run),
 `build-pr23/snow28-visual-result.json`, and `build-pr23/snow28-*.log`.
 Tracking: `beads-eio.9.152`. This change has not yet been packaged as a release.
+
+### October16 X versus Iris combat qualification
+
+Items117/118 are fixed in source after Playtest27. Archive C records Playtest26
+Split netplay with boss scaling and both story bosses enabled. The original
+Iris armor table80107DFC and crystal table80107E84 reject every X entry with
+FF/0. Native ordinary and charged X/P2 attempts reproduce rejection and leave
+the armor's eight-hit counter unchanged; peers agree through7170. Native Zero
+attacks can expose the real variant1 crystal, whose X entries also reject hits.
+
+The existing DE84 counterpart admission now handles Iris too. Reuse Iris's
+native Zero reaction/damage entries for this collision only: armor reaction5
+with zero lasting HP damage, basic buster1, intermediate buster2, full buster3,
+neutral weapons2, and Rising Fire/Nova4. These are co-op damage choices, not
+retail authored X damage. The original shot type, consumption and duplicate
+token remain intact. The native all-FF cooldown table stays closed, and the
+existing damage multiplier, boss scaling and player cooldowns still apply.
+The original shot dispatch table800F25D8 identifies buster0/9/18..21/23,
+normal weapons1..8, charged weapons10..17 and Nova22; the final mapping uses
+those identities. Existing Zero-versus-Double admission is retained.
+
+In a hidden, muted original-disc two-peer Split/Either match, Zero/P1 stays
+idle while X/P2's real buster shots advance all eight armor reactions and
+expose the crystal. The crystal then takes real buster hits: scaling retains
+the first half point and the following accepted hit changes its HP48 to47.
+The read-only trace shows native8002DF0C, actual attack0, and adjusted lookup
+base80107EC4, preserving that shot's identity. Both players retain32HP and
+normal controls, the renderer stays enabled, and core/mod checks agree through
+31713. The native buster path is unchanged by the final dispatch-table mapping
+review; other attack identities are covered by the focused combat checks.
+
+The combat regression fails on the original source and passes with the fix.
+It covers all X types0..23, both player assignments, either surviving player,
+native armor/core reactions, duplicate tokens, cooldown tables, unrelated
+actors/contexts, unchanged Zero damage and lethal native return values. All34
+Windows title checks and Linux combat/split checks pass. Native qualification
+here covers X/P2 in Zero's campaign; the reverse optional-story encounter and
+every special weapon were not individually replayed. Earlier air shots that
+missed the moving crystal, and a test teleport inside the closed left arena
+boundary, are excluded from the successful native qualification.
+
+Private evidence: `build-pr23/feedback28-iris-before-20261016`
+(`iris-native-before`), `build-pr23/feedback28-iris-final-20261016`
+(`iris-armor-final` armor rows and `iris-crystal-level` native HP result),
+`build-pr23/iris28-title-tests4.log`, `build-pr23/iris28-linux-units4.log`,
+and the private native table/disassembly captures. Tracking:
+`beads-eio.9.153`. This change has not yet been packaged as a release.

@@ -1043,10 +1043,88 @@ static void double_counterpart_damage(void) {
     }
 }
 
+static void iris_setup(unsigned x_seat,unsigned core) {
+    setup();double_model=1;
+    psx_mod_write_byte(MMX4_PLAY+0x0C,11);
+    psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)x_seat);
+    second[2]=(uint8_t)(x_seat^1u);
+    psx_mod_write_byte(DOUBLE_ENEMY,1);psx_mod_write_byte(DOUBLE_ENEMY+1,66);
+    psx_mod_write_byte(DOUBLE_ENEMY+2,(uint8_t)core);
+    psx_mod_write_byte(DOUBLE_ENEMY+4,1);psx_mod_write_byte(DOUBLE_ENEMY+0x5C,48);
+    uint32_t table=core?0x80107E84u:0x80107DFCu;
+    psx_mod_write_word(DOUBLE_ENEMY+0x58,table);
+    for(unsigned type=0;type<44;++type) {
+        psx_mod_write_byte(table+type*2u,0xFF);
+        psx_mod_write_byte(DOUBLE_COOLDOWN+type*2u,0xFF);
+    }
+    static const uint8_t zero_damage[]={2,2,3,3,3,2,2,3,1,2,2,4};
+    for(unsigned type=24;type<=35;++type) {
+        psx_mod_write_byte(table+type*2u,(uint8_t)(core?0:5));
+        psx_mod_write_byte(table+type*2u+1u,core?zero_damage[type-24]:0);
+    }
+    attack_present[x_seat]=1;attack_type[x_seat]=0;attack_token[x_seat]=3;
+}
+static uint32_t iris_hit(void) {
+    unsigned armor=!psx_mod_read_byte(DOUBLE_ENEMY+2);
+    /* Iris gives armor127HP for collision, then restores the48HP meter.
+     * Only her exposed core owns lasting health loss. */
+    if(armor)psx_mod_write_byte(DOUBLE_ENEMY+0x5C,127);
+    CPUState hit={.gpr={[4]=DOUBLE_ENEMY}};
+    CHECK(filter(HIT)(&hit,HIT) && !projected);
+    if(armor)psx_mod_write_byte(DOUBLE_ENEMY+0x5C,48);
+    return hit.gpr[2];
+}
+static void iris_counterpart_damage(void) {
+    for(unsigned core=0;core<2;++core)
+    for(unsigned x=0;x<2;++x)for(unsigned survivor=0;survivor<2;++survivor)
+    for(unsigned type=0;type<=23;++type) {
+        iris_setup(x,core);if(survivor)alive[x^1u]=0;
+        attack_type[x]=(uint8_t)type;
+        uint32_t table=psx_mod_read_word(DOUBLE_ENEMY+0x58);
+        uint8_t original[88];memcpy(original,address_ptr(table),sizeof original);
+        unsigned damage=(type==0 || type==23)?1:(type>=19 && type<=21)?3:
+            (type==5 || type==14 || type==22)?4:2;
+        CHECK(iris_hit()==type+1u && consumed==1);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x63)==(core?0:5));
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==48-(core?damage:0));
+        CHECK(!memcmp(original,address_ptr(table),sizeof original));
+        CHECK(psx_mod_read_word(DOUBLE_ENEMY+0x58)==table);
+        /* The same persistent attack token still cannot hit twice. */
+        CHECK(!iris_hit() && consumed==1);
+        /* Real cooldown masking stays closed, even for a fresh attack. */
+        psx_mod_write_word(DOUBLE_ENEMY+0x58,DOUBLE_COOLDOWN);++attack_token[x];
+        CHECK(iris_hit()==0x7F && consumed==1);
+        CHECK(mmx4_coop_combat_snapshot_ready());
+    }
+    for(unsigned excluded=0;excluded<7;++excluded) {
+        iris_setup(1,1);
+        if(excluded==0)psx_mod_write_byte(DOUBLE_ENEMY+1,67);
+        if(excluded==1)psx_mod_write_byte(DOUBLE_ENEMY+2,2);
+        if(excluded==2)psx_mod_write_byte(MMX4_PLAY+0x0D,1);
+        if(excluded==3)psx_mod_write_byte(MMX4_PLAY+0x0C,10);
+        if(excluded==4)local_view=1;
+        if(excluded==5)psx_mod_write_byte(DOUBLE_ENEMY,0);
+        if(excluded==6)attack_type[1]=36;
+        CHECK(iris_hit()==0x7F && !consumed);
+        CHECK(psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==48);
+    }
+    /* Counterpart admission does not change Iris's authored Zero response. */
+    iris_setup(0,1);attack_present[0]=0;attack_present[1]=1;
+    attack_type[1]=26;attack_token[1]=3;
+    CHECK(iris_hit()==27 && psx_mod_read_byte(DOUBLE_ENEMY+0x5C)==45);
+    for(unsigned x=0;x<2;++x)for(unsigned survivor=0;survivor<2;++survivor) {
+        iris_setup(x,1);if(survivor)alive[x^1u]=0;
+        psx_mod_write_byte(DOUBLE_ENEMY+0x5C,1);
+        CHECK(iris_hit()==UINT32_MAX && !psx_mod_read_byte(DOUBLE_ENEMY+0x5C));
+        CHECK(consumed==1 && !projected && mmx4_coop_combat_snapshot_ready());
+    }
+}
+
 int main(void) {
     accepted_events();independent_solids();aim_selection();effect_ownership();armor_handoff();armor_forced_dismount();independent_hit_tokens();
     split_native_targets();
     double_counterpart_damage();
+    iris_counterpart_damage();
     slash_intro_leader();
     vehicle_secondary_ownership();
     spider_capture_ownership();
