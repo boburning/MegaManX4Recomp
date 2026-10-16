@@ -115,7 +115,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 105 | [x] | P2's Split camera stays behind on Mushroom part2's elevator | Reproduced with two connected peers at stage3/section1/checkpoint2. The lift released only the canonical camera's vertical targets. Publish its native limit changes to views in the same shaft while retaining separate origins; do not repeat the platform or panels. Both views now follow the ascent, with matching peer core/mod state. `beads-eio.9.145` |
 | 106 | [x] | A dead teammate does not return at the next stage section | Forward sections now revive either dead seat with initialized native HP while retaining the survivor's resources and shared lives. Same-section checkpoint deaths, whole-team retries and voluntary withdrawal retain their rules. Native Mushroom area-load checks revive either seat without spending a shared life; both-seat boundary fixtures and snapshot checks pass. The special Double/Iris-to-Sigma3 new-level policy remains. `beads-eio.9.146` |
 | 107 | [ ] | Web Spider part1 spiked platform enemy does not spawn for leading P2 | Archive A, Playtest26 Split netplay. Current native probes spawn and update kind76 at1976/901 with P1 held at56/139, and the later platform enemy at3520/1384 with P1 at1856/1467. Inspected composed P2 image shows the first spiked enemy. Peer checks match through51397. The reported missing-enemy case remains unreproduced; unsafe initial teleports and an out-of-view approach are excluded. `beads-eio.9.149` |
-| 108 | [ ] | Web Spider part1 broken-door exit corrupts P2's background | Reported when P2 advances through the broken door at the end of part1; archive A. Qualify the transition separately from missing-player arrival74 and local survivor scenery102. `beads-eio.9.150` |
+| 108 | [x] | Web Spider part1 broken-door exit corrupts P2's background | Reproduced during a native P2-led General6 exit: the shared camera moves to Zero while native4:3 draws P1's stale tile ring as wrong cliff terrain. Use Split's authored map renderer in canonical shared passes too. Inspected fixed composed frame restores the waterfall/floor; both players reach part2 healthy and controllable, no local-view state leak, peer checks agree through7203. Old-fail/new-pass stale-ring fixture, Windows34 and Linux background checks pass. Source after Playtest27, not yet released. `beads-eio.9.150` |
 | 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Archive A. With P1 held at112/443, safe native P2 approaches allocate and animate the first ground creatures, flying bugs and web turrets, plus the upper variant group. Inspected composed images show the early enemies; peer checks match through35970. Exact missing group/trigger remains unreproduced, so no fix is claimed. The first unsafe in-terrain teleport is excluded. `beads-eio.9.149` |
 | 110 | [x] | Large health pickup shifts the displayed camera to P1 | Archive A identifies the full-health capsule, native kind5, omitted from Split's private refill handling. Native baseline heals P2 while freezing the world and presenting P1's unified view. Include kind5: the real capsule now heals8 to32 with no shared freeze, P1 moves29.5px during replenishment, and P2's own redraw/HUD continues. Peer state matches through5987; all34 Windows checks and Linux lifecycle/split units pass. Unified retains the native shared pause. Source after Playtest27, not yet released. `beads-eio.9.11` |
 | 111 | [x] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Video samples locate the opening timed ice, distinct from the rising shaft. Native baseline keeps the cycle unarmed with P1 at144/347 and P2 at705/426; bringing P1 over creates ice. Allow either living hero to arm the original cycle and use both Split camera ranges for its tile sequences. Corrected native P2-ahead and distant-camera cases pass with visible ice, healthy players and matching peer CRCs through7398. Windows34 and Linux lifecycle/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.151` |
@@ -1669,3 +1669,34 @@ Private evidence: `build-pr23/feedback28-pickup-fixed-20261016/water-*`
 (7f705af baseline), `build-pr23/feedback28-water-fixed-20261016`
 (fixed native run), and `build-pr23/water28-*.log`.
 Tracking: `beads-eio.9.28`. This change has not yet been packaged as a release.
+
+### October16 P2-led Spider exit scenery qualification
+
+Item108 is fixed in source after Playtest27. Archive A's video around native
+frame6785 shows both windows sharing the exit walk with unrelated terrain
+after the leading P2 breaks the final waterfall barrier. Current native
+Split/Either reproduces this at General6/variant0 at6304/392: P1 stays below
+at5680/1307, P2 breaks it with ordinary Zero attacks and starts the original
+exit scene at floor426. The composed shared image instead shows old cliff
+terrain around the grounded body. Both players still load part2 correctly.
+
+At native4:3, the background callback previously rebuilt authored tiles only
+inside the private redraw transaction. A canonical shared scene can abruptly
+inherit P2's distant camera while the native32x32 ring contains P1's old room.
+Use the same authored renderer for canonical Split passes as for private views,
+including zero-margin room ends. Unified retains its existing retail path.
+No extra scene, simulation update, actor allocation or camera switch is added.
+
+The fixed native entry shows the correct waterfall and continuous floor in
+the inspected composed scene. Both players then arrive active, visible,
+normal and healthy in part2, with no local-view state leak. Peer core/mod
+checks agree through7203. The background fixture fails before and passes
+after with a deliberately stale ring, while also checking the Unified
+exclusion; all34 Windows title checks and the native Linux background check
+pass. The initial direct exit teleport was clamped to5896 and is excluded:
+accepted probes enter the upper corridor at5730/426, move and attack normally.
+
+Private evidence: `build-pr23/feedback28-exit-session-20261016`
+(eafd1a5 baseline), `build-pr23/feedback28-exit-fixed-20261016`
+(fixed native run), and `build-pr23/exit28-*.log`.
+Tracking: `beads-eio.9.150`. This change has not yet been packaged as a release.

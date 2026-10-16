@@ -65,7 +65,14 @@ int main(void){
     mmx4_bg_end(&cpu,0x80026894u);
     CHECK(tiles==2u*22u*16u && (psx_mod_read_word(arena+12)&0xFFFFu)==0x10u);
     split=0;mmx4_bg_end(&cpu,0x80026894u);CHECK(tiles==2u*22u*16u);
-    split=1;local=0;mmx4_bg_end(&cpu,0x80026894u);CHECK(tiles==2u*22u*16u);
+    /* A P2-led shared scene hands the canonical camera across the stage.
+     * At native4:3 its ring can still contain P1's previous room. Render
+     * the same authored tiles in this canonical pass, even outside a local
+     * redraw; disabling Split retains the retail pass. */
+    split=1;local=0;mmx4_bg_end(&cpu,0x80026894u);
+    CHECK(tiles==3u*22u*16u && (psx_mod_read_word(arena+12)&0xFFFFu)==0x10u);
+    split=0;mmx4_bg_end(&cpu,0x80026894u);CHECK(tiles==3u*22u*16u);
+    split=1;
     /* Storm/Slash panoramas wrap the authored screen interval. The native
      * producer273F8 wraps a column left of screen2 onto the final screen;
      * an independent renderer must not turn that column into black space. */

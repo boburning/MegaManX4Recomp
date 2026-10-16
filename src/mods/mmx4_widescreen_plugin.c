@@ -84,10 +84,11 @@ static void mmx4_bg_end(CPUState *cpu, uint32_t address) {
     WsViewAnchor view;
     if (layer>=3) return;
     if (!gpu_ws_bg2d_get_view(layer,&view)) {
-        /* The wide anchor is unavailable at native 4:3. Split's local pass
-         * still needs authored tiles: the shared 32x32 ring follows the
-         * canonical player and cannot represent a distant partner's view. */
-        if(!mmx4_coop_split_views() || !psx_mod_local_view_scope())return;
+        /* The wide anchor is unavailable at native 4:3. Both Split's local
+         * pass and its canonical shared scenes need authored tiles: the
+         * ring can still contain the previous owner's distant room when
+         * P2 commits a door/section scene or becomes the survivor. */
+        if(!mmx4_coop_split_views())return;
         view=(WsViewAnchor){0,16,0,0,0};
     }
     uint32_t b=LAYERS+layer*0x54u;
@@ -100,8 +101,7 @@ static void mmx4_bg_end(CPUState *cpu, uint32_t address) {
             scroll_mapping(mode,camera-fg.left,&left))
             view=psx_capcom_scroll_view(fg,now,left);
     }
-    if(mmx4_coop_split_views() && psx_mod_local_view_scope() &&
-       view.left<=0 && view.right<=0)view.right=16;
+    if(mmx4_coop_split_views() && view.left<=0 && view.right<=0)view.right=16;
     unsigned width=psx_mod_read_byte(0x80172224u),stride=psx_mod_read_half(0x8013bd48u);
     PSXCapcomTileMap map={psx_mod_read_word(0x1f800004u),psx_mod_read_word(0x1f800008u),
         psx_mod_read_word(0x1f80000cu),width,width?stride/width:0,stride,layer,
