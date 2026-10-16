@@ -342,7 +342,10 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     if(address==WATER) {
         ++water_updates;
         /* Native type 7 selects the owner body (or its Double) on every
-         * update, rather than retaining an explicit following pointer. */
+         * update, rather than retaining an explicit following pointer.
+         * Its final B288 visibility query must also admit both Split views
+         * while this owner is projected, including at a distant waterfall. */
+        CHECK(mmx4_coop_combat_actor_context());
         uint32_t source=psx_mod_read_byte(a0+2)&2u?DOUBLE_BODY:MMX4_PLAYER;
         psx_mod_write_word(a0+8,psx_mod_read_word(source+8));
         psx_mod_write_word(a0+12,psx_mod_read_word(source+12));

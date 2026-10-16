@@ -148,7 +148,11 @@ static int world_ready(void) {
 }
 
 int mmx4_coop_combat_actor_context(void) {
-    return actor_call && !actor_suspended && (!mmx4_coop_projected() || actor_owner==1);
+    /* Attached effects also update in an owner projection. Their native
+     * visibility queries must see both Split views: water's B288 otherwise
+     * hides P2's ripples whenever they leave the canonical P1 camera. */
+    return personal_effect_call ||
+        (actor_call && !actor_suspended && (!mmx4_coop_projected() || actor_owner==1));
 }
 
 int mmx4_coop_combat_canonical_call(CPUState *cpu,uint32_t address,

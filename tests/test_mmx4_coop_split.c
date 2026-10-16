@@ -1031,6 +1031,14 @@ int main(void) {
     actor_position(ACTOR,1200,2000);CHECK(!invoke(&cpu,0x8002B1E8u));
     actor_position(ACTOR,100,140);CHECK(!invoke(&cpu,0x8002B1E8u));
     actor_position(ACTOR,100,2000);CHECK(invoke(&cpu,0x8002B1E8u));
+    /* Attached water effects run projected too. B288 must retain a ripple
+     * near either actual view and clear it outside both, restoring camera. */
+    actor_position(ACTOR,1200,2000);invoke(&cpu,0x8002B288u);
+    CHECK(psx_mod_read_byte(ACTOR+3) && !psx_mod_read_half(CAMERA+10));
+    actor_position(ACTOR,100,140);invoke(&cpu,0x8002B288u);
+    CHECK(psx_mod_read_byte(ACTOR+3) && !psx_mod_read_half(CAMERA+10));
+    actor_position(ACTOR,100,2000);invoke(&cpu,0x8002B288u);
+    CHECK(!psx_mod_read_byte(ACTOR+3) && !psx_mod_read_half(CAMERA+10));
     actor_context=0;mmx4_coop_leave_second();
     actor_position(ACTOR,1200,2000);local_scope=1;
     CHECK(invoke(&cpu,0x8002B1E8u));local_scope=0;

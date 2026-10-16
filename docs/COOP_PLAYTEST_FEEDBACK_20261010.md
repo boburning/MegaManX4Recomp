@@ -122,7 +122,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Opening timed-ice and rising-shaft controls continue changing phases, masks or positions after P1 dies; the permanent-platform symptom remains unreproduced. Keep this separate from the corrected P2 activation111 and personal ice momentum104. Archive B. `beads-eio.9.151` |
 | 113 | [ ] | P2 snowflakes animate only after P1 dies | Frost Walrus, archive B. Separate from floor physics104; the ice fix does not establish a snow-animation fix. `beads-eio.9.152` |
 | 114 | [x] | Frost Both-player boss door teleports P2 and can trap P1 walking left | Reproduced in native Split/Both at checkpoint4. Midboss52218 starts its scene during pair phase2; defer its whole admission until physical clearance. Also fix the permanent camera6080/minimum6032 equality wait by accepting the authored room interval. Both leading arrangements now cross, keep both players healthy/visible and restore controls without transport; peer state matches through8514. The supplied pair2 trace confirms Both was active despite saved Either settings. `beads-eio.9.109` |
-| 115 | [ ] | P2 water ripples appear only when P1 is nearby | Web Spider distance-conditioned effect, archive C. Recheck the earlier water-effect fix in Split netplay with P1 far away. `beads-eio.9.28` reopened for this case. |
+| 115 | [x] | P2 water ripples appear only when P1 is nearby | Reproduced in current native Split: P2's active water effects at432/394 are hidden with P1 at56/139, appear when P1 approaches400/395, then hide again when P1 leaves. Their owner projection excluded Split's two-view visibility query. Admit attached-effect context to that existing query. Fixed far/near/far native checks retain P2's pair in all15 samples; inspected composed images and matching peer state through4964. Windows34 and Linux combat/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.28` |
 | 116 | [x] | Both-player first/second door opening focuses the camera on P1 until both pass | Keep independent saved cameras, view selection and actual local presentation through paired phases1–3, sharing the authored door limits. Real boss introductions retain shared scenes. Composed Frost frames show separate X/Zero screens and HUDs with232px separation; peer state matches through8036. Cyber and Spider each cross both native doors, restore controls and retain both players with no transport or local-view state leaks. Windows34 checks and Linux lifecycle/split tests pass. `beads-eio.9.109` |
 | 117 | [ ] | X attacks do not knock back Iris | Archive C. Qualify boss-body reaction, attack type and player assignment; earlier Iris graphics/loading fixes84/85 do not establish combat correctness. `beads-eio.9.153` |
 | 118 | [ ] | X attacks do not damage Iris's crystal | Archive C. Separate crystal HP/collision acceptance case from Iris body knockback117. `beads-eio.9.153` |
@@ -1642,3 +1642,30 @@ Private evidence: `build-pr23/feedback28-pickup-session-20261016`
 (old8336b0d baseline), `build-pr23/feedback28-pickup-fixed-20261016`
 (fixed native run), and `build-pr23/pickup28-*.log`.
 Tracking: `beads-eio.9.11`. This change has not yet been packaged as a release.
+
+### October16 distant water-effect qualification
+
+Item115 is fixed in source after Playtest27. The earlier allocation-owner
+fix correctly keeps P2's type7 effects attached to P2, but their final native
+B288 visibility query runs inside a personal effect projection. Split's
+availability gate admitted shared actor projections and excluded this
+effect context, so the query culled P2's ripples against only P1's camera.
+Include the existing personal-effect scope in the actor-context predicate.
+The same native visibility query then uses both living views, retaining
+scene-owner restrictions, screen-relative exclusions and local-render guards.
+There is still one native effect update, without a second allocation or clock.
+
+Native two-peer before/after checks hold P2 in water at432/394. The baseline
+keeps its two active ripple actors hidden with P1 at56/139, shows them when
+P1 approaches400/395, then hides them when P1 returns to spawn. The fixed
+run retains both ripples at P2's own X-8/X+8 and native Y in all15 sampled
+far/near/far states. Both heroes stay healthy. Actual composed P2 images
+were inspected, and peer core/mod checks agree through4964. The projected
+water ownership fixture fails before and passes after; the bounds fixture
+also checks visibility near either view, rejection outside both and camera
+restoration. All34 Windows title checks and Linux combat/split units pass.
+
+Private evidence: `build-pr23/feedback28-pickup-fixed-20261016/water-*`
+(7f705af baseline), `build-pr23/feedback28-water-fixed-20261016`
+(fixed native run), and `build-pr23/water28-*.log`.
+Tracking: `beads-eio.9.28`. This change has not yet been packaged as a release.
