@@ -120,7 +120,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 110 | [x] | Large health pickup shifts the displayed camera to P1 | Archive A identifies the full-health capsule, native kind5, omitted from Split's private refill handling. Native baseline heals P2 while freezing the world and presenting P1's unified view. Include kind5: the real capsule now heals8 to32 with no shared freeze, P1 moves29.5px during replenishment, and P2's own redraw/HUD continues. Peer state matches through5987; all34 Windows checks and Linux lifecycle/split units pass. Unified retains the native shared pause. Source after Playtest27, not yet released. `beads-eio.9.11` |
 | 111 | [x] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Video samples locate the opening timed ice, distinct from the rising shaft. Native baseline keeps the cycle unarmed with P1 at144/347 and P2 at705/426; bringing P1 over creates ice. Allow either living hero to arm the original cycle and use both Split camera ranges for its tile sequences. Corrected native P2-ahead and distant-camera cases pass with visible ice, healthy players and matching peer CRCs through7398. Windows34 and Linux lifecycle/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.151` |
 | 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Opening timed-ice and rising-shaft controls continue changing phases, masks or positions after P1 dies; the permanent-platform symptom remains unreproduced. Keep this separate from the corrected P2 activation111 and personal ice momentum104. Archive B. `beads-eio.9.151` |
-| 113 | [ ] | P2 snowflakes animate only after P1 dies | Frost Walrus, archive B. Separate from floor physics104; the ice fix does not establish a snow-animation fix. `beads-eio.9.152` |
+| 113 | [x] | P2 snowflakes animate only after P1 dies | Reproduced with settled Split views: P1 stays144/347 while P2 waits3281/378; P2 snow origin and visible flake positions freeze until P1 dies. Native B75C8/type9 updates the shared weather atlas, outside ordinary mode5 camera follow. Publish its exact layer2 origins/changed metadata to both saved views without repeating its clock. Fixed native snowfall moves before and after P1 death; composed flake-position comparisons pass and peers agree through5416. Windows34, Linux combat/split and entry/release wiring checks pass. Source after Playtest27, not yet released. `beads-eio.9.152` |
 | 114 | [x] | Frost Both-player boss door teleports P2 and can trap P1 walking left | Reproduced in native Split/Both at checkpoint4. Midboss52218 starts its scene during pair phase2; defer its whole admission until physical clearance. Also fix the permanent camera6080/minimum6032 equality wait by accepting the authored room interval. Both leading arrangements now cross, keep both players healthy/visible and restore controls without transport; peer state matches through8514. The supplied pair2 trace confirms Both was active despite saved Either settings. `beads-eio.9.109` |
 | 115 | [x] | P2 water ripples appear only when P1 is nearby | Reproduced in current native Split: P2's active water effects at432/394 are hidden with P1 at56/139, appear when P1 approaches400/395, then hide again when P1 leaves. Their owner projection excluded Split's two-view visibility query. Admit attached-effect context to that existing query. Fixed far/near/far native checks retain P2's pair in all15 samples; inspected composed images and matching peer state through4964. Windows34 and Linux combat/split checks pass. Source after Playtest27, not yet released. `beads-eio.9.28` |
 | 116 | [x] | Both-player first/second door opening focuses the camera on P1 until both pass | Keep independent saved cameras, view selection and actual local presentation through paired phases1–3, sharing the authored door limits. Real boss introductions retain shared scenes. Composed Frost frames show separate X/Zero screens and HUDs with232px separation; peer state matches through8036. Cyber and Spider each cross both native doors, restore controls and retain both players with no transport or local-view state leaks. Windows34 checks and Linux lifecycle/split tests pass. `beads-eio.9.109` |
@@ -1700,3 +1700,40 @@ Private evidence: `build-pr23/feedback28-exit-session-20261016`
 (eafd1a5 baseline), `build-pr23/feedback28-exit-fixed-20261016`
 (fixed native run), and `build-pr23/exit28-*.log`.
 Tracking: `beads-eio.9.150`. This change has not yet been packaged as a release.
+
+### October16 independent Frost snowfall qualification
+
+Item113 is fixed in source after Playtest27. The settled native Split probe
+holds P1 at144/347 and P2 at3281/378, with P2's foreground camera fixed at
+3121/234. Its snow layer stays at4118.75/342 across four samples while P1
+lives, then starts moving after a real native P1 death. A read-only write
+trace identifies the stage pool's kind9 controller at B75C8: B78BC advances
+fractional wind and B790C advances/wraps snow Y. The ordinary mode5 camera
+helper does not publish this weather to the noncanonical view.
+
+The controller still runs once. Publish its exact native layer2 origins and
+changed metadata to both saved views, keeping foreground/terrain cameras
+independent. These coordinates encode weather atlas phases, including
+absolute resets, so they do not inherit a stale per-view position offset.
+The initial delta candidate animated successfully, but the final source uses
+the exact native phase and adds explicit stale-phase/reset regression cases.
+The new function entry is present in both development and release configs;
+fresh generation changes only shard54. Registration and release-contract
+checks caught the intermediate missing wiring before native qualification.
+
+The final actual-disc run shows P2's snow moving with P1 alive and continuing
+after P1 dies. Both views keep the proper terrain, P2 remains healthy, no
+private-render state leak is observed, and peer core/mod checks agree through
+5416. Inspected composed frames and sky-region snowflake masks distinguish
+position from unrelated sky-palette changes: baseline alive has one identical
+mask across four captures; baseline survivor and both fixed phases each have
+four distinct masks. The earlier unsettled teleport/camera catch-up samples
+are excluded from this visual claim. All34 Windows title checks and Linux
+combat/split units pass. Fractional movement, vertical wrap, absolute startup
+reset, one clock tick, later camera snapshot and excluded contexts are covered.
+
+Private evidence: `build-pr23/feedback28-exit-fixed-20261016`
+(`frost-snow-trace-settled` baseline and native writes),
+`build-pr23/feedback28-snow-atlas-20261016` (final native run),
+`build-pr23/snow28-visual-result.json`, and `build-pr23/snow28-*.log`.
+Tracking: `beads-eio.9.152`. This change has not yet been packaged as a release.

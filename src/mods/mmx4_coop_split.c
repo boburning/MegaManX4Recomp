@@ -383,6 +383,37 @@ static int jungle_background(CPUState *cpu,uint32_t address) {
     jungle_background_call=0;
     return mmx4_coop_finish(cpu,result);
 }
+static int frost_snow_background(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(background_call || !available() || mmx4_coop_projected() ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=2 ||
+       actor<0x80142F98u || actor>=0x80143598u ||
+       (actor-0x80142F98u)%0x30u || psx_mod_read_byte(actor+1)!=9)return 0;
+    initialize_cameras();
+    uint32_t snow=CAMERA+2u*0x54u;
+    uint8_t before[0x54],after[0x54];
+    read_bytes(snow,before,sizeof before);background_call=3;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    read_bytes(snow,after,sizeof after);
+    /* Native B75C8 owns one weather clock. B7764/B7934 add fractional wind
+     * and wrap the vertical snow origin. Mode5's camera helper is a no-op,
+     * so the noncanonical view otherwise keeps its initial frozen snow.
+     * The origin encodes the shared weather atlas phase, independently of
+     * foreground position. Publish its exact native value to both views,
+     * including absolute phase resets; do not repeat the timer or update. */
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t shadow=state+16u+seat*CAMERA_BYTES+2u*0x54u;
+        for(unsigned offset=0;offset<sizeof before;++offset) {
+            if((offset>=8u && offset<16u) || (offset>=20u && offset<28u))continue;
+            if(before[offset]!=after[offset])psx_mod_write_byte(shadow+offset,after[offset]);
+        }
+        for(unsigned axis=8;axis<=12;axis+=4)
+            psx_mod_write_word(shadow+axis,byte_word(after,axis));
+    }
+    background_call=0;
+    psx_mod_counter_add("mmx4.coop.split-snow-background-ticks",1);
+    return mmx4_coop_finish(cpu,result);
+}
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
     if(!available() || owner>1 || mmx4_coop_lifecycle_script_owner()>=0 ||
        psx_mod_read_byte(MMX4_PLAY+0x10) || psx_mod_read_byte(MMX4_PLAY+0x1C))return 0;
@@ -793,6 +824,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800C0D98u,destructible_camera_unlock);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800C3880u,mushroom_lift_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8ED4u,jungle_background);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800B75C8u,frost_snow_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B56F4u,spatial_stage_actor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B6A0Cu,spatial_stage_actor);
     psx_mod_register_function_entry_plugin(COOP_ID,0x80028DB4u,reset_placements);
