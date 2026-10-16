@@ -11,10 +11,23 @@ the isolated missing-pose regression and native recovery integration pass.
 Unified cameras and Stacked HUD remain defaults; Split is experimental.
 Both peers must update. Campaign memory-card saves carry forward.
 
-Items53 and89 remain open. Package qualification will be recorded after both
-production artifacts pass. Release issue: `beads-eio.9.143`. Private package receipt:
+Items53 and89 remain open. Release issue: `beads-eio.9.143`. Private package receipt:
 `build-pr23/release26-qa/release-receipt-final.json`.
 Player-facing changes are in [release notes](../RELEASE_NOTES.md).
+
+Compiled source `51c86dd`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows title checks pass; all 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `2f13719202a6f28e295a4b19546fe3415ef485395ee314ab5175cb86dd5f4086` |
+| Linux x86_64 AppImage | `1de7d454c49f15c9caceb52f6b7eebd8d6d13d194e1967b705a0a14118be9fa3` |
 
 ## Previous co-op playtest 25
 
