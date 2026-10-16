@@ -697,11 +697,13 @@ static int placement_allocate(CPUState *cpu,uint32_t address) {
     if(!available() || cpu->gpr[31]!=0x8002916Cu ||
        !placement_index(cpu->gpr[19],&index))return 0;
     uint32_t record=cpu->gpr[19];unsigned category=psx_mod_read_byte(record+3u);
+    unsigned refight_portal=category==4u && psx_mod_read_byte(record+1u)==27u &&
+        psx_mod_read_byte(MMX4_PLAY+12)==12 && !psx_mod_read_byte(MMX4_PLAY+13);
     if((psx_mod_read_byte(state+VISITS_OFFSET+index/8u)&(1u<<(index&7u))) ||
        (supplemental && (psx_mod_read_byte(record)&0x70u)) ||
        (supplemental && !(category<3u ||
             (category==4u && (psx_mod_read_byte(record+1u)==4u ||
-                             psx_mod_read_byte(record+1u)==8u))))) {
+                             psx_mod_read_byte(record+1u)==8u)) || refight_portal))) {
         psx_mod_counter_add("mmx4.coop.split-respawn-suppressed",1);
         return mmx4_coop_finish(cpu,0);
     }

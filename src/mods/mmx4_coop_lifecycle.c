@@ -1095,7 +1095,10 @@ static int stage_normal(CPUState *cpu,uint32_t address) {
     int owner=-1;
     if(mmx4_coop_alive(0) && (edge[0]&START))owner=0;
     else if(mmx4_coop_alive(1) && (edge[1]&START))owner=1;
-    if(script_active || psx_mod_read_byte(PLAY+0x1C) || psx_mod_read_byte(PLAY+0x10) ||
+    /* Paired doors keep a scene latch while both heroes walk through freely.
+     * Only the actual opening and boss conversation need the pause lock. */
+    int free_door=mmx4_coop_lifecycle_paired_door() && both_door.phase>=2;
+    if((script_active && !free_door) || psx_mod_read_byte(PLAY+0x1C) || psx_mod_read_byte(PLAY+0x10) ||
        psx_mod_read_byte(PLAY+0x0F) || psx_mod_read_byte(0x80141BDCu))owner=-1;
     uint8_t pad[6];read_bytes(PAD,pad,6);
     uint16_t native_edge=psx_mod_read_half(PAD+4);
@@ -1705,6 +1708,10 @@ static void dismount_at_door(CPUState *cpu,unsigned seat,uint32_t actor) {
 static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(scene_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected())return 0;
     uint32_t actor=cpu->gpr[4];unsigned owner=0;
+    unsigned refight_portal=address==0x800C7164u;
+    if(refight_portal && (psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY+12)!=12 || psx_mod_read_byte(PLAY+13) ||
+       !door_pool_actor(actor) || psx_mod_read_byte(actor+1)!=27))return 0;
     SceneOwner *record=scene_record(actor,0);
     if(psx_mod_read_byte(actor+4)==0 && record) {
         memset(record,0,sizeof *record);record=NULL;
@@ -1713,6 +1720,23 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     else if((address==0x800D1248u || address==0x800D1284u) && script_active)
         owner=script_owner;
     else if(!mmx4_coop_alive(0) && mmx4_coop_alive(1))owner=1;
+    else if(refight_portal && psx_mod_read_byte(actor+4)==1 &&
+            !psx_mod_read_byte(actor+5)) {
+        /* C7970 only reads the original body/portal collision boxes. Keep
+         * the full C7164 state machine with the hero who actually enters;
+         * its later phases still wait on that body's native warp state. */
+        unsigned first_hit=mmx4_coop_alive(0)?
+            mmx4_coop_call(cpu,0x800C7970u,actor,PLAYER):0;
+        unsigned second_hit=0;
+        if(mmx4_coop_alive(1)) {
+            mmx4_coop_enter_second();
+            second_hit=mmx4_coop_call(cpu,0x800C7970u,actor,PLAYER);
+            mmx4_coop_leave_second();
+        }
+        if(!first_hit && second_hit)owner=1;
+        if(mmx4_coop_both_door_players() && mmx4_coop_alive(0) &&
+           mmx4_coop_alive(1) && !departed && (!first_hit || !second_hit))door_wait=1;
+    }
     else if(address==0x800C2BE0u && mmx4_coop_alive(1) &&
             !(mmx4_coop_solid_contact_bits(actor,0)&8u) &&
              (mmx4_coop_solid_contact_bits(actor,1)&8u))owner=1;
@@ -1762,17 +1786,17 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     scene_guard=1;uint32_t result;
     if(owner) {
         uint8_t contact[4];static const unsigned at[]={0x72,0x74,0x76,0x78};
-        if(address==0x800C2BE0u) {
+        if(address==0x800C2BE0u || refight_portal) {
             for(unsigned i=0;i<4;++i)contact[i]=psx_mod_read_byte(actor+at[i]);
             psx_mod_write_byte(actor+0x72,mmx4_coop_solid_contact_bits(actor,1));
             projected_portal_solid=actor;
         }
         result=call_story_as_second(cpu,address,actor,cpu->gpr[5]);
-        if(address==0x800C2BE0u) {
+        if(address==0x800C2BE0u || refight_portal) {
             projected_portal_solid=0;
             for(unsigned i=0;i<4;++i)psx_mod_write_byte(actor+at[i],contact[i]);
-            /* Retail C2C20 performs one solid pass after the portal state
-             * update. Running it inside P2's story projection bypasses the
+            /* Retail C2C20 and C71A4 perform one solid pass after each portal
+             * state update. Inside P2's story projection that bypasses the
              * combat wrapper, leaving P1 without platform collision whenever
              * P2 stands on it. Restore the canonical histories first, then
              * let that one native pass resolve contact for both seats. */
@@ -1821,6 +1845,12 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(own_camera)mmx4_coop_split_scene_camera_end(owner,canonical_camera,
         script_active && script_owner==owner && (new_door || serial!=script_serial));
     return mmx4_coop_finish(cpu,result);
+}
+static int refight_portal_query(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(scene_guard && door_wait && mmx4_coop_ready())
+        return mmx4_coop_finish(cpu,0);
+    return 0;
 }
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {
     return scene_guard && projected_portal_solid && projected_portal_solid==actor;
@@ -2092,6 +2122,8 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x80021D20u,script_text);
     psx_mod_register_function_filter_plugin(ID,0x8002217Cu,shared_text_init);
     psx_mod_register_function_filter_plugin(ID,0x800C2BE0u,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800C7164u,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800C7970u,refight_portal_query);
     psx_mod_register_function_filter_plugin(ID,0x800C1994u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C1E7Cu,waiting_door_query);
     psx_mod_register_function_filter_plugin(ID,0x800C1D90u,both_door_traversal);

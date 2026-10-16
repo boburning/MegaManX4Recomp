@@ -55,6 +55,7 @@ static uint8_t terrain_contact;
 static int narrow_return_x;
 static unsigned flip_queries[2],flip_hits[2],flip_world_calls,flip_second_calls,flip_camera_calls;
 static uint8_t p2_solid_bits;
+static unsigned portal_hits[2],portal_admissions,portal_continuations[2];
 static uint16_t inputs[2];
 typedef struct { uint32_t address;PSXModFunctionFilterCallback filter; } Filter;
 static Filter filters[64];static unsigned filter_count;
@@ -399,6 +400,22 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             psx_mod_write_word(MMX4_PLAYER+12,psx_mod_read_word(a0+12));
             mmx4_coop_call(cpu,0x80036AE4u,0x14,0x40);
             psx_mod_write_byte(a0+5,1);
+        }
+        if(!mmx4_coop_lifecycle_defer_portal_solid(a0))
+            mmx4_coop_call(cpu,0x8002E184u,a0,0);
+        break;
+    case 0x800C7970:
+        assert(a1==MMX4_PLAYER);return portal_hits[projected];
+    case 0x800C7164:
+        if(!psx_mod_read_byte(a0+5)) {
+            if(mmx4_coop_call(cpu,0x800C7970u,a0,MMX4_PLAYER)) {
+                ++portal_admissions;
+                psx_mod_write_word(MMX4_PLAYER+8,psx_mod_read_word(a0+8));
+                mmx4_coop_call(cpu,0x80036AE4u,0x14,0x40);
+                psx_mod_write_byte(a0+5,1);
+            }
+        }else if(!psx_mod_read_byte(MMX4_PLAYER+0xC0)) {
+            ++portal_continuations[projected];psx_mod_write_byte(a0+5,2);
         }
         if(!mmx4_coop_lifecycle_defer_portal_solid(a0))
             mmx4_coop_call(cpu,0x8002E184u,a0,0);
@@ -2114,6 +2131,31 @@ int main(void) {
     mmx4_coop_call(&cpu,0x800C1994u,actor,0);
     CHECK(script_active && !script_owner && !door_wait);
 
+    /* Either seat can pause during free passage, retaining the open door
+     * through the native menu fade/resume. Opening/intro and global gates
+     * still reject Start; stale paired state cannot unlock a later scene. */
+    for(unsigned seat=0;seat<2;++seat)for(unsigned phase=1;phase<=5;++phase) {
+        CHECK(!open_both_door(&cpu,actor));both_door.phase=(uint8_t)phase;
+        inputs[seat]=START;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+        unsigned eligible=phase==2 || phase==3;
+        CHECK(menu_active==eligible && (psx_mod_read_byte(PLAY+1)==2)==eligible);
+        if(eligible) {
+            CHECK(menu_owner==seat && script_active);
+            inputs[seat]=0;pause_exit=1;
+            mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);pause_exit=0;
+            CHECK(!menu_active && !psx_mod_read_byte(PLAY+1));
+            CHECK(both_door.phase==phase && script_active && !warp_pending && !warp_phase);
+        }
+    }
+    for(unsigned gate=0;gate<6;++gate) {
+        CHECK(!open_both_door(&cpu,actor));inputs[1]=START;
+        if(gate<3)psx_mod_write_byte(PLAY+(unsigned[]){0x1C,0x10,0x0F}[gate],1);
+        else if(gate==3)both_door.stage^=1u;
+        else if(gate==4)psx_mod_write_byte(0x80141BDCu,1);
+        else ++script_serial;
+        mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);CHECK(!menu_active);
+    }
+
     /* Both mode keeps both native bodies in the world. Opening releases the
      * owner's action19 into ordinary controls; physical box clearance, then
      * camera arrival, own closure. No controller or door pass supplies X. */
@@ -2414,6 +2456,38 @@ int main(void) {
     p2[2]=1;CHECK(!mmx4_coop_lifecycle_nova_active());
     initial_arrival=1;CHECK(mmx4_coop_lifecycle_initial_arrival());
     initial_arrival=0;CHECK(!mmx4_coop_lifecycle_initial_arrival());
+    /* Refight entry is owned by the touching hero, even when the AI/view
+     * owner differs. Both mode waits for the same pad; dead/withdrawn seats
+     * cannot prevent a survivor from entering. Solid contact remains shared. */
+    for(unsigned both=0;both<2;++both)for(unsigned seat=0;seat<2;++seat)
+    for(unsigned absent=0;absent<3;++absent) {
+        reset();both_door_players=(int)both;
+        portal_hits[0]=portal_hits[1]=0;portal_hits[seat]=1;
+        portal_admissions=0;portal_continuations[0]=portal_continuations[1]=0;
+        psx_mod_write_byte(PLAY+12,12);psx_mod_write_byte(PLAY+13,0);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,27);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_word(actor+8,1024u<<16);
+        if(absent==1) {
+            if(seat)psx_mod_write_byte(PLAYER+0x5C,0);else p2[0x5C]=0;
+        }else if(absent==2) {
+            if(seat)psx_mod_write_byte(PLAYER,0);else departed=1;
+        }
+        unsigned solids_before=canonical_portal_solids;
+        mmx4_coop_call(&cpu,0x800C7164u,actor,0);
+        CHECK(canonical_portal_solids==solids_before+1 && !projected);
+        if(both && !absent) {
+            CHECK(!portal_admissions && !script_active && !warp_pending && !psx_mod_read_byte(actor+5));
+            portal_hits[seat^1u]=1;mmx4_coop_call(&cpu,0x800C7164u,actor,0);
+            CHECK(script_owner==0); /* P1 resolves simultaneous contact. */
+        }else CHECK(script_owner==seat);
+        CHECK(portal_admissions==1 && script_active && psx_mod_read_byte(actor+5)==1);
+        unsigned owner=script_owner;
+        portal_hits[0]=portal_hits[1]=0;
+        if(owner)p2[0xC0]=0;else psx_mod_write_byte(PLAYER+0xC0,0);
+        mmx4_coop_call(&cpu,0x800C7164u,actor,0);
+        CHECK(portal_continuations[owner]==1 && !portal_continuations[owner^1u]);
+        CHECK(psx_mod_read_byte(PLAY+0x43)==0 && !projected && !door_wait);
+    }
     CHECK(!personal_floor_momentum(&cpu));
     CHECK(!colonel_palette_refreshes(&cpu));
     CHECK(!survivor_palette_animation(&cpu));

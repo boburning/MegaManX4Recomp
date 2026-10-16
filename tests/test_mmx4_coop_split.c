@@ -790,6 +790,36 @@ static void stationary_second_door(CPUState *cpu) {
     invoke(cpu,0x80028E24u);CHECK(allocations==1); /* Both views, one actor. */
     native_directional_scans=0;native_table=TABLE;
 }
+static void stationary_refight_portal(CPUState *cpu) {
+    for(unsigned scope=0;scope<3;++scope) {
+        uint32_t table=native_table=0x800F87E0u;
+        split=ready=1;local_scope=projected=0;script_owner=-1;
+        unsigned stage=scope==2?6u:12u,section=scope==0?0u:1u;
+        psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,(uint8_t)stage);
+        psx_mod_write_byte(MMX4_PLAY+13,(uint8_t)section);
+        psx_mod_write_byte(MMX4_PLAY+0x10,0);psx_mod_write_byte(MMX4_PLAY+0x1C,0);
+        psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+        second[0]=second[4]=1;
+        actor_position(MMX4_PLAYER,80,2507);second_position(870,2506);
+        memset(ram+(CAMERA&0x1FFFFFu),0,0xFCu);
+        mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+        for(unsigned seat=0;seat<2;++seat) {
+            uint32_t view=saved_camera(seat,0);unsigned x=seat?688u:0u;
+            psx_mod_write_half(view+10,(uint16_t)x);psx_mod_write_half(view+0x16,(uint16_t)x);
+            psx_mod_write_half(view+14,2304);psx_mod_write_half(view+0x1A,2304);
+        }
+        memset(ram+(table&0x1FFFFFu),0,3u*8u);
+        psx_mod_write_word(0x800F43C8u+stage*8u+section*4u,table);
+        placement(0,992,2496,4);psx_mod_write_byte(table+1,27);
+        placement(1,992,2496,4);psx_mod_write_byte(table+8,0x20);psx_mod_write_byte(table+9,27);
+        psx_mod_write_byte(table+19,255);
+        native_directional_scans=1;allocations=0;capacity=16;
+        invoke(cpu,0x80028E24u);CHECK(allocations==(scope==0));
+        invoke(cpu,0x80028E24u);CHECK(allocations==(scope==0));
+        CHECK(!(psx_mod_read_byte(table+8)&1u)); /* Authored directional offset remains native. */
+    }
+    native_directional_scans=0;native_table=TABLE;
+}
 static uint32_t train_pool_tick(CPUState *cpu) {
     /* QA87 observed D9218 with a0=80169CB8, ra=80021BDC. Original21B34
      * dispatches four30-byte actors via800F2AB4 AFTER27850/27D40/281E8. */
@@ -1333,6 +1363,7 @@ int main(void) {
     destructible_camera_unlocks(&cpu);
     four_aligned_placements(&cpu);
     stationary_second_door(&cpu);
+    stationary_refight_portal(&cpu);
     jungle_backgrounds(&cpu);
     frost_ice_ranges(&cpu);
     puts("mmx4_coop_split_test: PASS");return 0;

@@ -767,6 +767,7 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
            (stage==10 && section==0 && checkpoint<3) ||
            (stage==11 && section==0 && checkpoint<2) ||
            ((stage==5 || stage==6) && section==1 && checkpoint<2) ||
+           (stage==12 && section==0 && checkpoint<19) ||
            (stage==12 && section==1 && checkpoint<7)) {
             psx_mod_write_byte(PLAY+0x1D,(uint8_t)checkpoint);
             psx_mod_write_byte(PLAY+0x1E,0);psx_mod_write_word(PLAY,5);

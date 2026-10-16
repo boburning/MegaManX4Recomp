@@ -49,8 +49,8 @@ label = "Side by side"
 [[option]]
 feature = "coop"
 id = "boss_doors"
-label = "Boss doors"
-description = "Either player opens the door by default. Both players requires both living players to touch it; a dead or teleported-out partner does not hold it closed. Works locally and online; the netplay host chooses for both players."
+label = "Boss doors and refight teleporters"
+description = "Either player activates boss doors and fortress refight teleporters by default. Both players requires both living players to touch the same door or teleporter; a dead or teleported-out partner does not hold it closed. Works locally and online; the netplay host chooses for both players."
 type = "choice"
 default = "either"
 [[option.choice]]
