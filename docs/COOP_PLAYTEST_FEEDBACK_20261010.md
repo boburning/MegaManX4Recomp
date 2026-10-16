@@ -96,7 +96,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 87 | [x] | Double might use incorrect sprites in Zero's story | Not reproduced after Playtest20's shared sprite-selector correction. Fresh native Zero campaign with the optional sequence on defeats Iris, loads Double with correct inspected sprites, defeats him and returns to Zero's normal movie route. Campaign1 and two lives are retained; one sequel/two boss defeats are recorded. No additional graphics patch. `beads-eio.9.86` |
 
 | 88 | [x] | P2 alone gets stuck in intro part2's crusher shaft | Metadata6 local Unified Playtest21 recording verifies all9,313 retained native checks. Dead P1 remains above; crusher C0558 tests only P1 Y, so panels never close/open the onward route. Use living P2 Y for that predicate while retaining native panel movement/map edits/contact. The verified recorded-state continuation escapes using wall jumps to X4175/Y443, HP23 unchanged and P1 still dead at X863/Y394. Both-campaign and negative predicate checks pass. `beads-eio.9.120` |
-| 89 | [x] | Storm Owl has an extra wall inside the boss arena | Reproduced on current source with the rear player at the original2680/683 release area: that hero overwrites the leader's arena minimum with0, then warps past its entry trigger. Commit the authored2240 minimum only when Owl's native introduction starts. Fixed local Unified reachesX2248 with both players healthy and the camera locked; two-peer Split passes both leading seats with matching core/mod state through8938 and inspected arena captures. Regression fails before the fix; all34 Windows checks and Linux lifecycle pass. Fixed after Playtest28; not yet packaged. `beads-eio.9.121` |
+| 89 | [x] | Storm Owl has an extra wall inside the boss arena | Reproduced on current source with the rear player at the original2680/683 release area: that hero overwrites the leader's arena minimum with0, then warps past its entry trigger. Commit the authored2240 minimum only when Owl's native introduction starts. Fixed local Unified reachesX2248 with both players healthy and the camera locked; two-peer Split passes both leading seats with matching core/mod state through8938 and inspected arena captures. Regression fails before the fix; all34 Windows checks and Linux lifecycle pass. Included in Playtest29. `beads-eio.9.121` |
 | 90 | [x] | Both living players perform their victory poses together | Default for normal Maverick clears: retain both native bodies/animations without partner withdrawal or a second theme/reward. Actual native Jet defeats pass in both campaigns; X fist raise and Zero salute are visible together, one clear/Continue cache update is retained. A save made during both poses reloads and finishes correctly. Midboss, survivor-only and story/movie paths keep native flow. Lifecycle snapshot/digest tests and all34 Windows title checks pass. `beads-eio.9.122` |
 | 91 | [x] | Intro act1 exit cutscene starts before Both-player door finishes | Metadata6 first recording reproduces a nonfatal stall. Defer D0580 admission until physical clearance: old replay branch leaves camera min4368/P1 stuckX4872/P2 hidden; fixed branch commits min4848, ends the native walk atX4912, and enters intro part2. Separate from older unconfirmed crash item53. `beads-eio.9.123` |
 | 92 | [x] | P2 Ride Armor ownership and safe dismounts | Corrected native mount mode; original Raiden boards, moves, attacks and ejects for either P2 character. Native partner arena transport ejects on foot; world armor retains HP. Both-door waiting/admission, death, occupied world slot and stage cleanup covered. `beads-eio.9.128` |
@@ -1881,3 +1881,25 @@ Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release28-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.155`. Existing items53 and89 remain open.
+
+### Playtest 29 package qualification (2026-10-16)
+
+Item89 ships with production Windows ZIP and Linux x86_64 AppImage packages.
+The README acknowledgment and requested blog link are above the title and
+present in both packages. The README packaging revision matches the compiled-code snapshot.
+Compiled source `764c4f5`, framework `9bd4c20f9`,
+UI `248c347`. All 34 Windows title checks pass; all 28 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `dd88f257a5fdfc432e169b677a2e36c4db512c6a2b50f1c4f8d378d2c46c6438` |
+| Linux x86_64 AppImage | `0ab54f96467132a51c8975f87a2e0330855ee9025700322ced13f40991781bdf` |
+
+Private receipt: `build-pr23/release29-qa/release-receipt-final.json`.
+Release tracking: `beads-eio.9.156`. Other unresolved reports remain on the numbered checklist.
