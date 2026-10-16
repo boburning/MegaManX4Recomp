@@ -114,6 +114,21 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 104 | [x] | P2 lacks slippery flooring in Frost Walrus | Native kind5/B60BC owns momentum outside PLAYER and previously updated P1 only. P2 now has private native controller state, included in snapshots/digests; the surviving P2's shared script pass cannot apply it twice. Original-disc before/after checks reproduce the abrupt stop and verify sliding for P2 X and Zero. `beads-eio.9.144` |
 | 105 | [x] | P2's Split camera stays behind on Mushroom part2's elevator | Reproduced with two connected peers at stage3/section1/checkpoint2. The lift released only the canonical camera's vertical targets. Publish its native limit changes to views in the same shaft while retaining separate origins; do not repeat the platform or panels. Both views now follow the ascent, with matching peer core/mod state. `beads-eio.9.145` |
 | 106 | [x] | A dead teammate does not return at the next stage section | Forward sections now revive either dead seat with initialized native HP while retaining the survivor's resources and shared lives. Same-section checkpoint deaths, whole-team retries and voluntary withdrawal retain their rules. Native Mushroom area-load checks revive either seat without spending a shared life; both-seat boundary fixtures and snapshot checks pass. The special Double/Iris-to-Sigma3 new-level policy remains. `beads-eio.9.146` |
+| 107 | [ ] | Web Spider part1 spiked platform enemy does not spawn for leading P2 | October16 report; archive A below, Playtest26 Split netplay. Distinct enemy-family check from the earlier Sigma placement fix80. Reported, not reproduced. `beads-eio.9.149` |
+| 108 | [ ] | Web Spider part1 broken-door exit corrupts P2's background | Reported when P2 advances through the broken door at the end of part1; archive A. Qualify the transition separately from missing-player arrival74 and local survivor scenery102. `beads-eio.9.150` |
+| 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Archive A. Separate acceptance case from the spiked enemy107; no shared root cause established. `beads-eio.9.149` |
+| 110 | [ ] | Large health pickup shifts the displayed camera to P1 | Web Spider part2, P2 ahead, during health replenishment; archive A. Follow-up to independent-view pickup handling. Reported, not reproduced. `beads-eio.9.11` |
+| 111 | [ ] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Archive B, Playtest26 Split netplay. Platform activation is separate from personal ice momentum104. `beads-eio.9.151` |
+| 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Archive B. Preserve the reported lifetime symptom; whether this means missing disappearance, movement or another phase needs qualification. `beads-eio.9.151` |
+| 113 | [ ] | P2 snowflakes animate only after P1 dies | Frost Walrus, archive B. Separate from floor physics104; the ice fix does not establish a snow-animation fix. `beads-eio.9.152` |
+| 114 | [ ] | Frost Both-player boss door teleports P2 and can trap P1 walking left | P1 leads/P2 stands still, or both walk together: P2 teleports away and P1 walks left against an invisible door. P2 leads: passage works but P2 still teleports out/in. Archive B; reported Both setting conflicts with saved Either snapshots, so verify the active setting. `beads-eio.9.109` reopened for this case. |
+| 115 | [ ] | P2 water ripples appear only when P1 is nearby | Web Spider distance-conditioned effect, archive C. Recheck the earlier water-effect fix in Split netplay with P1 far away. `beads-eio.9.28` reopened for this case. |
+| 116 | [ ] | Both-player first/second door opening focuses the camera on P1 until both pass | Archive C. Track camera ownership separately from physical traversal114; retain the reported Both-versus-recorded-Either settings discrepancy. `beads-eio.9.109` |
+| 117 | [ ] | X attacks do not knock back Iris | Archive C. Qualify boss-body reaction, attack type and player assignment; earlier Iris graphics/loading fixes84/85 do not establish combat correctness. `beads-eio.9.153` |
+| 118 | [ ] | X attacks do not damage Iris's crystal | Archive C. Separate crystal HP/collision acceptance case from Iris body knockback117. `beads-eio.9.153` |
+| 119 | [ ] | Sigma stage2 P2-triggered enemy respawns facing nearby off-camera P1 | Tester describes an enemy facing right when P2 triggers its spawn while P1 is nearby outside the displayed view. Enemy identity, exact location, native facing rule and matching recording segment remain unqualified. `beads-eio.9.154` |
+| 120 | [ ] | Web Spider background animation stops after P1 dies and P2 continues | Later October16 text report. Distinguish frozen animation from the earlier region-selection/corruption fixes78/102. Exact build/mode and matching segment for this follow-up are not independently bound. `beads-eio.9.108` reopened. |
+| 121 | [ ] | Slash Beast background animation stops after P1 dies and P2 continues | Later October16 text report; opposite P1-death behavior to Frost snow113. Earlier parallax/panorama fixes28/95 do not qualify this condition. Exact build/mode and matching segment remain unqualified. `beads-eio.9.55` reopened. |
 
 Playtest27 native evidence: the original-disc Frost comparisons cover both
 character assignments. The paired Split/Either Mushroom lift probe starts at
@@ -124,6 +139,35 @@ return healthy and controllable at Sigma3, then move, with matching peer
 core/mod state through9952. Mushroom revival checks use the native area loader
 after a forced seat death; they do not claim a complete midboss playthrough.
 The earlier authentic ceiling crush from undestroyed panels is unchanged.
+
+### October16 P2-ahead and survivor feedback intake
+
+Tracking: `beads-eio.9.148`. Items107–121 are queued reports, not newly
+reproduced or fixed outcomes. Existing item104 remains checked: the supplied
+Frost ice-physics recording predates its Playtest27 fix. If it persists in27,
+that would be a new qualification; no such current-build evidence is established here.
+
+The three archives below all identify Playtest26 via co-op build
+`mmx4-coop-delay-v3:c342aa784feabf6c0417ab57ba5424bd8a2693f9`, with netplay
+enabled. Their saved mod snapshots select Split cameras, Either-player doors,
+boss scaling and the optional Double/Iris sequence. Widescreen and HD textures
+are disabled. The tester explicitly reports Both-player doors for114/116;
+the saved settings cannot establish which negotiated option was active in
+those moments. Preserve that discrepancy for reproduction rather than silently
+changing the report. The later Sigma-facing and survivor-animation messages
+are not yet tied to a specific session or video timestamp.
+
+| Evidence | Supplied archive | Video | Archive SHA256 |
+| --- | --- | --- | --- |
+| A | `Minor Web Spider stage bugs.zip` | [Web Spider feedback](https://youtu.be/TuA3Kkfzbuk) | `0404cec463a03ed5cecc295a100cc099f0fc15caf83e79810eb6307098a51161` |
+| B | `Forst Walrus stage bugs.zip` | [Frost Walrus feedback](https://youtu.be/UYdwjNHgfGc) | `c1dd9d67479d9324b03d4a19c70ad0bf844322c5d57dff59072e081cab4f387f` |
+| C | `Web Spider water ripple effects boss door focused on player 1 camera X attack Iris no knock back or cyrstal damage.zip` | [Water effects, doors and Iris feedback](https://youtu.be/leHSU7f0uKU) | `593bace0fcc03a8b07950cae7b1ec0f277966e3bfaa458cd27aea7cf7d98bb5e` |
+
+Archive metadata was inspected for this intake. Videos are linked as supplied;
+no frame-by-frame review or gameplay reproduction is claimed. Prioritize
+blocked progression at the Frost doors/platforms, then missing combat/spawns
+and transition/camera faults, then cosmetic animation. Keep all individual
+acceptance cases visible even where they share an owning issue.
 
 Tester-confirmed improvements: Cyber yellow-ball capture freeze, course portal animation, Web Spider stage. Future enhancement: Cyber bullseye on P2. The clips alone do not prove code causes, infinite softlocks or persistent save-data loss.
 
