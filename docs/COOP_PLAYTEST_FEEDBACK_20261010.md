@@ -136,19 +136,19 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 125 | [x] | P2 weakness does not affect Storm Owl | Reproduced on current29: native Zero/P2 Rakuhouha (R2, action58/type36) damages Owl but never reaches weakness phase11. Select the accepted hit's character at the original reaction branch instead of P1's campaign. Patched Split/Both native peers enter phase11;722 core/mod samples match through23136. Windows34 and Linux combat checks pass. Fortress-specific admission/grab/transport reports remain separate. `beads-eio.9.158` |
 | 126 | [ ] | Storm Owl leaves P1 grabbed until P2 dies | Not reproduced in bounded native low-HP grabs: approaching with P2 or interrupting with P2 Rakuhouha releases P1 normally, alive with controls restored. Exact reported failure remains open. `beads-eio.9.157` |
 | 127 | [x] | P2 weakness does not affect Jet Stingray | Actual P2 Zero ice attack type33 enters Jet's native rootphase3 after the attacker-selector correction;48 to46HP, paired core/mod state agrees through30016. `beads-eio.9.158` |
-| 128 | [ ] | P1 teleports away after the final hit on Split Mushroom | Reported fortress refight; inspect departure and return against the authored room exit. `beads-eio.9.157` |
-| 129 | [ ] | P2 weakness may not affect Slash Beast | Tester explicitly uncertain; confirmation pending. `beads-eio.9.157` |
-| 130 | [ ] | Web Spider weakness may have no effect | Tester explicitly uncertain; attacker and reaction need qualification. `beads-eio.9.157` |
+| 128 | [x] | P1 teleports away after the final hit on Split Mushroom | Qualified through the actual hub pad in local Unified: P1 X's Lightning Web supplies the final hit, both authored beams complete, and both heroes return healthy/visible/controllable at checkpoint13. A teleport-fixture gravity error was excluded from this result. `beads-eio.9.163` |
+| 129 | [x] | P2 weakness may not affect Slash Beast | Current local Unified, Zero campaign: actual X/P2 Ground Hunter damages the fortress refight48 to46 and enters native reaction phase11. No additional Slash-specific failure reproduced after the attacker correction. `beads-eio.9.157` |
+| 130 | [ ] | Web Spider weakness may have no effect | Current local Unified, Zero campaign: X/P2 Twin Slasher damages the actual fortress Spider48 to47. This establishes damage; the separately authored supporting-web cut/reaction was not matched, so that part remains unconfirmed. `beads-eio.9.157` |
 | 131 | [x] | P2 weakness does not affect Frost Walrus | Actual P2 Zero fire attack type35 enters native weakness phase1/10 after the attacker-selector correction;48 to46HP, paired core/mod state agrees through27138. Combo cooldowns remain separate. `beads-eio.9.158` |
 | 132 | [x] | P2 Zero cannot combo Frost Walrus because immunity occurs between hits | Per-player scaling now gives the first two accepted ground-saber strikes4-tick timers, retaining the finisher's full timer. Native Split/Either emits all three classes24/25/26, damages actual Frost48 to45, and keeps both heroes healthy; peers match through6946. Shared mode is unchanged. `beads-eio.9.164` |
 | 133 | [ ] | Death animations lose sprites or disappear | The report does not identify whether this is a hero or boss; actor and exact event need binding to the video/recording before a fix is claimed. `beads-eio.9.157` |
-| 134 | [ ] | P2 teleports away after the final hit on Jet Stingray | Reported fortress refight; distinguish expected return from an interrupted death/transport. `beads-eio.9.157` |
-| 135 | [ ] | Lightning Web sometimes fails to trigger wall-mounted Split Mushroom's weakness | Reported conditional weakness failure. `beads-eio.9.157` |
-| 136 | [ ] | Room before Sigma lacks P1's intro after death or Continue | Exact missing animation/event requires video qualification. `beads-eio.9.157` |
+| 134 | [x] | P2 teleports away after the final hit on Jet Stingray | Qualified through the actual hub pad in local Unified: P2 Zero's native ice attack supplies the final hit, the authored outgoing beams complete, and both heroes return healthy/visible/controllable at checkpoint14. No premature missing partner remains in that case. `beads-eio.9.163` |
+| 135 | [ ] | Lightning Web sometimes fails to trigger wall-mounted Split Mushroom's weakness | Native P1 X Lightning Web hits the wall-mounted actual refight,48 to46 with a return from phase7 to phase2. The reported intermittent failed-hit condition has not been matched; no additional weakness fix claimed. `beads-eio.9.157` |
+| 136 | [ ] | Room before Sigma lacks P1's intro after death or Continue | Actual final kind74 fight admits both healthy heroes. A genuine native team death/retry restores both controllable arrivals; matching peers through21634. The exact missing intro animation/dialogue remains unidentified. `beads-eio.9.157` |
 | 137 | [x] | Pause does not open while a Both-player boss door is open | Permit each seat's native pause during free door traversal. Opening/admission/intro locks remain enforced. Native Split/Both Frost door: both owners pause/resume then complete crossing, with matching peers through11109. `beads-eio.9.159` |
 | 138 | [x] | Lightning Web may not trigger Sigma phase2 weakness | Checked current native second form (kind68/variant1): actual Lightning Web reduces48HP to46 and creates the authored weakness effect type32/variant6. Peer state matches through15809. No additional Web-specific fix needed. `beads-eio.9.157` |
 | 139 | [x] | P2 Zero cannot combo Sigma phase2 because immunity occurs between hits | Same opening-strike timer correction as132. Actual P2 Zero generates classes24/25/26 against the native second form, its combo counter advances, and HP46 to44; peers match through15809. `beads-eio.9.164` |
-| 140 | [ ] | Sigma phase1 targets P2 except during the scythe attack | Reported target bias; positions and native phase-specific targeting need qualification. `beads-eio.9.157` |
+| 140 | [ ] | Sigma phase1 targets P2 except during the scythe attack | Shared native AI uses the nearest living hero, with P1 winning ties; both-seat/Unified/Split targeting tests pass. Phase-specific cached targets and the reported positions have not been matched, so no Sigma AI rewrite is claimed. `beads-eio.9.157` |
 | 141 | [x] | P2 teleports out and back during Sigma phase2 | Reproduced native85CA8 presentation withdrawing nearby P2 with32HP. Nearby living heroes now remain for stationary fortress boss scenes. Fixed native complete first-to-second form transition retains both visible bodies and controls; peers match through9920. Actual transport commands remain enabled. `beads-eio.9.163` |
 | 142 | [x] | P2 teleports out and back during Sigma phase3 | Same-arena boss presentations use141's correction. Native second-form defeat still carries both heroes to the lower room; both arrive healthy, enter the actual kind74 fight, and survive its admission without a missing partner. Genuine upper-to-lower-room transport is preserved. `beads-eio.9.163` |
 | 143 | [x] | Adopt the SNES Mega Man X diagnostic file optimization before release | Bounded background formatting, hashes and writes preserve the v2 format and remove disk waits from steady-state input recording. Windows/Linux writer and replay checks pass; a real co-op recording replays all2542 complete native inputs. `beads-eio.9.161` |
@@ -262,6 +262,17 @@ restores both native arrivals at528/459 and552/458 (matching through21634).
 This checks arrival/retry and does not establish what the older report136
 meant by missing intro dialogue or animation.
 
+Additional local Unified checks follow the actual hub pads into Mushroom and
+Jet Stingray. P1 X's Lightning Web final hit and P2 Zero's ice final hit each
+complete the authored outgoing beams and restore both heroes at their native
+hub checkpoints13/14, with32HP and normal action2. These real room changes
+still transport the party. An earlier airborne-X stall came from the private
+teleport fixture clearing acceleration at PLAYER+2C along with velocity;
+native8002B694 requires that acceleration for falling. Restoring the observed
+native jump acceleration before firing clears the stall. That setup artifact
+is excluded from game-defect claims, as are health mutations during an
+already-running weakness response.
+
 Separate per-player boss cooldowns cap Zero's first two accepted grounded
 saber strikes (native classes24/25) at4 ticks. The third strike, other moves,
 X, and the legacy shared method keep their previous durations. Native P2
@@ -275,6 +286,8 @@ evidence: `build-pr23/feedback30-native-final`; baseline:
 `build-pr23/feedback30-finish-split`. Some exploratory checkpoint/teleport
 setups failed before their intended observation (including placing a hero
 inside Mushroom's wall); those are excluded from gameplay defect claims.
+Actual refight-return receipts: `build-pr23/feedback30-jet-native-final` and
+`build-pr23/feedback30-mushroom-native-gravity`.
 Tracking: `beads-eio.9.163`, `beads-eio.9.164`, release `beads-eio.9.162`.
 
 Playtest27 native evidence: the original-disc Frost comparisons cover both
@@ -2050,3 +2063,31 @@ Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release29-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.156`. Other unresolved reports remain on the numbered checklist.
+
+### Playtest 30 package qualification (2026-10-16)
+
+Items122/123/125/127/128/131/132/134/137/139/141-143 ship in this release.
+Native checks also qualify124 (P2-led Dragoon admission),129 (X/P2 Ground
+Hunter against Slash Beast), and138 (Sigma2 Web reaction) as working.
+Checked fixes remain distinct from unconfirmed reports.
+Of the21 reports122-142,15 are fixed or verified working in the qualified
+cases. Reports126/130/133/135/136/140 remain unconfirmed or only partially
+qualified, with their precise limits recorded in the table above.
+The README acknowledgment and requested blog link are above the title and
+present in both packages. The packaged README matches the compiled-code snapshot.
+Compiled source `86eda19`, framework `9bd4c20f9`,
+UI `248c347`. All 35 Windows title checks pass; all 29 Linux
+title checks pass. Both production packages pass hidden launcher/controller/netplay
+UI checks, 16 matching native option offers (including both cooldown methods),
+execution/co-op identity checks, portable startup logs and fresh default input
+recordings. Development controls are disabled. The AppImage layout passes;
+archive hashes match the exact packages tested. This does not claim a new live
+Windows-to-Linux gameplay qualification.
+
+| Asset | SHA256 |
+| --- | --- |
+| Windows ZIP | `6cc037b478bda6389170ccc58c99ef548b48902276c3e36d06d79e4dc8ac4de1` |
+| Linux x86_64 AppImage | `07d1750d951557e936fbeb8e2ca7190553d79abd6936195fbbf8e3a642c2a1f9` |
+
+Private receipt: `build-pr23/release30-qa/release-receipt-final.json`.
+Release tracking: `beads-eio.9.162`. Other unresolved reports remain on the numbered checklist.
