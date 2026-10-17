@@ -1,4 +1,29 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.32
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.33
+
+**Dr. Light's capsule conversations and faster co-op boss combat.**
+
+- X's armor capsules show the correct Dr. Light dialogue and hologram in Zero's
+  campaign. X receives his armor while P1 keeps ownership of campaign progress.
+- Boss scaling now halves boss-hit cooldowns with either cooldown method.
+  Separate player timers remain independent: a native 64-tick cooldown becomes
+  32 ticks, so Zero's aerial slash and combo finisher no longer impose the longer
+  wait from the previous separate-player setting.
+- Zero's opening ground slashes keep their short combo timing. The Mods tooltip
+  explains the same half-length cooldown policy for both choices.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.32
 
 **Safer Mushroom traversal, Ride Armor arrivals, and X's hover effects.**
 
