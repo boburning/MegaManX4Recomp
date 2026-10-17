@@ -815,6 +815,22 @@ static void recover_warp_passenger(CPUState *cpu,unsigned seat) {
         (int16_t)(seat?(body_word(mmx4_coop_second_body(),8)>>16):psx_mod_read_half(PLAYER+10)),
         (int16_t)(seat?(body_word(mmx4_coop_second_body(),12)>>16):psx_mod_read_half(PLAYER+14)));
 }
+static int armor_return_anchor(unsigned owner,uint32_t *x,uint32_t *y,uint32_t *box) {
+    uint8_t canonical[0xB0];
+    const uint8_t *vehicle;
+    if(owner)vehicle=mmx4_coop_second_vehicle();
+    else {read_bytes(MMX4_VEHICLE,canonical,sizeof canonical);vehicle=canonical;}
+    /* A mounted body has action18, personal phase1 and no foot contact box.
+     * Its occupied, grounded native Armor supplies the actual floor instead.
+     * Chasers, airborne/ejecting Armor and abandoned vehicles are ineligible. */
+    unsigned mounted=owner?mmx4_coop_second_body()[0xC5]:psx_mod_read_byte(PLAYER+0xC5);
+    uint32_t surface=body_word(vehicle,0x68);
+    if(mounted!=255 || !vehicle[0] || vehicle[1]!=1 || vehicle[4]!=1 ||
+       vehicle[5]>=11 || !(vehicle[0x97]&0x40u) || !(vehicle[0xA8]&8u) ||
+       surface<0x80010000u || surface>0x801FFFFCu)return 0;
+    *x=body_word(vehicle,8);*y=body_word(vehicle,12);*box=surface;
+    return 1;
+}
 static void warp_tick(CPUState *cpu) {
     warp_begin(cpu);
     if(!warp_phase || mmx4_coop_projected())return;
@@ -850,7 +866,18 @@ static void warp_tick(CPUState *cpu) {
         if(seat)mmx4_coop_leave_second();
         return;
     }
-    if(psx_mod_read_byte(PLAY+0x0F))return;
+    if(psx_mod_read_byte(PLAY+0x0F)) {
+        /* A new real transport can overtake an earlier incoming beam.
+         * Hiding that pose leaves canonical P1 state1 forever, whereas the
+         * native checkpoint loader waits for state3. Complete an outgoing
+         * beam for the existing passenger without resampling its saved HP,
+         * visibility or return origin. Already-departed/dead bodies stay so. */
+        unsigned passenger_state=seat?second[4]:psx_mod_read_byte(PLAYER+4);
+        unsigned passenger_hp=(seat?second[0x5C]:psx_mod_read_byte(PLAYER+0x5C))&127u;
+        if(script_active && script_owner==warp_owner && passenger_state==1 && passenger_hp)
+            start_outgoing(cpu,seat);
+        return;
+    }
     if(warp_phase==2 && !mmx4_coop_alive(warp_owner)) {
         /* The incoming player is alive even if their partner dies before
          * the return pose finishes; release control before team-wipe checks. */
@@ -863,9 +890,11 @@ static void warp_tick(CPUState *cpu) {
         /* Native walking/dashing has a different action from idle. A living
          * grounded leader already supplies a safe landing point; requiring
          * idle restarted the wait whenever that player kept moving. */
-        if(locked || personal || state!=1 || action<2 || action>=0x10 || !(grounded&8u)) {warp_unlocked_ticks=0;return;}
-        if(++warp_unlocked_ticks<3)return;
         uint32_t surface_box=warp_owner?body_word(second,0x68):psx_mod_read_word(PLAYER+0x68);
+        int armor=action==18 && armor_return_anchor(warp_owner,&x,&y,&surface_box);
+        if(locked || state!=1 || (!armor &&
+           (personal || action<2 || action>=0x10 || !(grounded&8u)))) {warp_unlocked_ticks=0;return;}
+        if(++warp_unlocked_ticks<3)return;
         position_return(cpu,seat,x,y,warp_active,warp_visible,
             warp_vehicle_active,warp_vehicle_visible,surface_box);
         if(!safe_return_position(cpu,seat)) {
@@ -1528,7 +1557,14 @@ static int fan_latch(CPUState *cpu,uint32_t address) {
     int x=players[1].world_x-camera_x,y=players[1].world_y-camera_y;
     if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
     uint32_t player_box=body_word(body,0x68),platform_box=psx_mod_read_word(actor+0x68);
-    if(!player_box || !platform_box)return 0;
+    if(!platform_box)return 0;
+    /* X's native movement transition briefly clears its collision box.
+     * Missing geometry is not evidence that the living on-screen partner
+     * has cleared the hatch. Wait for its next ordinary contact box. */
+    if(!player_box) {
+        psx_mod_counter_add("mmx4.coop.latch-waits",1);
+        return mmx4_coop_finish(cpu,0);
+    }
     /* Original800C36E8 closes only when PLAYER's collision bottom clears
      * the platform's top. Apply that same test to the second body before
      * the native routine freezes input and begins the closing animation. */
@@ -1857,6 +1893,21 @@ int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {
 }
 static int scene_actor(CPUState *cpu,uint32_t address) {
     return mmx4_coop_combat_canonical_call(cpu,address,scene_actor_canonical);
+}
+int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(!mmx4_coop_ready() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY+12)!=3 || psx_mod_read_byte(PLAY+13)!=1 ||
+       !door_pool_actor(actor) || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=14 || psx_mod_read_byte(actor+4)!=1 ||
+       psx_mod_read_byte(actor+5) || psx_mod_read_byte(actor+6) ||
+       mmx4_coop_alive(0) || !mmx4_coop_alive(1))return 0;
+    /* Native C3A7C waits for PLAYER.action before starting the shared lift.
+     * A completed P1 death leaves action zero forever. Run that admission
+     * update with the living rider; retain one lift/panel/collision update
+     * and restore the canonical corpse and campaign afterward. Subsequent
+     * ascent and authored ceiling-panel destruction remain native. */
+    return scene_actor(cpu,address);
 }
 static int cyber_flip_query(CPUState *cpu,uint32_t address) {
     if(flip_guard || !mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||

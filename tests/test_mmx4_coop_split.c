@@ -1,4 +1,7 @@
 #include "mmx4_coop_internal.h"
+int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address) {
+    (void)cpu;(void)address;return 0;
+}
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

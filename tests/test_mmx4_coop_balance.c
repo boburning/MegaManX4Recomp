@@ -159,6 +159,20 @@ int main(void){
         for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
         CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
         CHECK(psx_mod_read_byte(BOSS+0x5C)==44);
+        /* Finisher and upgraded aerial saber retain the native64 ticks,
+         * with no extra tick and no immunity imposed on the other hero. */
+        for(unsigned tick=4;tick<63;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+        CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
+        mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+        CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
+        shot_type=34;CHECK(timed_hit(seat,2,64)==1);
+        for(unsigned tick=0;tick<63;++tick){
+            mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+            CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
+            CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat^1u));
+        }
+        mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+        CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
     }
     actor(57,48);shot_type=24;hero=0;CHECK(timed_hit(0,2,64)==1);
     for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}

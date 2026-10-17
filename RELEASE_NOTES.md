@@ -1,4 +1,31 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.31
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.32
+
+**Safer Mushroom traversal, Ride Armor arrivals, and X's hover effects.**
+
+- Mushroom's hatch before the first miniboss waits for a nearby living partner,
+  including the brief animation frame where their collision box is unavailable.
+- The Mushroom part2 lift starts for a surviving P2 when P1 is dead.
+- Cyber Peacock's course portals finish an interrupted partner warp before
+  advancing, preventing a P2-led transition from locking the checkpoint loader.
+- A partner can finish warping back beside a grounded, occupied Ride Armor.
+  Magma Dragoon's entrance no longer requires destroying the armor to restore them.
+- X's upgraded boots show their native blue hover jets in Zero's campaign.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+
+The [release dispositions](docs/COOP_PLAYTEST32_DISPOSITIONS.md) distinguish
+these five validated fixes from reports that did not reproduce in bounded
+checks. Those reports remain tracked; they are not advertised as fixed.
+
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.31
 
 **Controller rebinding, Windows borderless mode, and more flexible offline saves.**
 
