@@ -119,15 +119,15 @@ int main(void){
     enabled=0;mmx4_coop_balance_activate();
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
     CHECK(!mmx4_coop_balance_snapshot(&io));
-    /* A fresh/missing choice defaults to independent full native cooldowns.
+    /* A fresh/missing choice defaults to independent half-length cooldowns.
      * The first hit leaves the partner eligible; then both timers coexist. */
     enabled=1;per_player=2;mmx4_coop_balance_activate();actor(73,48);
     CHECK(timed_hit(0,1,64)==1);
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && mmx4_coop_balance_hit_allowed(BOSS,1));
-    CHECK(timed_hit(1,1,64)==63);
+    CHECK(timed_hit(1,1,64)==31);
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
     CHECK(psx_mod_read_byte(BOSS+0x5C)==47);
-    for(unsigned i=0;i<62;++i){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+    for(unsigned i=0;i<30;++i){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
     mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
     CHECK(mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
@@ -141,7 +141,7 @@ int main(void){
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,1));
     mmx4_coop_balance_forget(BOSS);CHECK(mmx4_coop_balance_hit_allowed(BOSS,1));
     /* Independent timers retain Zero's short first/second saber chain,
-     * followed by full immunity after the finisher. Both seats qualify. */
+     * followed by half-length finisher/aerial immunity. Both seats qualify. */
     for(unsigned seat=0;seat<2;++seat)for(unsigned kind=57;kind<=68;kind+=11) {
         actor(kind,48);hero=1;shot_type=24;
         CHECK(timed_hit(seat,2,64)==1);
@@ -159,14 +159,14 @@ int main(void){
         for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
         CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
         CHECK(psx_mod_read_byte(BOSS+0x5C)==44);
-        /* Finisher and upgraded aerial saber retain the native64 ticks,
+        /* Finisher and upgraded aerial saber use32 of the native64 ticks,
          * with no extra tick and no immunity imposed on the other hero. */
-        for(unsigned tick=4;tick<63;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+        for(unsigned tick=4;tick<31;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
         CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
         mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
         CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
         shot_type=34;CHECK(timed_hit(seat,2,64)==1);
-        for(unsigned tick=0;tick<63;++tick){
+        for(unsigned tick=0;tick<31;++tick){
             mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
             CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
             CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat^1u));
@@ -177,8 +177,24 @@ int main(void){
     actor(57,48);shot_type=24;hero=0;CHECK(timed_hit(0,2,64)==1);
     for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0));shot_type=255;hero=0;
+    /* Odd native durations round up, for either owner. The last blocked
+     * tick remains blocked; the partner is available throughout. */
+    for(unsigned seat=0;seat<2;++seat) {
+        actor(57,48);CHECK(timed_hit(seat,2,5)==1);
+        for(unsigned tick=0;tick<2;++tick) {
+            mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+            CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
+            CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat^1u));
+        }
+        mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
+        CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
+    }
     per_player=0;mmx4_coop_balance_activate();
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
     CHECK(!mmx4_coop_balance_snapshot(&io));
+    actor(57,48);cpu.gpr[16]=BOSS;cpu.gpr[2]=5;
+    hook(&cpu,0x800725A0u);CHECK(cpu.gpr[2]==3);
+    enabled=0;mmx4_coop_balance_activate();
+    CHECK(timed_hit(1,2,64)==64); /* Original balance stays native. */
     puts("Boss scaling preserves weak hits, separate pools, rejected hits and snapshots.");return 0;
 }

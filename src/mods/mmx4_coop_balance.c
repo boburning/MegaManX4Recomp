@@ -122,7 +122,7 @@ static void damage(CPUState *cpu,uint32_t address) {
     /* This site follows SUBU, after the separate damage-multiplier hook. */
     cpu->gpr[3]=scaled_damage(actor,amount);
     /* Keep Zero's first two grounded strikes chainable in the independent
-     * cooldown mode. The finisher and other moves retain their full timer.
+     * cooldown mode. The finisher and other moves use the halved timer.
      * A1 is the native projectile accepted by 2DE30, after overlap/tokens. */
     uint32_t shot=cpu->gpr[5];
     if(current_actor==actor) {
@@ -165,6 +165,10 @@ static void cooldown(CPUState *cpu,uint32_t address) {
     if(ticks>1 && ticks<255) {
         if(per_player) {
             if(current_actor!=actor || !damage_owner)return;
+            /* Scaling halves hit cooldowns in either mode. Keeping the full
+             * native duration here made separate mode block the next aerial
+             * swing/combo even though reduced-shared mode admitted it. */
+            ticks=(ticks+1)/2;
             if(saber_chain && ticks>4) {
                 ticks=4;
                 psx_mod_counter_add("mmx4.coop.zero-combo-cooldown",1);
@@ -172,7 +176,7 @@ static void cooldown(CPUState *cpu,uint32_t address) {
             uint8_t *timers=immunity[slot(actor)][bank(actor)];
             timers[damage_owner-1u]=(uint8_t)ticks;
             /* Native collision/flash gates see the earliest available seat.
-             * The filter above retains the full duration for the attacker.
+             * The filter above retains the halved duration for the attacker.
              * Reactions and AI still execute once in the original caller. */
             unsigned next=timers[0]<timers[1]?timers[0]:timers[1];
             /* Spider installs a temporary hit table and restores it on the

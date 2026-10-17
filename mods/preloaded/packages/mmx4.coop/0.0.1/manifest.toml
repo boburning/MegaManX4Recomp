@@ -84,7 +84,7 @@ default = false
 feature = "coop"
 id = "boss_cooldowns"
 label = "Boss hit cooldowns"
-description = "With co-op boss scaling enabled, separate cooldowns let each player damage a boss independently. Zero can chain his opening ground slashes; the finisher retains its full cooldown. Reduced shared cooldowns keeps the earlier scaling behavior. The netplay host chooses for both players."
+description = "With co-op boss scaling enabled, both methods halve boss hit cooldowns. Separate cooldowns let each player damage a boss independently. Zero's opening ground slashes keep their short combo timing. Reduced shared cooldowns uses one shared timer. The netplay host chooses for both players."
 type = "choice"
 default = "per_player"
 [[option.choice]]
