@@ -1,4 +1,21 @@
-# Co-op playtest 30
+# Co-op playtest 31
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.31)
+with Windows ZIP and Linux x86_64 AppImage. Includes controller instance-zero
+rebinding and release handling, Windows SDL2 borderless windows, immediate mod
+preference saving, and compatible offline HUD/native-code setting changes.
+Black Zero's palette refreshes after loading a state with the option enabled.
+
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Both peers must update. Campaign memory-card saves carry forward.
+Online/Discord startup, intermittent music loss, historical intro-boss failures,
+Switch Pro drift and high-refresh Alt-Tab behavior still need reporter confirmation.
+
+Release issue: `beads-eio.9.169`. Private build and publication receipts:
+`build-pr23/release31-qa/`. Player-facing changes are in
+[release notes](../RELEASE_NOTES.md).
+
+## Previous co-op playtest 30
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.30)
 with Windows ZIP and Linux x86_64 AppImage. Includes fortress refight-pad
