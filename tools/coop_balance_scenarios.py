@@ -75,7 +75,7 @@ def boss_balance(s, spider=False):
         separate=getattr(s,'boss_cooldowns','per_player')=='per_player'
         counter='mmx4.coop.per-player-boss-cooldown' if separate else 'mmx4.coop.shorter-boss-cooldown'
         assert final[counter] > initial.get(counter, 0)
-        assert max(r['cooldown'] for r in samples) <= (64 if separate else 32), samples
+        assert max(r['cooldown'] for r in samples) <= 32, samples
     else:
         assert not final.get('mmx4.coop.scaled-boss-hit') and hp < 48, (hp, final)
     # Exercise real native death after the fixture sets up its final HP.

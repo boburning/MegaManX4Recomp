@@ -1,10 +1,11 @@
 # October 10 co-op feedback
 
-Current status, October17: **154 numbered items; 128 checked and 26 unchecked.**
+Current status, October17: **154 numbered items; 130 checked and 24 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
-Capsule dialogue item154 is fixed after Playtest32 and awaits the next release.
-The remaining26 are23 reports unmatched in bounded checks, two explicitly parked
-online-startup cases and one elective story-scene enhancement. They are not26
+Capsule dialogue154 and scaling cooldowns152/153 are fixed after Playtest32
+and await the next release.
+The remaining24 are21 reports unmatched in bounded checks, two explicitly parked
+online-startup cases and one elective story-scene enhancement. They are not24
 confirmed current defects. [Release dispositions](COOP_PLAYTEST32_DISPOSITIONS.md)
 record the checks and limits without relabeling unreproduced reports as fixes.
 The full numbered table remains the source for evidence and validation limits.
@@ -14,9 +15,8 @@ arrivals in `3b471b9`; the Playtest32 integration also fixes overlapping transpo
 | Status | Items | Current work |
 |---|---|---|
 | Fixed and validated for Playtest32 | 145, 146, 147, 148, 149 | Mushroom hatch/lift admission, interrupted Cyber portal arrivals, grounded occupied Armor return anchors, and owner-bound X hover jets. |
-| Fixed after Playtest32; awaiting release | 154 | X's armor capsules now use Dr Light's conversation in Zero's campaign. Native before/after checks and both story-selector/lifecycle test suites pass. |
+| Fixed after Playtest32; awaiting release | 152, 153, 154 | Scaling now halves boss hit cooldowns in either method, including Zero's aerial/finisher in separate mode. X's armor capsules use Dr Light's conversation in Zero's campaign. Native before/after checks and regression suites pass. |
 | Current recurrence; exact cause still unqualified | 109 | First Web Spider part2 bees with P2 leading. Fresh Playtest31 paired recordings and video supplement the earlier native checks that did spawn the candidate groups. |
-| Bounded comparison; excess delay not reproduced | 152, 153 | P2 native aerial damage and full ground combo pass in Split LAN. An unscaled native Zero/P1 ground control has a64-tick timer; independent finisher/aerial expiry tests also release on tick64. The exact reported aerial effective-delay condition remains unmatched. |
 | Bounded checks; failure not reproduced | 144, 150 | Slash HUD/scenery corruption and X's stage-colored weapon icons remain tracked with the actual capture limits. |
 | Enhancement tracked separately | 151 | Both heroes together in additional suitable story scenes. |
 | Older unchecked cases retained | 30, 32, 34, 36, 41, 43, 46, 49, 51, 53, 107, 112, 119, 121, 126, 130, 133, 135, 136, 140 | See each original row for bounded checks, missing evidence and owner-requested deferrals. Discord/startup30/32 remain parked. |
@@ -181,9 +181,40 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 149 | [x] | X's upgraded boots lack their blue hover flames in Zero's campaign | Reproduced and fixed after31. Native effect33/800B2AD0 reads the singleton player's pose229/230 and deletes itself when it sees idle Zero/P1. Run this personal effect with its allocating X, preserving its assembly, position and native expiry. Fresh Zero-campaign native check shows five healthy P2-hover samples with visible effect33 and blue/white foot jets matching the initialized X/P1 control; the actor expires after landing. Later authored hazard deaths are excluded from that visual qualification. Owner/following/expiry/reuse tests, all35 Windows checks and Linux combat checks pass. The earlier unrelated effect4/9 candidate remains removed. `beads-eio.9.170` |
 | 150 | [ ] | X's special-weapon icons inherit stage colors in Zero's campaign | Separate from acquired armor body palettes. Native Zero-campaign live-HUD captures now cover X/P2 weapons1/3/7 in Spider, Mushroom and Slash, in addition to the earlier pause-menu check. The same icons retain their distinct colors across these stage palettes; the reported failure is not reproduced in this bounded check. No palette rewrite claimed. `beads-eio.9.170` |
 | 151 | [ ] | Show both heroes together in suitable story scenes | Elective Metadata8 request for scenes such as Magma Dragoon and Storm Owl. Assess scene gates, rider dismounts and safe placement; existing simultaneous arrivals and victory poses remain separate behavior. Tracked separately from the correctness release gate in `beads-eio.9.173`. |
-| 152 | [ ] | Zero/P2 aerial attacks appear to leave longer boss immunity in refights | Bounded Split/Both LAN admits P2 aerial class34 and damages native Frost48 to46, with matching peers. Both-seat finisher26/aerial34 unit checks retain the native64 ticks, release exactly on tick64 and keep the other hero eligible. A separate unscaled native aerial control emitted34 but missed, so it is excluded as effective-delay proof. The exact reported longer aerial delay remains unmatched; no speculative shortening patch. Tester is also comparing retail. `31 bugs.zip`, [video](https://youtu.be/tS316c1P3sE), `beads-eio.9.171` |
-| 153 | [ ] | Zero/P2 grounded-combo finisher appears to leave longer boss immunity | Actual Split/Both LAN P2 native mash emits24/25/26 and damages Frost48 to38, with matching core/mod through28678. Separate fresh Zero/P1 control with scaling explicitly OFF emits the same classes, damages48 to38 and samples a full native64-tick timer. Per-player finisher26 also expires on tick64 in both-seat tests; only opening strikes use the earlier4-tick correction. The reported extra effective delay was not reproduced; keep the retail-comparison report tracked, with no additional timing change claimed. `beads-eio.9.171` |
+| 152 | [x] | Zero/P2 aerial attacks leave longer boss immunity with separate player cooldowns | Owner confirms scaling/separate mode and requests half-length boss iframes generally. Separate mode retained native64 ticks while shared mode used32. Both scaling methods now divide boss hit cooldowns by2, rounding up; separate mode retains independent owners. Native P2 Frost repeat aerial observations improve from69-74-frame accepted gaps to many35-40-frame gaps, with10 instead of6 accepted damage observations in12 attempted short hops. Reverse-roster Zero/P1 also passes. Earlier64-tick expiry checks did not qualify the desired scaling cadence and are superseded. All35 Windows checks and Linux balance checks pass. Fixed after32, awaiting release. `31 bugs (1).zip`, [video](https://youtu.be/tS316c1P3sE), `beads-eio.9.171` |
+| 153 | [x] | Zero/P2 grounded-combo finisher delays the next combo with separate player cooldowns | Same full64-versus-half32 discrepancy after finisher26. Separate mode now halves that timer while retaining the short first/second grounded-strike timing, distinct player timers, original hit tokens and doubled effective health. Native P2 ground mash emits24/25/26 and damages Frost48 to25 after the fix versus48 to34 before, with earlier post-finisher reconnects; Zero/P1 also passes. Both-owner tests release finisher/aerial on tick32, preserve the other seat's eligibility, round odd durations up and retain snapshots/native unscaled timing. All35 Windows and Linux balance checks pass. Fixed after32, awaiting release. `beads-eio.9.171` |
 | 154 | [x] | X's armor capsule shows Iris/Colonel story text in Zero's campaign | Reproduced with the real Spider boots capsule: Zero's campaign opened HUNTER H.Q./Mavericks emerged, while X's campaign opened DR. LIGHT/This battle. Capsule text, portrait and cue selectors now use X's bank while the shared textbox retains P1's campaign and palette. Native after-check shows Dr Light's hologram and correct later pages, completes the conversation and restores both players' control. All35 Windows checks and focused Linux lifecycle/story-selector checks pass. Fixed after Playtest32, awaiting release. `beads-eio.9.174` |
+
+### October17 scaling cooldown clarification
+
+The tester confirms boss scaling with separate player cooldowns. The replacement
+`31 bugs (1).zip` is byte-identical to the previously inspected archive (all20
+CRC entries pass). The owner requests boss hit cooldowns divided by2 generally,
+including the separate mode. The old separate implementation intentionally kept
+the full native timer for aerials and finishers while the shared alternative
+halved it. Proving that the64-tick timer expired did not qualify that intended
+scaling behavior. Both methods now use half-length boss hit cooldowns, rounding
+odd durations up; Zero's first two grounded strikes retain their shorter chain
+timing. Native AI/scene timers are outside this change.
+
+Fresh hidden, muted original-game Frost refight checks compare the old and new
+separate mode with X/P1-Zero/P2. Repeated short-hop aerial34 hits reconnect
+earlier after the change, and native ground attacks24/25/26 inflict more damage
+in the same scripted input sequence. A fresh Zero/P1-X/P2 check also passes
+ground and aerial cadence. These asynchronous observations support the timing
+change; they do not claim every attempted slash physically overlapped the boss.
+Both-owner unit checks prove exact32-tick expiry for native64, independent
+overlapping timers, odd-duration rounding, unchanged doubled survival and
+snapshot restoration. Original balance remains native when scaling is off.
+All35 Windows title checks pass in the ordinary and development-netplay
+profiles; the Linux GCC balance suite also passes. The Mods tooltip now states
+the same half-length policy for both choices.
+
+The additional [comparison video](https://youtu.be/F4QwpLa-Ofo) was supplied
+during this follow-up. Its download failed with HTTP403 after the intro; it is
+not claimed as a full retail comparison. The native A/B checks above provide
+the gameplay evidence. Private logs/reports are under
+`build-pr23/feedback33-iframe-cadence/`. These fixes await the next release.
 
 ### October17 capsule dialogue follow-up
 
