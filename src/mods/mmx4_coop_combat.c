@@ -387,6 +387,8 @@ static int personal_effect(CPUState *cpu,uint32_t address) {
      * Type3 dust already has a fixed origin and retains its shared update.
      * Type27 uploads Ground Hunter's compressed graphics from SCRATCH+14.
      * This deferred pass must use the allocating X, even with Zero/P1.
+     * Type33's boot jets bind SCRATCH+1C and follow the owner's animation
+     * frame/position. Reading the other hero's pose deletes them immediately.
      * Type 7 follows PLAYER/Double. Type 2 is X's delayed charge release:
      * it uses the owner's assembly/pose, then allocates a native projectile
      * at 800AF0A4. Keep that allocation in the owner's private shot pool. */
@@ -858,6 +860,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800AF22Cu,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800AEED8u,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B2A3Cu,personal_effect);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800B2AD0u,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,PARTICLE_ALLOCATE,allocate_particle);
     psx_mod_register_function_filter_plugin(COOP_ID,PARTICLE_INITIALIZE,initialize_character_particle);
     psx_mod_register_function_filter_plugin(COOP_ID,0x8009485Cu,initialize_character_particle);

@@ -20,6 +20,7 @@
 #define WATER 0x800AF22Cu
 #define SLIDE_EFFECT 0x800AEAC0u
 #define DASH_EFFECT 0x800AED18u
+#define HOVER_EFFECT 0x800B2AD0u
 #define MIRROR 0x80110000u
 #define ARMOR_UPDATE 0x8003D3F8u
 #define ARMOR_MOUNT 0x8003E0D0u
@@ -306,6 +307,20 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         psx_mod_write_word(a0+0x38,psx_mod_read_word(MMX4_PLAYER+0x38));
         psx_mod_write_byte(a0,0);
         return 0x10203040u;
+    }
+    if(address==HOVER_EFFECT) {
+        /* Original B2AD0 expires the jets if their owner's pose is no
+         * longer a hover/dash pose. Initialization binds its assembly. */
+        if(psx_mod_read_byte(MMX4_PLAYER+0x47)!=229) {
+            psx_mod_write_byte(a0,0);psx_mod_write_byte(a0+3,0);
+        }else {
+            uint32_t assembly=psx_mod_read_word(0x1F80001Cu);
+            psx_mod_write_word(a0+0x3C,assembly+psx_mod_read_word(assembly+0x30));
+            psx_mod_write_word(a0+8,psx_mod_read_word(MMX4_PLAYER+8));
+            psx_mod_write_word(a0+12,psx_mod_read_word(MMX4_PLAYER+12));
+            psx_mod_write_byte(a0+3,1);
+        }
+        return 0x87654321u;
     }
     if(address==SLIDE_EFFECT || address==DASH_EFFECT) {
         unsigned dash=address==DASH_EFFECT;
@@ -1185,6 +1200,27 @@ int main(void) {
         CHECK(!memcmp(p1,address_ptr(MMX4_PLAYER),sizeof p1) && !memcmp(p2,second,sizeof p2));
         invoke(EFFECT_ALLOC);CHECK(!filter(0x800B2A3Cu)(&upload,0x800B2A3Cu));
     }
+    /* P2 hover jets survive while the unrelated P1 is idle, follow the
+     * allocating X, and expire when that owner leaves the hover pose. */
+    setup();second[2]=0;psx_mod_write_byte(MMX4_PLAYER+2,1);
+    second[0x47]=229;psx_mod_write_byte(MMX4_PLAYER+0x47,0);
+    second_assembly=0x80112000u;psx_mod_write_word(0x1F80001Cu,0x80110000u);
+    allocated_actor=EFFECT;mmx4_coop_enter_second();invoke(EFFECT_ALLOC);mmx4_coop_leave_second();
+    psx_mod_write_word(0x80110030u,0x60);psx_mod_write_word(0x80112030u,0x80);
+    psx_mod_write_byte(EFFECT,0x21);psx_mod_write_byte(EFFECT+1,33);
+    CPUState hover={.gpr={[4]=EFFECT}};
+    CHECK(filter(HOVER_EFFECT)(&hover,HOVER_EFFECT) && hover.gpr[2]==0x87654321u);
+    CHECK(psx_mod_read_byte(EFFECT) && psx_mod_read_byte(EFFECT+3));
+    CHECK(psx_mod_read_word(EFFECT+8)==30u<<16 && psx_mod_read_word(EFFECT+12)==20u<<16);
+    CHECK(psx_mod_read_word(EFFECT+0x3C)==0x80112080u);
+    CHECK(!projected && !psx_mod_read_byte(MMX4_PLAYER+0x47));
+    CHECK(psx_mod_read_word(0x1F80001Cu)==0x80110000u);
+    second[10]=80;
+    CHECK(filter(HOVER_EFFECT)(&hover,HOVER_EFFECT) && psx_mod_read_word(EFFECT+8)==80u<<16);
+    second[0x47]=0;
+    CHECK(filter(HOVER_EFFECT)(&hover,HOVER_EFFECT) && !psx_mod_read_byte(EFFECT));
+    invoke(EFFECT_ALLOC);CHECK(!filter(HOVER_EFFECT)(&hover,HOVER_EFFECT));
+
     /* X/P2's shared delayed release must use X's body and private pool,
      * without consuming Zero/P1's shot accounting. Reuse clears ownership. */
     setup();second[2]=0;psx_mod_write_byte(MMX4_PLAYER+2,1);

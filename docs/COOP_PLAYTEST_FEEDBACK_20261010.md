@@ -1,17 +1,16 @@
 # October 10 co-op feedback
 
-Current status, October17: **153 numbered items; 124 checked and 29 unchecked.**
+Current status, October17: **153 numbered items; 125 checked and 28 unchecked.**
 The latest public build is [Playtest31](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.31).
-Two checked fixes below are newer than that release. Unchecked includes reported,
-unreproduced and explicitly parked cases; it does not mean29 confirmed defects.
+Three checked fixes below are newer than that release. Unchecked includes reported,
+unreproduced and explicitly parked cases; it does not mean28 confirmed defects.
 The full numbered table remains the source for evidence and validation limits.
 The pending Mushroom fixes are committed in `6e422ee` on
 `fix/metadata8-coop-regressions`; they have not been merged or published.
 
 | Status | Items | Current work |
 |---|---|---|
-| Fixed and validated; awaiting release | 145, 146 | Mushroom hatch waits through the partner's transient missing contact box; a living P2 can start the lift after P1 dies. Windows35 checks and focused Linux lifecycle/split checks pass. |
-| Reproduced; fix still needed | 149 | X/P2 hover lacks the blue/white boot jets in Zero's campaign. A native X/P1 control displays them; the incomplete effect-initialization candidate was removed. |
+| Fixed and validated; awaiting release | 145, 146, 149 | Mushroom hatch waits through the partner's missing contact box; a living P2 starts the lift after P1 dies; X/P2's native boot jets follow their actual owner. Windows35 checks and focused Linux lifecycle/split/combat checks pass. |
 | Current recurrence; exact cause still unqualified | 109 | First Web Spider part2 bees with P2 leading. Fresh Playtest31 paired recordings and video supplement the earlier native checks that did spawn the candidate groups. |
 | Native comparison pending | 152, 153 | Zero/P2 aerial-hit and grounded-finisher boss immunity. Prior opening-combo fix132/139 does not qualify these moves. |
 | Reported; matching failure not yet qualified | 144, 147, 148, 150 | Slash HUD/scenery corruption, Cyber portal/withdrawal overlap, mounted-leader Dragoon arrival, and X's stage-colored weapon icons. |
@@ -175,7 +174,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 146 | [x] | Mushroom part2 lift does not work with only P2 alive | Fixed after Playtest31. Native C3A7C waits on the dead P1's zero action. Use the surviving P2 for that one shared admission update, composed through the existing lift-camera dispatcher. A supplied restored-state segment retains all953 complete input/state checks; its subsequent native checkpoint2 control stalls atY2216 on the original and rises toY2059 with the fix, P2HP36 and P1 still dead. Ceiling panels and later ascent retain their native rules; this does not qualify every older elevator report. `beads-eio.9.170` |
 | 147 | [ ] | Cyber portal entry during the other hero's withdrawal softlocks | First-course original prefix verifies6763 inputs through checkpoint5; it ends in the tester's pause menu (mode6/2), not a demonstrated portal softlock. Other recorded Cyber visits and the exact overlapping withdrawal still need qualification. `beads-eio.9.170` |
 | 148 | [ ] | Magma Dragoon Ride Armor boss entry hides the partner until armor destruction | Metadata8 reports a mounted leader preventing the other hero's arrival. Native boarding/control probes qualify P2 mounting, but the initial approach stops before admission; the paired follow-up admits the on-foot P1 instead. Neither qualifies the reported mounted-leader failure. Distinguish this from the prior forced-dismount and rider-layering fixes. `beads-eio.9.170` |
-| 149 | [ ] | X's upgraded boots lack their blue hover flames in Zero's campaign | Visually reproduced with X/P2 in native hover action33. A native X/P1 control with initialized boot upgrades displays the missing blue/white jets. Projecting deferred effect types4/9 alone does not restore that appearance; the incomplete candidate was retained privately and removed from the confirmed fix. Rendering/resource selection still needs investigation. `beads-eio.9.170` |
+| 149 | [x] | X's upgraded boots lack their blue hover flames in Zero's campaign | Reproduced and fixed after31. Native effect33/800B2AD0 reads the singleton player's pose229/230 and deletes itself when it sees idle Zero/P1. Run this personal effect with its allocating X, preserving its assembly, position and native expiry. Fresh Zero-campaign native check shows five healthy P2-hover samples with visible effect33 and blue/white foot jets matching the initialized X/P1 control; the actor expires after landing. Later authored hazard deaths are excluded from that visual qualification. Owner/following/expiry/reuse tests, all35 Windows checks and Linux combat checks pass. The earlier unrelated effect4/9 candidate remains removed. `beads-eio.9.170` |
 | 150 | [ ] | X's special-weapon icons inherit stage colors in Zero's campaign | Separate from acquired armor body palettes. A native X/P2 pause-menu capture in Mushroom shows distinct normal weapon-icon colors; the reported stage-dependent failure is not qualified by that bounded check. `beads-eio.9.170` |
 | 151 | [ ] | Show both heroes together in suitable story scenes | Elective Metadata8 request for scenes such as Magma Dragoon and Storm Owl. Assess scene gates, rider dismounts and safe placement; existing simultaneous arrivals and victory poses remain separate behavior. `beads-eio.9.170` |
 | 152 | [ ] | Zero/P2 aerial attacks appear to leave longer boss immunity in refights | New Playtest31 report; tester is also comparing retail X4. Scaling is enabled with its default per-player cooldowns. The prior fix132/139 changes only the first two grounded strikes24/25; it does not qualify airborne moves. Compare the actual accepted attack and native boss timer before changing combat balance. `31 bugs.zip`, [video](https://youtu.be/tS316c1P3sE), `beads-eio.9.171` |
@@ -212,7 +211,8 @@ explicitly names Playtest31. The settings select Unified cameras, Both-player
 doors, boss scaling and both story bosses; the campaign is Zero's in the
 inspected gameplay intervals. Items144–151 preserve all reports separately.
 Bounded native comparisons qualify the hatch and survivor-lift fixes145/146.
-The hover-flame defect149 is reproduced but remains unfixed. Other reports
+The hover-flame defect149 is now fixed through its actual native effect33;
+the earlier effect4/9 candidate did not restore it and remains removed. Other reports
 remain reported or awaiting a matching trigger; the two-character story-scene
 request151 is an enhancement, not a confirmed failure.
 
