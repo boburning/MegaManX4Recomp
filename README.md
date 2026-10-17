@@ -10,7 +10,7 @@
 Mega Man X4 on Windows and Linux, with **two-player co-op in alpha**.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Download Playtest 30](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.30)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Download Playtest 31](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.31)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -54,6 +54,10 @@ The netplay host chooses the shared options.
 3. For **local co-op**, enable **Mods → X + Zero Co-op**, assign Player 1 and Player 2 in **Controls**, then press **Play**. For **netplay**, press **Netplay** and host or join using **X + Zero Co-op**. Both peers need the same release.
 
 Co-op requires OpenGL and takes effect on a fresh game boot. Single-player remains available.
+
+Fast loading is built in. The old **CD Speed** and **Fast Loading** mods are
+retired; the game now keeps verified disc data in memory and feeds it through
+the original loading routines. Music and cutscenes retain their normal timing.
 
 <p align="center">
   <img src="docs/images/netplay.png" width="720" alt="The launcher offers LAN / Direct IP and Online Netplay">

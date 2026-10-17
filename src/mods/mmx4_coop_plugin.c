@@ -1349,11 +1349,11 @@ static int snapshot_walk(Mmx4SnapshotIO *s) {
     mmx4_snapshot_fixed(s,0x39503458u); /* X4P9, private floor momentum */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
-    mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_fixed(s,hud_side_by_side);
+    mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_preference(s,hud_side_by_side);
     mmx4_snapshot_fixed(s,boss_door_both);
-    mmx4_snapshot_fixed(s,ultimate_armor_x);mmx4_snapshot_fixed(s,black_zero);
-    mmx4_snapshot_fixed(s,mmx4_cheats_character_enabled(0));
-    mmx4_snapshot_fixed(s,mmx4_cheats_character_enabled(1));
+    mmx4_snapshot_preference(s,ultimate_armor_x);mmx4_snapshot_preference(s,black_zero);
+    mmx4_snapshot_preference(s,mmx4_cheats_character_enabled(0));
+    mmx4_snapshot_preference(s,mmx4_cheats_character_enabled(1));
     MMX4_SNAPSHOT_BOOL(s,x_variant);
     if(!ultimate_archive.loaded)s->ok=0;
     mmx4_snapshot_fixed(s,ultimate_archive.size);
@@ -1419,6 +1419,16 @@ static void snapshot_read(const uint8_t *data,uint32_t len) {
     snapshot_walk(&s);
 }
 static void snapshot_resources_restored(void) {
+    mmx4_cheats_restore();
+    select_x_variant(counterpart==1?
+        (psx_mod_read_byte(PLAY+0x37)!=0 || mmx4_cheats_character_enabled(0)):
+        mmx4_cheats_character_enabled(0));
+    if(enrolled && counterpart==1) {
+        const CharacterAssets *a=&assets[1];
+        unsigned row=mmx4_cheats_character_enabled(1)?13:0;
+        for(unsigned i=0;i<16;++i)
+            psx_mod_write_half(a->palette+i*2,psx_mod_read_half(a->colors+row*32+i*2));
+    }
     /* Native DMA may still reference any of the four restored ID ranges. */
     psx_mod_forget_texture_bank_range(0x6000u,4096);
     psx_mod_forget_texture_bank_range(0x8000u,4096);

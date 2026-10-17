@@ -1,4 +1,27 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.30
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.31
+
+**Controller rebinding, Windows borderless mode, and more flexible offline saves.**
+
+- Fixed controller rebinding when SDL assigns the selected controller ID zero,
+  including Map All release handling and two identical controllers.
+- Windows borderless mode uses an ordinary desktop-sized window with SDL2 as
+  well as SDL3, and restores the previous window geometry when leaving it.
+- Mod selections save when edited, including when closing the launcher without
+  pressing Play.
+- Save states allow HUD layout and native character-code option changes.
+  Existing constant cheat-provider records migrate without weakening checks
+  for mutable co-op state, schemas or enhancement memory layout.
+- Documented the retirement of generic CD Speed and Fast Loading mods. Verified
+  resident disc loading is built in; native music and movie timing is retained.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Campaign memory-card saves carry forward. Changes to snapshot memory layout or
+ongoing co-op/boss protocols still require compatible settings. Online startup
+and intermittent music/intro-boss reports remain under investigation.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.30
 
 **Fortress co-op fixes, chainable Zero combos, and lighter diagnostic recording.**
 

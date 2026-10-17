@@ -70,7 +70,9 @@ Offline save-state controls use your configured PlayStation button bindings:
 | Browse rewind / accept / back | Left / Right, Cross, Circle |
 
 Save states and rewind are unavailable during a netplay match. Use states made
-with the same release and mod options. Loading a state or rewinding starts a
+with the same release. HUD layout and native character-code choices can change;
+mods that change memory layout or an ongoing co-op/boss protocol still need to
+match. Loading a state or rewinding starts a
 new diagnostic session with a `baseline.pst` file.
 
 ## Send a useful bug report

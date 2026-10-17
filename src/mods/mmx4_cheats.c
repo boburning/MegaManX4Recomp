@@ -52,6 +52,24 @@ void mmx4_cheats_enforce_current(void) {
      * Do not grant armor or write an additional campaign/save record. */
 }
 
+static int palette_range(uint32_t address,unsigned bytes) {
+    return (address>=0x80010000u && address<=0x80200000u-bytes) ||
+           (address>=0x9F000000u && address<=0x9F100000u-bytes);
+}
+void mmx4_cheats_restore(void) {
+    mmx4_cheats_enforce_current();
+    /* A state made before enabling Black Zero already contains the old CLUT.
+     * Mirror the original 800362B0 helper's 16-color row13 copy without running
+     * guest code or reinitializing a live player/attack during restore. */
+    if(projected_second() || psx_mod_read_byte(PLAY)!=6 ||
+       psx_mod_read_byte(PLAY+0x43)!=1 || !mmx4_cheats_character_enabled(1))return;
+    uint32_t colors=psx_mod_read_word(0x1F800024u),palette=psx_mod_read_word(0x1F800028u);
+    if(!palette_range(colors,14*32) || !palette_range(palette,32))return;
+    for(unsigned i=0;i<16;++i)
+        psx_mod_write_half(palette+i*2,psx_mod_read_half(colors+13*32+i*2));
+    psx_mod_write_byte(0x80166BB0u,1);
+}
+
 static void enforce_entry(CPUState *cpu, uint32_t address) {
     (void)cpu; (void)address;
     mmx4_cheats_enforce_current();
@@ -77,20 +95,11 @@ static void activate_standalone(void) {
     selector_call = 0;
 }
 
-/* There are no standalone mutable gameplay fields beyond the native flag in
- * guest RAM. A constant provider records the configuration and supplies a
- * readiness boundary while the original selector runs on a live C stack. */
-static uint32_t snapshot_bytes(void) { return 1; }
-static int snapshot_write(uint8_t *out, uint32_t len) {
-    if (!out || len != 1 || !mmx4_cheats_snapshot_ready()) return 0;
-    out[0] = 1;
-    return 1;
-}
+/* All gameplay state lives in native RAM. Keep the selector's readiness guard,
+ * but do not make a code option part of the host-state layout. Accept the old
+ * one-byte constant provider when reading existing states. */
 static int snapshot_validate(const uint8_t *data, uint32_t len) {
     return data && len == 1 && data[0] == 1;
-}
-static void snapshot_read(const uint8_t *data, uint32_t len) {
-    (void)data; (void)len;
 }
 
 PSX_MOD_CONSTRUCTOR(mmx4_register_cheats) {
@@ -105,10 +114,6 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_cheats) {
         0x800C6EDCu, /* Native capsule grant/animation */
         0x800375B4u  /* Native Nova Strike/energy policy */
     };
-    static const PSXModSnapshotProvider provider = {
-        1, snapshot_bytes, snapshot_write, snapshot_validate, snapshot_read,
-        mmx4_cheats_snapshot_ready
-    };
     for (unsigned p = 0; p < sizeof plugins / sizeof plugins[0]; ++p) {
         for (unsigned i = 0; i < sizeof entries / sizeof entries[0]; ++i) {
             /* One plugin owns one callback per address. The core owns these
@@ -122,6 +127,8 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_cheats) {
     }
     psx_mod_register_activation_plugin(plugins[0], activate_standalone);
     psx_mod_register_activation_plugin(plugins[1], activate_standalone);
-    psx_mod_register_snapshot_provider(ULTIMATE_PACKAGE, &provider);
-    psx_mod_register_snapshot_provider(BLACK_PACKAGE, &provider);
+    psx_mod_register_snapshot_guard(ULTIMATE_PACKAGE, mmx4_cheats_snapshot_ready, 1, snapshot_validate);
+    psx_mod_register_snapshot_guard(BLACK_PACKAGE, mmx4_cheats_snapshot_ready, 1, snapshot_validate);
+    psx_mod_register_savestate_plugin(plugins[0], mmx4_cheats_restore);
+    psx_mod_register_savestate_plugin(plugins[1], mmx4_cheats_restore);
 }
