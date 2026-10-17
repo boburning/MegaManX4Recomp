@@ -1,5 +1,23 @@
 # October 10 co-op feedback
 
+Current status, October17: **153 numbered items; 124 checked and 29 unchecked.**
+The latest public build is [Playtest31](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.31).
+Two checked fixes below are newer than that release. Unchecked includes reported,
+unreproduced and explicitly parked cases; it does not mean29 confirmed defects.
+The full numbered table remains the source for evidence and validation limits.
+The pending Mushroom fixes are committed in `6e422ee` on
+`fix/metadata8-coop-regressions`; they have not been merged or published.
+
+| Status | Items | Current work |
+|---|---|---|
+| Fixed and validated; awaiting release | 145, 146 | Mushroom hatch waits through the partner's transient missing contact box; a living P2 can start the lift after P1 dies. Windows35 checks and focused Linux lifecycle/split checks pass. |
+| Reproduced; fix still needed | 149 | X/P2 hover lacks the blue/white boot jets in Zero's campaign. A native X/P1 control displays them; the incomplete effect-initialization candidate was removed. |
+| Current recurrence; exact cause still unqualified | 109 | First Web Spider part2 bees with P2 leading. Fresh Playtest31 paired recordings and video supplement the earlier native checks that did spawn the candidate groups. |
+| Native comparison pending | 152, 153 | Zero/P2 aerial-hit and grounded-finisher boss immunity. Prior opening-combo fix132/139 does not qualify these moves. |
+| Reported; matching failure not yet qualified | 144, 147, 148, 150 | Slash HUD/scenery corruption, Cyber portal/withdrawal overlap, mounted-leader Dragoon arrival, and X's stage-colored weapon icons. |
+| Enhancement tracked separately | 151 | Both heroes together in additional suitable story scenes. |
+| Older unchecked cases retained | 30, 32, 34, 36, 41, 43, 46, 49, 51, 53, 107, 112, 119, 121, 126, 130, 133, 135, 136, 140 | See each original row for bounded checks, missing evidence and owner-requested deferrals. Discord/startup30/32 remain parked. |
+
 Owner approved items1-18 after all ten unique clips were reviewed, then added items19-28 through further tester feedback. Their original qualifications remain recorded; item25 is reopened for newer Playtest13 feedback. Split Mushroom elevator item29 is qualified in both rosters; the owner confirmed its later overhead-panel crush is authentic. Numbers remain stable. A checkmark means the fix is validated; reported and observed symptoms remain distinguished below. The diagnostic review is beads-eio.9.41; implementation lives in the linked central issues.
 
 | # | Done | Symptom | Evidence and owning issue |
@@ -116,7 +134,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 106 | [x] | A dead teammate does not return at the next stage section | Forward sections now revive either dead seat with initialized native HP while retaining the survivor's resources and shared lives. Same-section checkpoint deaths, whole-team retries and voluntary withdrawal retain their rules. Native Mushroom area-load checks revive either seat without spending a shared life; both-seat boundary fixtures and snapshot checks pass. The special Double/Iris-to-Sigma3 new-level policy remains. `beads-eio.9.146` |
 | 107 | [ ] | Web Spider part1 spiked platform enemy does not spawn for leading P2 | Archive A, Playtest26 Split netplay. Current native probes spawn and update kind76 at1976/901 with P1 held at56/139, and the later platform enemy at3520/1384 with P1 at1856/1467. Inspected composed P2 image shows the first spiked enemy. Peer checks match through51397. The reported missing-enemy case remains unreproduced; unsafe initial teleports and an out-of-view approach are excluded. `beads-eio.9.149` |
 | 108 | [x] | Web Spider part1 broken-door exit corrupts P2's background | Reproduced during a native P2-led General6 exit: the shared camera moves to Zero while native4:3 draws P1's stale tile ring as wrong cliff terrain. Use Split's authored map renderer in canonical shared passes too. Inspected fixed composed frame restores the waterfall/floor; both players reach part2 healthy and controllable, no local-view state leak, peer checks agree through7203. Old-fail/new-pass stale-ring fixture, Windows34 and Linux background checks pass. Included in Playtest28. `beads-eio.9.150` |
-| 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Archive A. With P1 held at112/443, safe native P2 approaches allocate and animate the first ground creatures, flying bugs and web turrets, plus the upper variant group. Inspected composed images show the early enemies; peer checks match through35970. Exact missing group/trigger remains unreproduced, so no fix is claimed. The first unsafe in-terrain teleport is excluded. `beads-eio.9.149` |
+| 109 | [ ] | Web Spider part2 first bee enemies do not spawn for leading P2 | Re-reported on Playtest31 in `31 bugs.zip` and [video](https://youtu.be/tS316c1P3sE). The new route holds P1 at112/443 while P2 passes the opening enemies, platforms and shaft; native input indices11159–12779 bind the section. Both peers'29325 overlapping recorded state hashes agree. Earlier Archive A bounded probes allocate and animate the candidate first/upper groups, with composed images and matching peers through35970. The exact missing bee family/activation path remains unqualified; those probes do not close this recurrence. No spawn fix claimed. `beads-eio.9.149` |
 | 110 | [x] | Large health pickup shifts the displayed camera to P1 | Archive A identifies the full-health capsule, native kind5, omitted from Split's private refill handling. Native baseline heals P2 while freezing the world and presenting P1's unified view. Include kind5: the real capsule now heals8 to32 with no shared freeze, P1 moves29.5px during replenishment, and P2's own redraw/HUD continues. Peer state matches through5987; all34 Windows checks and Linux lifecycle/split units pass. Unified retains the native shared pause. Included in Playtest28. `beads-eio.9.11` |
 | 111 | [x] | Frost Walrus part1 ice platforms do not spawn for leading P2 | Video samples locate the opening timed ice, distinct from the rising shaft. Native baseline keeps the cycle unarmed with P1 at144/347 and P2 at705/426; bringing P1 over creates ice. Allow either living hero to arm the original cycle and use both Split camera ranges for its tile sequences. Corrected native P2-ahead and distant-camera cases pass with visible ice, healthy players and matching peer CRCs through7398. Windows34 and Linux lifecycle/split checks pass. Included in Playtest28. `beads-eio.9.151` |
 | 112 | [ ] | Frost ice platforms remain indefinitely after P1 spawns them and dies | Opening timed-ice and rising-shaft controls continue changing phases, masks or positions after P1 dies; the permanent-platform symptom remains unreproduced. Keep this separate from the corrected P2 activation111 and personal ice momentum104. Archive B. `beads-eio.9.151` |
@@ -152,6 +170,51 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 141 | [x] | P2 teleports out and back during Sigma phase2 | Reproduced native85CA8 presentation withdrawing nearby P2 with32HP. Nearby living heroes now remain for stationary fortress boss scenes. Fixed native complete first-to-second form transition retains both visible bodies and controls; peers match through9920. Actual transport commands remain enabled. `beads-eio.9.163` |
 | 142 | [x] | P2 teleports out and back during Sigma phase3 | Same-arena boss presentations use141's correction. Native second-form defeat still carries both heroes to the lower room; both arrive healthy, enter the actual kind74 fight, and survive its admission without a missing partner. Genuine upper-to-lower-room transport is preserved. `beads-eio.9.163` |
 | 143 | [x] | Adopt the SNES Mega Man X diagnostic file optimization before release | Bounded background formatting, hashes and writes preserve the v2 format and remove disk waits from steady-state input recording. Windows/Linux writer and replay checks pass; a real co-op recording replays all2542 complete native inputs. `beads-eio.9.161` |
+| 144 | [ ] | Slash Beast lifebars and scenery boxes become corrupted | Metadata8 report; distinguish HUD/actor artwork from the previously fixed panorama and the unconfirmed frozen background. No matching composed frame qualified yet. `beads-eio.9.170` |
+| 145 | [x] | Mushroom doors before the first miniboss trap P2 when P1 crosses first | Reproduced as a native kind13 hatch at6088/792, rather than a C4 boss door. Original prefix verifies15908 inputs and closes with P2 below atY843. P2's movement briefly clears its contact-box pointer; the earlier hatch guard treated missing geometry as clearance. Wait for that living on-screen partner's ordinary box instead. Fixed replay retains checks until the intentional frame15786 fork; the hatch stays open with P2 below, and subsequent native controls move P2 without transport. Both-roster missing-box/ordinary-clearance tests pass. A complete natural ascent is not claimed. `beads-eio.9.170` |
+| 146 | [x] | Mushroom part2 lift does not work with only P2 alive | Fixed after Playtest31. Native C3A7C waits on the dead P1's zero action. Use the surviving P2 for that one shared admission update, composed through the existing lift-camera dispatcher. A supplied restored-state segment retains all953 complete input/state checks; its subsequent native checkpoint2 control stalls atY2216 on the original and rises toY2059 with the fix, P2HP36 and P1 still dead. Ceiling panels and later ascent retain their native rules; this does not qualify every older elevator report. `beads-eio.9.170` |
+| 147 | [ ] | Cyber portal entry during the other hero's withdrawal softlocks | First-course original prefix verifies6763 inputs through checkpoint5; it ends in the tester's pause menu (mode6/2), not a demonstrated portal softlock. Other recorded Cyber visits and the exact overlapping withdrawal still need qualification. `beads-eio.9.170` |
+| 148 | [ ] | Magma Dragoon Ride Armor boss entry hides the partner until armor destruction | Metadata8 reports a mounted leader preventing the other hero's arrival. Native boarding/control probes qualify P2 mounting, but the initial approach stops before admission; the paired follow-up admits the on-foot P1 instead. Neither qualifies the reported mounted-leader failure. Distinguish this from the prior forced-dismount and rider-layering fixes. `beads-eio.9.170` |
+| 149 | [ ] | X's upgraded boots lack their blue hover flames in Zero's campaign | Visually reproduced with X/P2 in native hover action33. A native X/P1 control with initialized boot upgrades displays the missing blue/white jets. Projecting deferred effect types4/9 alone does not restore that appearance; the incomplete candidate was retained privately and removed from the confirmed fix. Rendering/resource selection still needs investigation. `beads-eio.9.170` |
+| 150 | [ ] | X's special-weapon icons inherit stage colors in Zero's campaign | Separate from acquired armor body palettes. A native X/P2 pause-menu capture in Mushroom shows distinct normal weapon-icon colors; the reported stage-dependent failure is not qualified by that bounded check. `beads-eio.9.170` |
+| 151 | [ ] | Show both heroes together in suitable story scenes | Elective Metadata8 request for scenes such as Magma Dragoon and Storm Owl. Assess scene gates, rider dismounts and safe placement; existing simultaneous arrivals and victory poses remain separate behavior. `beads-eio.9.170` |
+| 152 | [ ] | Zero/P2 aerial attacks appear to leave longer boss immunity in refights | New Playtest31 report; tester is also comparing retail X4. Scaling is enabled with its default per-player cooldowns. The prior fix132/139 changes only the first two grounded strikes24/25; it does not qualify airborne moves. Compare the actual accepted attack and native boss timer before changing combat balance. `31 bugs.zip`, [video](https://youtu.be/tS316c1P3sE), `beads-eio.9.171` |
+| 153 | [ ] | Zero/P2 grounded-combo finisher appears to leave longer boss immunity | Separate from the fixed opening strikes and aerial report152. Existing code intentionally retains the full native duration for finisher26. Source inspection confirms a64-tick native cooldown path, but does not establish the reported effective delay matches retail in the recorded fights. Native comparison remains pending; no new cooldown fix claimed. `beads-eio.9.171` |
+
+### October17 Playtest31 paired feedback
+
+`31 bugs.zip` passes CRC checks for all20 entries, SHA256
+`2b5e73cedf171b34a9f84f07c4827a68af98b38eddbeb44a4587bbe0701297d4`.
+It contains both network sessions, initial cards, settings, mod choices and
+nonempty startup logs. Both identify Playtest31 profile
+`a2ed2a044309d2cf51c67fbed296bd947b076bb2`, Split cameras, Both-player doors,
+boss scaling and both story bosses. These network recordings are not treated
+as successful offline replays. All29325 overlapping native-boundary state
+hashes agree between the supplied peers; that comparison is not a full-core
+or cross-build compatibility qualification.
+
+The509-second video shows the P2-led Spider route and fortress refights.
+Spider part2 begins around3:20; P1 stays at112/443 while P2 advances.
+The recurrence stays on109, and new moves152/153 stay separate from the
+previous opening-strike fix. No additional weapon timing change is justified
+by this intake alone. The tester's report that the rest of Spider looks good
+is retained as feedback, without closing unrelated unqualified cases.
+
+### October17 Metadata8 intake
+
+`Metadata 8.zip` passes CRC checks for all91 entries (SHA256
+`3f7cc646977b490facbd04fe8fb8e99898f3a9c9a006297a1070b17091c3107c`).
+It contains11 local recordings, five complete restored-state baselines,
+starting cards/settings/mod choices and eight nonempty startup logs.
+Although the tester calls the build30, the captured profile is
+`a2ed2a044309d2cf51c67fbed296bd947b076bb2` and the startup installation path
+explicitly names Playtest31. The settings select Unified cameras, Both-player
+doors, boss scaling and both story bosses; the campaign is Zero's in the
+inspected gameplay intervals. Items144–151 preserve all reports separately.
+Bounded native comparisons qualify the hatch and survivor-lift fixes145/146.
+The hover-flame defect149 is reproduced but remains unfixed. Other reports
+remain reported or awaiting a matching trigger; the two-character story-scene
+request151 is an enhancement, not a confirmed failure.
 
 ### October16 fortress feedback intake
 
