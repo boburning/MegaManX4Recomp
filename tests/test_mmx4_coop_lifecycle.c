@@ -4,6 +4,7 @@
 #include "mmx4_coop_internal.h"
 void mmx4_coop_bosses_new_stage(void) {}
 void mmx4_coop_bosses_stage_initialization(void) {}
+uint32_t mmx4_coop_counterpart_story_text(void) {return 0x9F046000u;}
 void mmx4_coop_balance_reset(void) {}
 void mmx4_cheats_enforce_current(void) {} /* This fixture has no character codes. */
 #include "ws_view_anchor.h"
@@ -2520,6 +2521,29 @@ int main(void) {
         CHECK(psx_mod_read_byte(PLAY+0x43)==campaign && p2[0x5C]==hp);
         CHECK(psx_mod_read_byte(0x80166BB0u)&1u);
     }
+    /* Continued capsule text follows its native live actor/cursor, including
+     * a restored textbox. A closed box, another bank or scene cannot inherit
+     * X's selectors just because a capsule remains elsewhere in the stage. */
+    for(unsigned reject=0;reject<8;++reject) {
+        reset();psx_mod_write_byte(PLAYER+2,1);p2[2]=0;
+        psx_mod_write_word(0x8013BC28u,0x9F046100u);psx_mod_write_byte(0x8013BC34u,0x80);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,26);
+        psx_mod_write_byte(actor+4,1);psx_mod_write_byte(actor+5,2);
+        if(reject==1)psx_mod_write_byte(0x8013BC34u,0);
+        if(reject==2)psx_mod_write_word(0x8013BC28u,0x801F0000u);
+        if(reject==3)psx_mod_write_byte(actor,0);
+        if(reject==4)psx_mod_write_byte(actor+1,8);
+        if(reject==5)psx_mod_write_byte(actor+5,4);
+        if(reject==6)psx_mod_write_byte(PLAYER+2,0);
+        if(reject==7)local_view=1;
+        CHECK(mmx4_coop_lifecycle_x_capsule_text()==!reject);
+    }
+    reset();psx_mod_write_byte(PLAYER+2,1);p2[2]=0;
+    mmx4_coop_enter_second();capsule_guard=1;
+    CHECK(mmx4_coop_lifecycle_x_capsule_text());
+    capsule_guard=0;mmx4_coop_leave_second();
+    CHECK(!mmx4_coop_lifecycle_x_capsule_text() && !projected);
+
     reset();psx_mod_write_word(PLAYER+8,0x1000000u);p2[11]=2;
     psx_mod_write_word(actor+8,0x2000000u);
     psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
