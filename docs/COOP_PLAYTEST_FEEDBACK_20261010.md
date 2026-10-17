@@ -210,6 +210,16 @@ All35 Windows title checks pass in the ordinary and development-netplay
 profiles; the Linux GCC balance suite also passes. The Mods tooltip now states
 the same half-length policy for both choices.
 
+Three completed Split LAN phases also qualify one held slash damaging once
+(48->47), repeated P2 combos (48->24), and consecutive aerial damage (47->45
+with47 observed frames between hits). Their25 core/mod CRC samples agree,
+through matched tick6980. These are individual completed phases, not a claim
+that the full four-case script passed: its later mixed-player setup rejected
+a teleport for a dead, edge-parked P1. A fresh interior-position run kept both
+heroes healthy but did not produce accepted hits inside the overlap window.
+That extra native simultaneous-hit probe remains unqualified; independent
+partner eligibility is covered by the both-owner unit cases above.
+
 The additional [comparison video](https://youtu.be/F4QwpLa-Ofo) was supplied
 during this follow-up. Its download failed with HTTP403 after the intro; it is
 not claimed as a full retail comparison. The native A/B checks above provide
