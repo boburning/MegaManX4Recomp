@@ -1,3 +1,17 @@
+# Unreleased
+
+- Fixed controller rebinding when SDL assigns the selected controller ID zero,
+  including Map All release handling and two identical controllers.
+- Windows borderless mode uses an ordinary desktop-sized window with SDL2 as
+  well as SDL3, and restores the previous window geometry when leaving it.
+- Mod selections save when edited, including when closing the launcher without
+  pressing Play.
+- Save states allow HUD layout and native character-code option changes.
+  Existing constant cheat-provider records migrate without weakening checks
+  for mutable co-op state, schemas or enhancement memory layout.
+- Documented the retirement of generic CD Speed and Fast Loading mods. Verified
+  resident disc loading is built in; native music and movie timing is retained.
+
 # Mega Man X4 Recompiled - v0.1.1-coop-playtest.30
 
 **Fortress co-op fixes, chainable Zero combos, and lighter diagnostic recording.**

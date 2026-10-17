@@ -29,10 +29,12 @@ typedef struct { const char *id; uint32_t address; PSXModFunctionEntryCallback c
 typedef struct { const char *id; uint32_t address; PSXModFunctionFilterCallback callback; } Filter;
 typedef struct { const char *id; PSXModActivationCallback callback; } Activation;
 typedef struct { const char *id; PSXModSnapshotProvider provider; } Provider;
+typedef struct { const char *id; PSXModActivationCallback callback; } Restore;
 static Entry entries[32]; static unsigned entry_count;
 static Filter filters[4]; static unsigned filter_count;
 static Activation activations[2]; static unsigned activation_count;
 static Provider providers[2]; static unsigned provider_count;
+static Restore restores[2]; static unsigned restore_count;
 
 int mod_runtime_snapshot_package_active(const char *id) {
     if (online_profile) return !strcmp(id,"mmx4.coop");
@@ -63,9 +65,13 @@ int psx_mod_register_activation_plugin(const char *id, PSXModActivationCallback 
     REQUIRE(activation_count < sizeof activations / sizeof activations[0]);
     activations[activation_count++] = (Activation){id,cb}; return 1;
 }
-int psx_mod_register_snapshot_provider(const char *id, const PSXModSnapshotProvider *provider) {
+int psx_mod_register_snapshot_guard(const char *id, int (*ready)(void), uint32_t version,
+                                  int (*validate)(const uint8_t *,uint32_t)) {
     REQUIRE(provider_count < sizeof providers / sizeof providers[0]);
-    providers[provider_count++] = (Provider){id,*provider}; return 1;
+    providers[provider_count++] = (Provider){id,{version,NULL,NULL,validate,NULL,ready}}; return 1;
+}
+int psx_mod_register_savestate_plugin(const char *id, PSXModActivationCallback callback) {
+    REQUIRE(restore_count<2);restores[restore_count++]=(Restore){id,callback};return 1;
 }
 static uint8_t *byte_at(uint32_t address) {
     uint32_t physical = address & 0x1FFFFFFFu;
@@ -160,9 +166,7 @@ uint32_t psx_mod_call_guest(CPUState *cpu, uint32_t function, uint32_t return_ad
     REQUIRE(a0==cpu->gpr[4]&&a1==cpu->gpr[5]&&a2==cpu->gpr[6]&&a3==cpu->gpr[7]);
     REQUIRE(!mmx4_cheats_snapshot_ready());
     for (unsigned i=0;i<provider_count;++i) {
-        uint8_t data=0;
         REQUIRE(!providers[i].provider.ready());
-        REQUIRE(!providers[i].provider.write(&data,1));
     }
     /* Recursive registrations from the other enabled package/co-op must
      * decline interception, leaving one original selector invocation. */
@@ -182,7 +186,7 @@ uint32_t psx_mod_call_guest(CPUState *cpu, uint32_t function, uint32_t return_ad
 
 static int policy(void) {
     CHECK(!registration_failures);
-    CHECK(entry_count==15&&filter_count==3&&activation_count==2&&provider_count==2);
+    CHECK(entry_count==15&&filter_count==3&&activation_count==2&&provider_count==2&&restore_count==2);
     CHECK(!strcmp(providers[0].id,ULTIMATE_PACKAGE)&&!strcmp(providers[1].id,BLACK_PACKAGE));
     CPUState cpu={0};cpu.gpr[4]=PLAY;cpu.gpr[31]=0x80012340u;
     mmx4_cheats_configure_coop(1,1);
@@ -232,10 +236,12 @@ static int policy(void) {
         }
     }
     for(unsigned i=0;i<provider_count;++i) {
-        const PSXModSnapshotProvider *p=&providers[i].provider;uint8_t data=0;
-        CHECK(p->version==1&&p->bytes()==1&&p->ready());CHECK(p->write(&data,1)&&data==1);
+        const PSXModSnapshotProvider *p=&providers[i].provider;uint8_t data=1;
+        CHECK(p->version==1&&!p->bytes&&!p->write&&!p->read&&p->ready());
         CHECK(p->validate(&data,1)&&!p->validate(&data,0));data=0;CHECK(!p->validate(&data,1));
-        CHECK(!p->write(NULL,1)&&!p->write(&data,2));
+        CHECK(!p->validate(NULL,1)&&!p->validate(&data,2));
+        psx_mod_write_byte(PLAY+0x37,0);restores[i].callback();
+        CHECK(psx_mod_read_byte(PLAY+0x37)==1);
     }
     /* Reapply the newly selected character after native clears the flag. */
     local_black=0;requested_character=1;
@@ -250,6 +256,17 @@ static int policy(void) {
     CHECK(guest_calls==3&&psx_mod_read_byte(PLAY+0x37)==1);
     local_ultimate=local_black=0;mmx4_cheats_configure_coop(0,0);
     CHECK(!mmx4_cheats_character_enabled(0)&&!mmx4_cheats_character_enabled(1));
+    /* Restore applies a newly enabled palette without resetting the body or
+     * trusting invalid scratch resource pointers. */
+    psx_mod_write_byte(PLAY,6);psx_mod_write_byte(PLAY+0x43,1);
+    psx_mod_write_word(0x1F800024u,0x801E0000u);psx_mod_write_word(0x1F800028u,0x801E0400u);
+    for(unsigned i=0;i<16;++i)psx_mod_write_half(0x801E0000u+13*32+i*2,(uint16_t)(0x6300+i));
+    local_black=1;restores[1].callback();
+    for(unsigned i=0;i<16;++i)CHECK(psx_mod_read_half(0x801E0400u+i*2)==0x6300+i);
+    CHECK(!memcmp(byte_at(PLAYER),protected_body,sizeof protected_body));
+    psx_mod_write_word(0x1F800024u,0x1F801000u);restores[1].callback();
+    psx_mod_write_word(0x1F800028u,0);restores[1].callback();
+    local_black=0;
     return 0;
 }
 

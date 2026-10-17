@@ -34,6 +34,12 @@ static inline void mmx4_snapshot_bytes(Mmx4SnapshotIO *s,void *bytes,uint32_t co
 static inline void mmx4_snapshot_fixed(Mmx4SnapshotIO *s,uint32_t expected) {
     if(mmx4_snapshot_integer(s,expected,4,UINT32_MAX)!=expected)s->ok=0;
 }
+/* A user preference keeps its current value on restore. Retain its original
+ * four-byte wire slot, and validate the saved value without treating it as a
+ * memory-layout requirement. Gameplay protocols still use fixed/field. */
+static inline void mmx4_snapshot_preference(Mmx4SnapshotIO *s,uint32_t current) {
+    (void)mmx4_snapshot_integer(s,current,4,1);
+}
 static inline int mmx4_snapshot_guest(uint32_t address) {
     return !address || (address>=0x80010000u && address<0x80200000u) ||
         (address>=0x9F000000u && address<0x9F100000u);

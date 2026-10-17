@@ -55,6 +55,10 @@ The netplay host chooses the shared options.
 
 Co-op requires OpenGL and takes effect on a fresh game boot. Single-player remains available.
 
+Fast loading is built in. The old **CD Speed** and **Fast Loading** mods are
+retired; the game now keeps verified disc data in memory and feeds it through
+the original loading routines. Music and cutscenes retain their normal timing.
+
 <p align="center">
   <img src="docs/images/netplay.png" width="720" alt="The launcher offers LAN / Direct IP and Online Netplay">
 </p>
