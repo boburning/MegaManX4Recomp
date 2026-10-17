@@ -194,6 +194,11 @@ scanner; the test did not fabricate an NPC, dialogue index, script payload or
 textbox state. Before the fix, X/P2 in Zero's campaign used the opening
 HUNTER H.Q. text instead of the same capsule's DR. LIGHT text in X's campaign.
 After the fix, the hologram and successive pages match the X conversation.
+The full native conversation closes, X jumps into the capsule and receives
+the boots (campaign armor flag08); both heroes resume normal control with
+HP32, scene gates cleared and P1's Zero campaign byte still01. Earlier pickup
+setup attempts stopped at the capsule base and are excluded from award proof;
+the final `zero-campaign-final/report.json` and captures qualify acquisition.
 
 The shared textbox initializer still runs in P1's canonical context, preserving
 its palette refresh and campaign ownership. Only the existing text, portrait
