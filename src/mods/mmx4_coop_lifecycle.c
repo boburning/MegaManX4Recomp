@@ -1386,6 +1386,27 @@ static int x_capsule_canonical(CPUState *cpu,uint32_t address) {
 static int x_capsule(CPUState *cpu,uint32_t address) {
     return mmx4_coop_combat_canonical_call(cpu,address,x_capsule_canonical);
 }
+int mmx4_coop_lifecycle_x_capsule_text(void) {
+    if(!mmx4_coop_ready() || psx_mod_local_view_scope())return 0;
+    unsigned campaign=mmx4_coop_projected()?mmx4_coop_first_body()[2]:
+        psx_mod_read_byte(PLAYER+2);
+    if(campaign!=1)return 0; /* P1 X already has the native X resources. */
+    if(capsule_guard)return 1;
+    uint32_t text=mmx4_coop_counterpart_story_text();
+    uint32_t cursor=psx_mod_read_word(0x8013BC28u);
+    if(!text || !psx_mod_read_byte(0x8013BC34u) || cursor<text || cursor-text>=0xA000u)
+        return 0;
+    /* Native C6814 opens the box, C6894/C68E0 wait for it in phases2/3.
+     * Derive continuation from the native actor and bound script cursor;
+     * no new saved flag can outlive the capsule or leak into story scenes. */
+    for(unsigned slot=0;slot<32;++slot) {
+        uint32_t actor=0x80165A30u+slot*0x8Cu;
+        unsigned phase=psx_mod_read_byte(actor+5);
+        if(psx_mod_read_byte(actor) && psx_mod_read_byte(actor+1)==26 &&
+           psx_mod_read_byte(actor+4)==1 && phase>=2 && phase<=3)return 1;
+    }
+    return 0;
+}
 static SceneOwner *scene_record(uint32_t actor,int create) {
     SceneOwner *empty=NULL;
     for(unsigned i=0;i<sizeof scenes/sizeof scenes[0];++i) {

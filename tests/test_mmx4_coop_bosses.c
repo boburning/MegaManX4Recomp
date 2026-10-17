@@ -5,7 +5,7 @@
 #include <string.h>
 #define CHECK(x) do {if(!(x)){fprintf(stderr,"line%d: %s\n",__LINE__,#x);exit(1);}}while(0)
 static uint8_t ram[0x200000];
-static int enabled,projected,local,ready=1;
+static int enabled,projected,local,ready=1,capsule_text;
 static PSXModFunctionFilterCallback transition;
 static struct {uint32_t address;PSXModFunctionEntryCallback fn;} hooks[20];
 static unsigned count;
@@ -16,6 +16,7 @@ int psx_mod_local_view_scope(void){return local;}
 int mmx4_coop_projected(void){return projected;}
 int mmx4_coop_ready(void){return ready;}
 uint32_t mmx4_coop_counterpart_story_text(void){return 0x9f046000u;}
+int mmx4_coop_lifecycle_x_capsule_text(void){return capsule_text;}
 int psx_mod_current_option_value(const char *key,char *value,uint32_t cap){
     CHECK(!strcmp(key,"both_story_bosses") && cap>=6);strcpy(value,enabled?"true":"false");return 1;
 }
@@ -88,5 +89,21 @@ int main(void){
         s=(Mmx4SnapshotIO){NULL,second,7,0,MMX4_SNAPSHOT_VALIDATE,1};
         CHECK(!mmx4_coop_bosses_snapshot(&s));
     }
-    puts("Optional story encounter state and campaign ownership passed.");return 0;
+    /* Capsules use X selectors with the elective story mod disabled. Only
+     * text sites change: no boss-bank/campaign/progression selector does. */
+    enabled=0;mmx4_coop_bosses_activate();capsule_text=1;
+    psx_mod_write_byte(MMX4_PLAY+0xC,1);psx_mod_write_byte(MMX4_PLAY+0x43,1);
+    for(unsigned i=4;i<13;++i) {
+        unsigned reg=hooks[i].address==0x80022554u || hooks[i].address==0x800224D4u ||
+            hooks[i].address==0x80022928u?4u:
+            hooks[i].address==0x80022880u || hooks[i].address==0x800228B4u?3u:2u;
+        cpu.gpr[reg]=0x5A;hooks[i].fn(&cpu,hooks[i].address);
+        CHECK(cpu.gpr[reg]==(hooks[i].address==0x80022554u?0x9f046000u:0u));
+        CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==1);
+        local=1;cpu.gpr[reg]=0x5A;hooks[i].fn(&cpu,hooks[i].address);
+        CHECK(cpu.gpr[reg]==0x5A);local=0;
+    }
+    cpu.gpr[3]=1;hook(&cpu,0x8001302Cu);CHECK(cpu.gpr[3]==1);
+    capsule_text=0;cpu.gpr[4]=0x5A;hook(&cpu,0x80022554u);CHECK(cpu.gpr[4]==0x5A);
+    puts("Story/capsule text selectors preserve campaign ownership.");return 0;
 }

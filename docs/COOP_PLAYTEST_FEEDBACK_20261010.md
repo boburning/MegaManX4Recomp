@@ -1,7 +1,8 @@
 # October 10 co-op feedback
 
-Current status, October17: **153 numbered items; 127 checked and 26 unchecked.**
+Current status, October17: **154 numbered items; 128 checked and 26 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
+Capsule dialogue item154 is fixed after Playtest32 and awaits the next release.
 The remaining26 are23 reports unmatched in bounded checks, two explicitly parked
 online-startup cases and one elective story-scene enhancement. They are not26
 confirmed current defects. [Release dispositions](COOP_PLAYTEST32_DISPOSITIONS.md)
@@ -13,6 +14,7 @@ arrivals in `3b471b9`; the Playtest32 integration also fixes overlapping transpo
 | Status | Items | Current work |
 |---|---|---|
 | Fixed and validated for Playtest32 | 145, 146, 147, 148, 149 | Mushroom hatch/lift admission, interrupted Cyber portal arrivals, grounded occupied Armor return anchors, and owner-bound X hover jets. |
+| Fixed after Playtest32; awaiting release | 154 | X's armor capsules now use Dr Light's conversation in Zero's campaign. Native before/after checks and both story-selector/lifecycle test suites pass. |
 | Current recurrence; exact cause still unqualified | 109 | First Web Spider part2 bees with P2 leading. Fresh Playtest31 paired recordings and video supplement the earlier native checks that did spawn the candidate groups. |
 | Bounded comparison; excess delay not reproduced | 152, 153 | P2 native aerial damage and full ground combo pass in Split LAN. An unscaled native Zero/P1 ground control has a64-tick timer; independent finisher/aerial expiry tests also release on tick64. The exact reported aerial effective-delay condition remains unmatched. |
 | Bounded checks; failure not reproduced | 144, 150 | Slash HUD/scenery corruption and X's stage-colored weapon icons remain tracked with the actual capture limits. |
@@ -181,6 +183,34 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 151 | [ ] | Show both heroes together in suitable story scenes | Elective Metadata8 request for scenes such as Magma Dragoon and Storm Owl. Assess scene gates, rider dismounts and safe placement; existing simultaneous arrivals and victory poses remain separate behavior. Tracked separately from the correctness release gate in `beads-eio.9.173`. |
 | 152 | [ ] | Zero/P2 aerial attacks appear to leave longer boss immunity in refights | Bounded Split/Both LAN admits P2 aerial class34 and damages native Frost48 to46, with matching peers. Both-seat finisher26/aerial34 unit checks retain the native64 ticks, release exactly on tick64 and keep the other hero eligible. A separate unscaled native aerial control emitted34 but missed, so it is excluded as effective-delay proof. The exact reported longer aerial delay remains unmatched; no speculative shortening patch. Tester is also comparing retail. `31 bugs.zip`, [video](https://youtu.be/tS316c1P3sE), `beads-eio.9.171` |
 | 153 | [ ] | Zero/P2 grounded-combo finisher appears to leave longer boss immunity | Actual Split/Both LAN P2 native mash emits24/25/26 and damages Frost48 to38, with matching core/mod through28678. Separate fresh Zero/P1 control with scaling explicitly OFF emits the same classes, damages48 to38 and samples a full native64-tick timer. Per-player finisher26 also expires on tick64 in both-seat tests; only opening strikes use the earlier4-tick correction. The reported extra effective delay was not reproduced; keep the retail-comparison report tracked, with no additional timing change claimed. `beads-eio.9.171` |
+| 154 | [x] | X's armor capsule shows Iris/Colonel story text in Zero's campaign | Reproduced with the real Spider boots capsule: Zero's campaign opened HUNTER H.Q./Mavericks emerged, while X's campaign opened DR. LIGHT/This battle. Capsule text, portrait and cue selectors now use X's bank while the shared textbox retains P1's campaign and palette. Native after-check shows Dr Light's hologram and correct later pages, completes the conversation and restores both players' control. All35 Windows checks and focused Linux lifecycle/story-selector checks pass. Fixed after Playtest32, awaiting release. `beads-eio.9.174` |
+
+### October17 capsule dialogue follow-up
+
+The new report needed no replay. Hidden, muted fresh native sessions compared
+the authored Web Spider boots capsule in both campaigns. A private teleport
+and camera placement exposed the upper-route capsule to the ordinary placement
+scanner; the test did not fabricate an NPC, dialogue index, script payload or
+textbox state. Before the fix, X/P2 in Zero's campaign used the opening
+HUNTER H.Q. text instead of the same capsule's DR. LIGHT text in X's campaign.
+After the fix, the hologram and successive pages match the X conversation.
+
+The shared textbox initializer still runs in P1's canonical context, preserving
+its palette refresh and campaign ownership. Only the existing text, portrait
+and cue selectors use X's resources during actual capsule initialization or
+while a native capsule waits on its open X-bank conversation. Continuation is
+derived from the live actor, textbox and cursor, including after restoration;
+there is no additional saved flag. Closed textboxes, other text banks, ordinary
+Zero story scenes, non-text boss selectors and local presentation passes do
+not acquire the capsule override. The optional Iris/Double setting remains
+independent and can stay off.
+
+All35 Windows title checks pass; the affected lifecycle and story-selector
+suites also compile and pass under Linux GCC. Native proof covers the Spider
+boots conversation in local co-op; it is not a new full-game, every-capsule or
+two-peer netplay qualification. Private captures and reports are under
+`build-pr23/feedback33-capsules/`. This is a post-Playtest32 fix, not a claim
+that the already published package contains it.
 
 ### October17 Playtest31 paired feedback
 

@@ -46,7 +46,13 @@ void mmx4_coop_bosses_stage_initialization(void) {
     reloading=0;
 }
 static void select_story(CPUState *cpu,uint32_t address) {
-    if(!both_stories || !second_round || !story_room() || psx_mod_local_view_scope())return;
+    if(psx_mod_local_view_scope())return;
+    unsigned capsule=address>=0x800224D4u && address<=0x80022928u &&
+        mmx4_coop_lifecycle_x_capsule_text();
+    if(!capsule && (!both_stories || !second_round || !story_room()))return;
+    /* The shared textbox keeps the campaign's palette, but X's capsule
+     * supplies X's text/portraits/voice selectors even in Zero's story.
+     * This correctness path is independent of the optional second boss. */
     if(address==0x80022554u) {
         uint32_t text=mmx4_coop_counterpart_story_text();
         if(text)cpu->gpr[4]=text;
@@ -54,7 +60,7 @@ static void select_story(CPUState *cpu,uint32_t address) {
         unsigned reg=2;
         if(address==0x800224D4u || address==0x80022928u)reg=4;
         if(address==0x8001302Cu || address==0x80022880u || address==0x800228B4u)reg=3;
-        cpu->gpr[reg]=story_character();
+        cpu->gpr[reg]=capsule?0u:story_character();
     }
 }
 static void story_defeated(CPUState *cpu,uint32_t address) {
