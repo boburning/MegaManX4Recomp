@@ -815,6 +815,22 @@ static void recover_warp_passenger(CPUState *cpu,unsigned seat) {
         (int16_t)(seat?(body_word(mmx4_coop_second_body(),8)>>16):psx_mod_read_half(PLAYER+10)),
         (int16_t)(seat?(body_word(mmx4_coop_second_body(),12)>>16):psx_mod_read_half(PLAYER+14)));
 }
+static int armor_return_anchor(unsigned owner,uint32_t *x,uint32_t *y,uint32_t *box) {
+    uint8_t canonical[0xB0];
+    const uint8_t *vehicle;
+    if(owner)vehicle=mmx4_coop_second_vehicle();
+    else {read_bytes(MMX4_VEHICLE,canonical,sizeof canonical);vehicle=canonical;}
+    /* A mounted body has action18, personal phase1 and no foot contact box.
+     * Its occupied, grounded native Armor supplies the actual floor instead.
+     * Chasers, airborne/ejecting Armor and abandoned vehicles are ineligible. */
+    unsigned mounted=owner?mmx4_coop_second_body()[0xC5]:psx_mod_read_byte(PLAYER+0xC5);
+    uint32_t surface=body_word(vehicle,0x68);
+    if(mounted!=255 || !vehicle[0] || vehicle[1]!=1 || vehicle[4]!=1 ||
+       vehicle[5]>=11 || !(vehicle[0x97]&0x40u) || !(vehicle[0xA8]&8u) ||
+       surface<0x80010000u || surface>0x801FFFFCu)return 0;
+    *x=body_word(vehicle,8);*y=body_word(vehicle,12);*box=surface;
+    return 1;
+}
 static void warp_tick(CPUState *cpu) {
     warp_begin(cpu);
     if(!warp_phase || mmx4_coop_projected())return;
@@ -863,9 +879,11 @@ static void warp_tick(CPUState *cpu) {
         /* Native walking/dashing has a different action from idle. A living
          * grounded leader already supplies a safe landing point; requiring
          * idle restarted the wait whenever that player kept moving. */
-        if(locked || personal || state!=1 || action<2 || action>=0x10 || !(grounded&8u)) {warp_unlocked_ticks=0;return;}
-        if(++warp_unlocked_ticks<3)return;
         uint32_t surface_box=warp_owner?body_word(second,0x68):psx_mod_read_word(PLAYER+0x68);
+        int armor=action==18 && armor_return_anchor(warp_owner,&x,&y,&surface_box);
+        if(locked || state!=1 || (!armor &&
+           (personal || action<2 || action>=0x10 || !(grounded&8u)))) {warp_unlocked_ticks=0;return;}
+        if(++warp_unlocked_ticks<3)return;
         position_return(cpu,seat,x,y,warp_active,warp_visible,
             warp_vehicle_active,warp_vehicle_visible,surface_box);
         if(!safe_return_position(cpu,seat)) {

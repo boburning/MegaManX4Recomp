@@ -1780,6 +1780,37 @@ int main(void) {
         CHECK(!warp_phase && mmx4_coop_alive(owner^1u));
     }
 
+    /* A grounded mounted leader releases its on-foot partner at the native
+     * Armor's floor. Personal phase1/no foot box are normal while riding. */
+    for(unsigned owner=0;owner<2;++owner)for(unsigned reject=0;reject<5;++reject) {
+        reset();warp_owner=owner;warp_phase=1;warp_active=warp_visible=1;
+        unsigned passenger=owner^1u;
+        if(passenger)p2[0]=p2[3]=0;
+        else {psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);}
+        if(owner)mmx4_coop_enter_second();
+        psx_mod_write_byte(PLAYER+5,18);psx_mod_write_byte(PLAYER+0x67,1);
+        psx_mod_write_byte(PLAYER+0xC5,255);psx_mod_write_byte(PLAYER+0x89,0);
+        psx_mod_write_word(PLAYER+0x68,0);
+        psx_mod_write_byte(MMX4_VEHICLE,0x41);psx_mod_write_byte(MMX4_VEHICLE+1,1);
+        psx_mod_write_byte(MMX4_VEHICLE+4,1);psx_mod_write_byte(MMX4_VEHICLE+5,1);
+        psx_mod_write_byte(MMX4_VEHICLE+0x97,0x40);psx_mod_write_byte(MMX4_VEHICLE+0xA8,8);
+        psx_mod_write_word(MMX4_VEHICLE+8,640u<<16);psx_mod_write_word(MMX4_VEHICLE+12,180u<<16);
+        psx_mod_write_word(MMX4_VEHICLE+0x68,0x800F9120u);
+        psx_mod_write_byte(0x800F9123u,32);
+        if(reject==1)psx_mod_write_byte(MMX4_VEHICLE+0xA8,0);
+        if(reject==2)psx_mod_write_byte(MMX4_VEHICLE+1,0);
+        if(reject==3)psx_mod_write_byte(MMX4_VEHICLE+0x97,0);
+        if(reject==4)psx_mod_write_byte(PLAYER+0xC0,1);
+        if(owner)mmx4_coop_leave_second();
+        for(unsigned tick=0;tick<3;++tick)warp_tick(&cpu);
+        CHECK(!projected && warp_phase==(reject?1u:2u));
+        CHECK(incoming_calls[passenger]==!reject);
+        if(!reject) {
+            CHECK((passenger?body_word(p2,12):psx_mod_read_word(PLAYER+12))==212u<<16);
+            CHECK((owner?p2[0xC5]:psx_mod_read_byte(PLAYER+0xC5))==255);
+        }
+    }
+
     /* Once grounded arrival is committed, the leader's jump/fall or Nova
      * must not hide the partner and restart the beam. Native +67 is also a
      * personal airborne phase, not evidence of a shared cutscene. */

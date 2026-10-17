@@ -810,6 +810,13 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         guest(cpu,0x80037104u,PLAYER,0);guest(cpu,0x800371E4u,PLAYER,0);
         if(first_arg)leave_second();
         psx_mod_write_word(diagnostic+0x54,1);
+    }else if(command==6 && first_arg==255 && second_arg<2 && mmx4_coop_ready()) {
+        /* Private QA: request the existing native room handoff directly.
+         * This shares its ordinary departure, scene gates and terrain-safe
+         * return, and is encoded through agreed debug inputs in netplay. */
+        mmx4_coop_lifecycle_room_entry(second_arg);
+        if(mmx4_coop_lifecycle_hidden(second_arg^1u))
+            psx_mod_write_word(diagnostic+0x54,1);
     }else if(command==6 && first_arg<48 && second_arg>0 && second_arg<128) {
         uint32_t actor=0x8013BED0u+first_arg*0x9Cu;
         if(psx_mod_read_byte(actor)) {
