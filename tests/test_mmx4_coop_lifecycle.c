@@ -393,6 +393,12 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             palette_uploaded_world=psx_mod_read_half(psx_mod_read_word(0x1F800028u)+STAGE_PALETTE_OFFSET);
         }
         psx_mod_write_byte(0x80166BB0u,0);break;
+    case 0x800C3880:
+        ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        /* Original C3A7C's initial lift gate. P1's completed death has
+         * action zero; a living P2 must supply this read without revival. */
+        if(psx_mod_read_byte(MMX4_PLAYER+5))psx_mod_write_byte(a0+6,1);
+        break;
     case 0x800C2BE0:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         if(psx_mod_read_byte(a0+0x72)&8u) {
@@ -817,6 +823,22 @@ int main(void) {
         psx_mod_write_byte(fan+5,0);p2[0x5C]=0;
         mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);
         CHECK(latch_calls==2 && latch_owner==0 && latch_y==2507);
+    }
+    for(unsigned campaign=0;campaign<2;++campaign) {
+        reset();latch_calls=0;const uint32_t fan=0x80165A30u;
+        psx_mod_write_byte(PLAY+12,3);psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(fan,1);psx_mod_write_byte(fan+1,13);psx_mod_write_byte(fan+4,1);
+        psx_mod_write_half(fan+14,120);psx_mod_write_word(fan+0x68,0x800F0000u);
+        psx_mod_write_byte(0x800F0003u,16);psx_mod_write_byte(0x800F0023u,16);
+        put32(p2+8,100u<<16);put32(p2+12,200u<<16);cpu.gpr[6]=PLAYER;
+        /* A transiently missing P2 box must not close a hatch above them. */
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);
+        CHECK(!latch_calls && !psx_mod_read_byte(fan+5) && !psx_mod_read_byte(PLAY+0x10));
+        put32(p2+0x68,0x800F0020u);
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);CHECK(!latch_calls);
+        put32(p2+12,80u<<16);
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);CHECK(latch_calls==1);
     }
     reset();
     /* The ordinary unlocked enrollment policy is retained. READY has not
@@ -1948,6 +1970,24 @@ int main(void) {
     psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
     mmx4_coop_call(&cpu,0x8001FF8Cu,0,0);
     CHECK(!warp_phase && mmx4_coop_alive(1) && p2[0x5C]==12 && world_calls==1);
+
+    /* The Mushroom lift's initial native gate must use the sole survivor.
+     * It must not revive P1, change campaign ownership, or update twice. */
+    const uint32_t survivor_lift=0x80165A30u;
+    reset();psx_mod_write_byte(MMX4_PLAY+12,3);psx_mod_write_byte(MMX4_PLAY+13,1);
+    psx_mod_write_byte(survivor_lift,1);psx_mod_write_byte(survivor_lift+1,14);psx_mod_write_byte(survivor_lift+4,1);
+    psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+5,0);
+    psx_mod_write_byte(PLAYER+0x5C,0);p2[5]=2;
+    scene_calls=0;cpu.gpr[4]=survivor_lift;
+    CHECK(mmx4_coop_lifecycle_lift_start(&cpu,0x800C3880u));
+    CHECK(scene_calls==1 && psx_mod_read_byte(survivor_lift+6)==1 && !projected);
+    CHECK(!psx_mod_read_byte(PLAYER+5) && !psx_mod_read_byte(PLAYER+0x5C));
+    CHECK(p2[5]==2 && p2[0x5C]==12 && observed_campaign==0);
+    CHECK(!script_active && !warp_pending && !warp_phase);
+    /* A corpse in another stage is not a Mushroom lift admission. */
+    psx_mod_write_byte(survivor_lift+6,0);psx_mod_write_byte(MMX4_PLAY+12,1);
+    CHECK(!mmx4_coop_lifecycle_lift_start(&cpu,0x800C3880u));
+    CHECK(!psx_mod_read_byte(survivor_lift+6));
 
     /* P2 may trigger a native portal first. Its scene sees the original
      * campaign, while only P2 receives native body/action writes. */

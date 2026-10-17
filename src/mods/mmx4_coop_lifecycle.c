@@ -1528,7 +1528,14 @@ static int fan_latch(CPUState *cpu,uint32_t address) {
     int x=players[1].world_x-camera_x,y=players[1].world_y-camera_y;
     if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
     uint32_t player_box=body_word(body,0x68),platform_box=psx_mod_read_word(actor+0x68);
-    if(!player_box || !platform_box)return 0;
+    if(!platform_box)return 0;
+    /* X's native movement transition briefly clears its collision box.
+     * Missing geometry is not evidence that the living on-screen partner
+     * has cleared the hatch. Wait for its next ordinary contact box. */
+    if(!player_box) {
+        psx_mod_counter_add("mmx4.coop.latch-waits",1);
+        return mmx4_coop_finish(cpu,0);
+    }
     /* Original800C36E8 closes only when PLAYER's collision bottom clears
      * the platform's top. Apply that same test to the second body before
      * the native routine freezes input and begins the closing animation. */
@@ -1857,6 +1864,21 @@ int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {
 }
 static int scene_actor(CPUState *cpu,uint32_t address) {
     return mmx4_coop_combat_canonical_call(cpu,address,scene_actor_canonical);
+}
+int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(!mmx4_coop_ready() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY+12)!=3 || psx_mod_read_byte(PLAY+13)!=1 ||
+       !door_pool_actor(actor) || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=14 || psx_mod_read_byte(actor+4)!=1 ||
+       psx_mod_read_byte(actor+5) || psx_mod_read_byte(actor+6) ||
+       mmx4_coop_alive(0) || !mmx4_coop_alive(1))return 0;
+    /* Native C3A7C waits for PLAYER.action before starting the shared lift.
+     * A completed P1 death leaves action zero forever. Run that admission
+     * update with the living rider; retain one lift/panel/collision update
+     * and restore the canonical corpse and campaign afterward. Subsequent
+     * ascent and authored ceiling-panel destruction remain native. */
+    return scene_actor(cpu,address);
 }
 static int cyber_flip_query(CPUState *cpu,uint32_t address) {
     if(flip_guard || !mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||

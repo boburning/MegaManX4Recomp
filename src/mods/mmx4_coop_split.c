@@ -189,13 +189,16 @@ static int destructible_camera_unlock(CPUState *cpu,uint32_t address) {
 }
 static int mushroom_lift_camera(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
-    if(lift_camera_call || !available() || psx_mod_read_byte(MMX4_PLAY+12)!=3 ||
+    if(lift_camera_call)return 0;
+    if(!available())return mmx4_coop_lifecycle_lift_start(cpu,address);
+    if(psx_mod_read_byte(MMX4_PLAY+12)!=3 ||
        actor<0x80165A30u || actor>=0x80166BB0u || (actor-0x80165A30u)%0x8Cu ||
        !psx_mod_read_byte(actor) || psx_mod_read_byte(actor+1)!=14)return 0;
     initialize_cameras();
     uint8_t before[CAMERA_BYTES];read_bytes(CAMERA,before,sizeof before);
     lift_camera_call=1;
-    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    uint32_t result=mmx4_coop_lifecycle_lift_start(cpu,address)?cpu->gpr[2]:
+        mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     /* Native C3B40 releases the lift's vertical targets from2048 to720.
      * C3BA4/C3C9C subsequently change the current limits at its top. Apply
      * those authored writes to every view in this shaft, once, without
