@@ -239,6 +239,24 @@ static void attack_reaction_character(CPUState *cpu,uint32_t address) {
         cpu->gpr[2]=reaction_character-1u;
 }
 
+static void owl_release_partner(CPUState *cpu,uint32_t address) {
+    /* Retail clears PLAYER+BA when Owl releases or aborts his grab. Both
+     * bodies can be caught by that one attack, but the selected AI target
+     * can change before release. Apply the same native release to the other
+     * captured body; preserve negative pending damage/throw commands. */
+    if(!actor_call || actor_suspended || actor_pool!=0x80021234u ||
+       !mmx4_coop_ready() || psx_mod_local_view_scope())return;
+    uint32_t actor=cpu->gpr[address==0x8007687Cu?17:16];
+    if(actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
+       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=60)return;
+    uint8_t *partner=mmx4_coop_projected()?mmx4_coop_first_body():mmx4_coop_second_body();
+    if(partner[0xBA]==1) {
+        partner[0xBA]=0;
+        psx_mod_counter_add("mmx4.coop.owl-partner-releases",1);
+    }
+}
+
 static int spider_web(uint32_t actor) {
     return actor>=SECONDARY_POOL && actor<SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE &&
         !((actor-SECONDARY_POOL)%SECONDARY_STRIDE) && psx_mod_read_byte(actor+1)==22;
@@ -391,7 +409,11 @@ static int personal_effect(CPUState *cpu,uint32_t address) {
      * frame/position. Reading the other hero's pose deletes them immediately.
      * Type 7 follows PLAYER/Double. Type 2 is X's delayed charge release:
      * it uses the owner's assembly/pose, then allocates a native projectile
-     * at 800AF0A4. Keep that allocation in the owner's private shot pool. */
+     * at 800AF0A4. Keep that allocation in the owner's private shot pool.
+     * Type26 follows a shot through +50 and copies its graphics at B2924.
+     * That address names the allocating seat's projected shot arena. With
+     * P1 restored it can instead name Zero's simultaneous Ryuuenjin; the
+     * X-only effect frame then decodes unrelated bytes over PLAY state. */
     personal_effect_call=1;mmx4_coop_enter_second();
     uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     mmx4_coop_leave_second();personal_effect_call=0;
@@ -859,6 +881,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800AED18u,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800AF22Cu,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800AEED8u,personal_effect);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800B28CCu,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B2A3Cu,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B2AD0u,personal_effect);
     psx_mod_register_function_filter_plugin(COOP_ID,PARTICLE_ALLOCATE,allocate_particle);
@@ -879,6 +902,12 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_instruction_plugin(COOP_ID,0x80082644u,0,attack_reaction_character);
     psx_mod_register_instruction_plugin(COOP_ID,0x800850DCu,0,attack_reaction_character);
     psx_mod_register_instruction_plugin(COOP_ID,0x80091344u,0,attack_reaction_character);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80075694u,0xA0201982u,owl_release_partner);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800763D0u,0xA0201982u,owl_release_partner);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800764D4u,0xA0201982u,owl_release_partner);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800767E4u,0xA0201982u,owl_release_partner);
+    psx_mod_register_instruction_plugin(COOP_ID,0x8007687Cu,0xA0201982u,owl_release_partner);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800778C8u,0xA0201982u,owl_release_partner);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021300u,0x0040F809u,redirect_actor);
     psx_mod_register_instruction_plugin(COOP_ID,0x80021518u,0x0040F809u,redirect_actor);
     psx_mod_register_guest_function_plugin(COOP_ID,ACTOR_DISPATCH,update_actor);

@@ -791,6 +791,29 @@ static void prepare_direct_spawn(CPUState *cpu,unsigned campaign) {
 }
 int main(void) {
     CPUState cpu={0};reset();
+    /* Hub return pads include Slash's wall-adjacent spawn. Enrollment may
+     * prefer +24 elsewhere; a refight return must wait for the existing
+     * standing-box/floor probe before making either counterpart visible. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned checkpoint=11;checkpoint<=18;++checkpoint) {
+        reset();psx_mod_write_byte(PLAY+12,12);psx_mod_write_byte(PLAY+0x1D,(uint8_t)checkpoint);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_word(PLAYER+8,640u<<16);psx_mod_write_word(PLAYER+12,180u<<16);
+        psx_mod_write_byte(PLAYER+0x89,8);
+        mmx4_coop_call(&cpu,0x80035EA4u,PLAYER,0);
+        put32(p2+8,664u<<16);put32(p2+12,180u<<16);
+        mmx4_coop_lifecycle_enrolled(&cpu);
+        CHECK(warp_phase==1 && !p2[0] && !p2[3] && !incoming_calls[1]);
+        CHECK(psx_mod_read_word(PLAYER+8)==640u<<16 && psx_mod_read_byte(PLAYER+0x5C)==16);
+        terrain_contact=12;
+        for(unsigned tick=0;tick<3;++tick)warp_tick(&cpu);
+        CHECK(warp_phase==1 && !p2[3] && p2[0x5C]==12 && !incoming_calls[1]);
+        terrain_contact=8;
+        for(unsigned tick=0;tick<3;++tick)warp_tick(&cpu);
+        CHECK(warp_phase==2 && p2[0] && p2[3] && incoming_calls[1]==1);
+        CHECK(body_word(p2,8)==640u<<16 && p2[0x70]==8 && p2[0x89]==8 && p2[0x5C]==12);
+        CHECK(!projected && psx_mod_read_byte(PLAY+0x43)==campaign);
+    }
     /* Bike entry may enroll under READY, but never resurrect a carried death
      * or treat an ordinary checkpoint/story lock as this initial entrance. */
     reset();psx_mod_write_byte(PLAY+0x0C,5);psx_mod_write_byte(PLAY+0x1C,1);

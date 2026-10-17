@@ -8,6 +8,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CoopHookRegistrationTest(unittest.TestCase):
+    def test_instruction_callbacks_are_emitted(self):
+        config = tomllib.loads((ROOT / 'game.toml').read_text(encoding='utf-8'))
+        emitted = {int(value, 16) for value in config['recompiler']['mod_instruction_sites']}
+        pattern = re.compile(r'psx_mod_register_instruction_plugin\s*\('
+                             r'\s*(?:ID|COOP_ID)\s*,\s*(0x[0-9a-fA-F]+)[uU]?\s*,')
+        for source in (ROOT / 'src/mods').glob('mmx4_coop_*.c'):
+            for match in pattern.finditer(source.read_text(encoding='utf-8')):
+                address = int(match.group(1), 16)
+                self.assertIn(address, emitted,
+                              f'Missing emitted instruction callback in {source.name}: {address:#x}')
+
     def test_guest_dispatch_address_is_in_runtime_function_aperture(self):
         source = (ROOT / 'src/mods/mmx4_coop_combat.c').read_text(encoding='utf-8')
         address = int(re.search(r'#define ACTOR_DISPATCH (0x[0-9A-Fa-f]+)u', source)[1], 16)
