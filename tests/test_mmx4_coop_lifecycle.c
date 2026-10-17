@@ -1703,6 +1703,29 @@ int main(void) {
         CHECK(psx_mod_read_byte(PLAYER+2)==character && !projected);
     }
 
+    /* A real checkpoint transport can overtake a still-incoming passenger.
+     * The global loader requires canonical state3 even when that P1 pose was
+     * already hidden by the scene lock. Retain its cached return resources. */
+    for(unsigned owner=0;owner<2;++owner)for(unsigned phase=1;phase<=2;++phase)
+    for(unsigned dead=0;dead<2;++dead) {
+        reset();script_active=1;script_owner=warp_owner=owner;warp_phase=phase;
+        warp_active=warp_visible=1;warp_origin_x=123u<<16;warp_origin_y=456u<<16;
+        unsigned passenger=owner^1u;
+        if(owner)p2[4]=3;else psx_mod_write_byte(PLAYER+4,3);
+        if(passenger) {p2[0]=p2[3]=0;p2[4]=(uint8_t)(dead?2:1);p2[5]=p2[6]=0;}
+        else {psx_mod_write_byte(PLAYER,0);psx_mod_write_byte(PLAYER+3,0);
+            psx_mod_write_byte(PLAYER+4,(uint8_t)(dead?2:1));
+            psx_mod_write_byte(PLAYER+5,0);psx_mod_write_byte(PLAYER+6,0);}
+        psx_mod_write_byte(PLAY+0x0F,64);psx_mod_write_byte(PLAY+0x1C,1);
+        warp_tick(&cpu);CHECK(warp_phase==(dead?phase:3u) && !projected);
+        CHECK(warp_active==1 && warp_visible==1 && warp_origin_x==123u<<16 && warp_origin_y==456u<<16);
+        if(!dead) {
+            warp_tick(&cpu);warp_tick(&cpu);
+            CHECK(warp_phase==1 && psx_mod_read_byte(PLAYER+4)==3 && p2[4]==3);
+            CHECK((passenger?p2[0x5C]:psx_mod_read_byte(PLAYER+0x5C))==(passenger?12:16));
+        }
+    }
+
     /* A winner's state3 is a completed departure, not a dead owner to rescue.
      * Finish either passenger's outgoing beam during completion, so native
      * stage termination sees canonical state3; keep the passenger outside. */

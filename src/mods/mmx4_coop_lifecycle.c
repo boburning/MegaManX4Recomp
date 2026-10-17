@@ -866,7 +866,18 @@ static void warp_tick(CPUState *cpu) {
         if(seat)mmx4_coop_leave_second();
         return;
     }
-    if(psx_mod_read_byte(PLAY+0x0F))return;
+    if(psx_mod_read_byte(PLAY+0x0F)) {
+        /* A new real transport can overtake an earlier incoming beam.
+         * Hiding that pose leaves canonical P1 state1 forever, whereas the
+         * native checkpoint loader waits for state3. Complete an outgoing
+         * beam for the existing passenger without resampling its saved HP,
+         * visibility or return origin. Already-departed/dead bodies stay so. */
+        unsigned passenger_state=seat?second[4]:psx_mod_read_byte(PLAYER+4);
+        unsigned passenger_hp=(seat?second[0x5C]:psx_mod_read_byte(PLAYER+0x5C))&127u;
+        if(script_active && script_owner==warp_owner && passenger_state==1 && passenger_hp)
+            start_outgoing(cpu,seat);
+        return;
+    }
     if(warp_phase==2 && !mmx4_coop_alive(warp_owner)) {
         /* The incoming player is alive even if their partner dies before
          * the return pose finishes; release control before team-wipe checks. */
