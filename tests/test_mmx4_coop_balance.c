@@ -4,11 +4,13 @@
 #include <string.h>
 #define CHECK(x) do {if(!(x)){fprintf(stderr,"line%d: %s\n",__LINE__,#x);exit(1);}}while(0)
 #define BOSS 0x8013BED0u
-#define SAVE_BYTES (8+48*3+48*3*2+2*17*4+48*3*2*4+48*3*2*2)
+#define SAVE_BYTES (8+48*3+48*3*2+2*17*4+48*3*2*4+48*3*2*2+48*3*6)
 static uint8_t ram[0x200000];
 static int enabled,local,ready=1,per_player,projected;
 static unsigned shot_type=255,hero;
 static uint32_t shot_address=0x801406F8u;
+static uint32_t damage_table;
+static unsigned native_clangs;
 static struct {uint32_t address;PSXModFunctionEntryCallback fn;} hooks[32];
 static unsigned count;
 uint8_t psx_mod_read_byte(uint32_t a){return ram[a&0x1fffff];}
@@ -16,6 +18,9 @@ uint32_t psx_mod_read_word(uint32_t a){return psx_mod_read_byte(a)|psx_mod_read_
     psx_mod_read_byte(a+2)<<16|(uint32_t)psx_mod_read_byte(a+3)<<24;}
 void psx_mod_write_byte(uint32_t a,uint8_t v){ram[a&0x1fffff]=v;}
 static void word(uint32_t a,uint32_t v){for(unsigned i=0;i<4;++i)psx_mod_write_byte(a+i,(uint8_t)(v>>(8*i)));}
+void psx_mod_write_word(uint32_t a,uint32_t v){word(a,v);}
+uint16_t psx_mod_read_half(uint32_t a){return (uint16_t)(psx_mod_read_byte(a)|psx_mod_read_byte(a+1)<<8);}
+void psx_mod_write_half(uint32_t a,uint16_t v){psx_mod_write_byte(a,(uint8_t)v);psx_mod_write_byte(a+1,(uint8_t)(v>>8));}
 int psx_mod_local_view_scope(void){return local;}
 int mmx4_coop_ready(void){return ready;}
 int mmx4_coop_projected(void){return projected;}
@@ -36,10 +41,39 @@ static void hook(CPUState *cpu,uint32_t a){
     for(unsigned i=0;i<count;++i)if(hooks[i].address==a){hooks[i].fn(cpu,a);return;}
     CHECK(0);
 }
+/* The relevant original DE30 contract: a rejection table clangs and stamps
+ * a fresh contact before the original boss caller can expire its countdown.
+ * This stub does not choose/project a different table or shorten a timer. */
+uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t actor,uint32_t shot) {
+    CHECK(address==0x8002DE30u);
+    unsigned key=psx_mod_read_byte(shot+0x64),type=psx_mod_read_byte(shot+1);
+    if(key && key==psx_mod_read_byte(actor+0x65))return 0x7Eu;
+    psx_mod_write_byte(actor+0x65,(uint8_t)key);
+    uint32_t table=psx_mod_read_word(actor+0x58);
+    unsigned reaction=psx_mod_read_byte(table+type*2u);
+    if(reaction==255){++native_clangs;return 0x7Fu;}
+    unsigned amount=psx_mod_read_byte(table+type*2u+1u);
+    cpu->gpr[4]=actor;cpu->gpr[5]=shot;cpu->gpr[7]=table;
+    cpu->gpr[2]=amount;cpu->gpr[3]=psx_mod_read_byte(actor+0x5C)-amount;
+    hook(cpu,0x8002DF08u);
+    psx_mod_write_byte(actor+0x5C,(uint8_t)cpu->gpr[3]);
+    return type+1u;
+}
+int mmx4_coop_finish(CPUState *cpu,uint32_t value){cpu->gpr[2]=value;return 1;}
+static unsigned contact(CPUState *cpu,unsigned seat) {
+    if(!mmx4_coop_balance_contact_allowed(cpu->gpr[4],cpu->gpr[5],seat))return 0x7Eu;
+    if(mmx4_coop_balance_project_contact(cpu,0x8002DE30u))return cpu->gpr[2];
+    return mmx4_coop_call(cpu,0x8002DE30u,cpu->gpr[4],cpu->gpr[5]);
+}
 static void actor(unsigned kind,unsigned hp){
     memset(ram,0,sizeof ram);mmx4_coop_balance_reset();
     psx_mod_write_byte(BOSS,0x41);psx_mod_write_byte(BOSS+1,(uint8_t)kind);
     psx_mod_write_byte(BOSS+4,1);psx_mod_write_byte(BOSS+0x5C,(uint8_t)hp);
+}
+static uint32_t memory_digest(void) {
+    uint32_t value=2166136261u;
+    for(unsigned i=0;i<sizeof ram;++i)value=(value^ram[i])*16777619u;
+    return value;
 }
 static unsigned hit(unsigned amount,int rejected){
     unsigned hp=psx_mod_read_byte(BOSS+0x5C);
@@ -58,10 +92,14 @@ static unsigned timed_hit(unsigned seat,unsigned amount,unsigned ticks) {
     unsigned hp=psx_mod_read_byte(BOSS+0x5C);
     CPUState cpu={0};cpu.gpr[4]=cpu.gpr[16]=BOSS;cpu.gpr[2]=amount;cpu.gpr[3]=hp-amount;
     cpu.gpr[5]=shot_address;psx_mod_write_byte(cpu.gpr[5]+1,(uint8_t)shot_type);
+    cpu.gpr[7]=damage_table;
     psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)hero);
     mmx4_coop_balance_begin(BOSS);hook(&cpu,0x8002DF08u);
     psx_mod_write_byte(BOSS+0x5C,(uint8_t)cpu.gpr[3]);
+    word(BOSS+0x58,0x801060F0u);
+    word(0x8008CEC0u,0xA202008Bu);
     cpu.gpr[2]=ticks;hook(&cpu,0x8008CEC0u);
+    psx_mod_write_byte(BOSS+0x8B,(uint8_t)cpu.gpr[2]);
     mmx4_coop_balance_end();projected=0;return cpu.gpr[2];
 }
 int main(void){
@@ -270,6 +308,60 @@ int main(void){
         mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
         CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
     }
+    /* A fresh partner attack must not clang on the shared recovery table
+     * while their private timer is ready. Exercise both attacker orders,
+     * the exact min1 window, the post-hit caller, no-hit cleanup, snapshots
+     * and an actual invulnerable phase with no hit countdown. */
+    for(unsigned first=0;first<2;++first) {
+        actor(57,48);damage_table=0x80107A78u;hero=0;shot_type=0;
+        psx_mod_write_byte(damage_table+1,1);
+        psx_mod_write_byte(damage_table+24*2u+1,2);
+        for(unsigned t=0;t<40;++t)psx_mod_write_byte(0x801060F0u+t*2u,255);
+        CHECK(timed_hit(first,1,64)==1);
+        word(BOSS+0x58,0x801060F0u);psx_mod_write_byte(BOSS+0x8B,1);
+        const uint32_t shot=0x801406F8u;
+        psx_mod_write_byte(shot+1,24);psx_mod_write_byte(shot+0x64,1);
+        projected=(int)(first^1u);psx_mod_write_byte(MMX4_PLAYER+2,1);
+        cpu=(CPUState){0};cpu.gpr[4]=cpu.gpr[16]=BOSS;cpu.gpr[5]=shot;
+        mmx4_coop_balance_begin(BOSS);native_clangs=0;
+        CHECK(contact(&cpu,first^1u)==25);
+        CHECK(native_clangs==0 && psx_mod_read_byte(BOSS+0x5C)==47);
+        CHECK(psx_mod_read_word(BOSS+0x58)==damage_table);
+        CHECK(!psx_mod_read_byte(BOSS+0x8B));
+        /* The selected hit reaches the original caller with zero shared
+         * countdown so its ordinary reaction/new cooldown is not discarded. */
+        word(BOSS+0x58,0x801060F0u);cpu.gpr[2]=64;hook(&cpu,0x8008CEC0u);
+        psx_mod_write_byte(BOSS+0x8B,(uint8_t)cpu.gpr[2]);
+        CHECK(!mmx4_coop_balance_hit_allowed(BOSS,first));
+        CHECK(!mmx4_coop_balance_hit_allowed(BOSS,first^1u));
+        mmx4_coop_balance_end();projected=0;
+        io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
+        CHECK(mmx4_coop_balance_snapshot(&io));digest=mmx4_coop_balance_digest(1);
+        mmx4_coop_balance_reset();
+        io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_READ,1};
+        CHECK(mmx4_coop_balance_snapshot(&io) && digest==mmx4_coop_balance_digest(1));
+        /* After private expiry, an unchanged duplicate restores the native
+         * table/countdown for its original cleanup instead of restarting it. */
+        for(unsigned tick=0;tick<32;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+        psx_mod_write_byte(BOSS+0x8B,1);word(BOSS+0x58,0x801060F0u);
+        mmx4_coop_balance_begin(BOSS);cpu.gpr[4]=BOSS;cpu.gpr[5]=shot;
+        CHECK(contact(&cpu,first^1u)==0x7Eu);
+        CHECK(psx_mod_read_byte(BOSS+0x8B)==1 && psx_mod_read_word(BOSS+0x58)==0x801060F0u);
+        psx_mod_write_byte(BOSS+0x8B,0);psx_mod_write_byte(BOSS+0x65,0);
+        CHECK(contact(&cpu,first^1u)==0x7Fu); /* Real phase, not a hit countdown. */
+        CHECK(native_clangs==1);
+        word(BOSS+0x58,damage_table); /* Original expiry completes. */
+        mmx4_coop_balance_end();
+        word(BOSS+0x58,0x801060F0u);psx_mod_write_byte(BOSS+0x8B,1);
+        mmx4_coop_balance_begin(BOSS);
+        CHECK(!mmx4_coop_balance_project_contact(&cpu,0x8002DE30u)); /* Later phase cannot inherit the old window. */
+        mmx4_coop_balance_end();mmx4_coop_balance_forget(BOSS);
+        psx_mod_write_byte(BOSS+0x8B,1);cpu.gpr[4]=BOSS;
+        mmx4_coop_balance_begin(BOSS);
+        CHECK(!mmx4_coop_balance_project_contact(&cpu,0x8002DE30u));
+        mmx4_coop_balance_end();
+    }
+    damage_table=0;shot_type=255;hero=0;projected=0;
     per_player=0;mmx4_coop_balance_activate();
     CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
@@ -279,5 +371,31 @@ int main(void){
     enabled=0;mmx4_coop_balance_activate();
     CHECK(timed_hit(1,2,64)==64); /* Original balance stays native. */
     CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    enabled=per_player=1;mmx4_coop_balance_activate();actor(57,48);
+    uint32_t before_memory=memory_digest();
+#if MMX4_COOP_NETPLAY_DEBUG
+    io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
+    CHECK(mmx4_coop_balance_snapshot(&io));
+    CHECK(mmx4_coop_balance_development_mode(0));
+    CHECK(memory_digest()==before_memory);
+    io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(!mmx4_coop_balance_snapshot(&io)); /* No weakened cross-mode restore. */
+    CHECK(hit(2,0)==46);
+    CHECK(mmx4_coop_balance_development_mode(1));CHECK(hit(2,0)==45);
+    io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(mmx4_coop_balance_snapshot(&io));
+    CHECK(!mmx4_coop_balance_development_mode(2));
+    local=1;CHECK(!mmx4_coop_balance_development_mode(0));local=0;
+    projected=1;CHECK(!mmx4_coop_balance_development_mode(0));projected=0;
+    ready=0;CHECK(!mmx4_coop_balance_development_mode(0));ready=1;
+    mmx4_coop_balance_begin(BOSS);
+    CHECK(!mmx4_coop_balance_development_mode(0));mmx4_coop_balance_end();
+    enabled=0;CHECK(!mmx4_coop_balance_development_mode(1));
+    enabled=1;per_player=0;mmx4_coop_balance_activate();
+    CHECK(!mmx4_coop_balance_development_mode(0));
+#else
+    CHECK(!mmx4_coop_balance_development_mode(0));
+    CHECK(memory_digest()==before_memory);CHECK(hit(2,0)==47);
+#endif
     puts("Boss scaling preserves weak hits, separate pools, rejected hits and snapshots.");return 0;
 }

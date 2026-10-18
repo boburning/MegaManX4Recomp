@@ -29,6 +29,14 @@ class Scenarios:
         from coop_balance_scenarios import boss_balance
         return boss_balance(self, spider=True)
 
+    def balance_saved_control(self):
+        from coop_balance_saved_scenario import balance_saved_control
+        return balance_saved_control(self)
+
+    def balance_saved_slashes(self):
+        from coop_balance_saved_scenario import balance_saved_slashes
+        return balance_saved_slashes(self)
+
     def __init__(self, runtime, output, campaign, victory_seat=1,clears=16):
         self.r, self.output, self.campaign = runtime, output, campaign
         self.victory_seat=victory_seat
@@ -133,6 +141,111 @@ class Scenarios:
         assert after['lives']==before['lives'],after
         self.sample('owl-team-exit-after',True)
         return dict(before=before,after=after)
+
+    def storm_exit_race(self):
+        """P2 crosses the real final gap, including during P1's death.
+
+        The older survivor case waits for state3 before entering and cannot
+        expose a death dispatcher suspended by the native forward fade.
+        """
+        cases=[]
+        for dying in (False,True):
+            self.load(7,0);self.r.fixture(5,3)
+            # Observed safe final ledge, before the6352 native exit test.
+            # Both fit Unified's separation bound; movement crosses the gap.
+            self.r.teleport_both(6240,426)
+            before=self.sample('owl-race-before-'+str(dying),True)
+            if dying:self.r.fixture(2,0,0)
+            tick=lambda:struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]
+            first=tick();deadline=time.monotonic()+5
+            self.r.input(0x9fdf,1)
+            try:
+                while tick()-first<4:
+                    if time.monotonic()>=deadline:raise TimeoutError('Owl jump world clock stopped')
+                    time.sleep(.005)
+                self.r.input(0xdfdf,1)
+                self.wait('owl-race-native-section',lambda v:v['section']==1,15)
+            finally:self.r.release()
+            after=self.wait('owl-race-both-return',lambda v:v['stage']==7 and v['section']==1 and
+                v['mode'][:2]==[6,0] and not v['freeze'] and all(p['active'] and p['visible'] and
+                p['hp'] and p['state']==1 and p['action']==2 for p in v['players']),40)
+            assert after['lives']==before['lives'],(before,after)
+            self.sample('owl-race-after-'+str(dying),True)
+            cases.append(dict(p1_dying=dying,before=before,after=after))
+        return dict(native_exit_races=cases)
+
+    def storm_midboss_exit(self):
+        """Defeat the original Core, then let P2 follow P1 out of its room.
+
+        Setup uses the existing synchronized enemy-health fixture. A native
+        attack supplies the final hit; the original death animation, camera
+        release and map edits must complete without further state writes.
+        This scenario works with Runtime and NetplayRuntime.
+        """
+        cases = []
+        for owner in (0, 1):
+            self.load(7, 1)
+            self.r.fixture(5, 3)
+            self.r.fixture(7, self.campaign ^ 1, 0, 1)
+            self.r.teleport_both(2150, 939)
+            self.r.teleport(1, 2170, 938)
+            try:
+                self.r.input(0xffdf, 0)
+                self.r.input(0xffdf, 1)
+                self.wait('owl-core-approach', lambda v:
+                    all(p['x'] >= 2490 and p['state'] == 1 and not p['door']
+                        for p in v['players']) and not v['blocked'] and
+                    any(e['type'] == 70 and e['hp'] > 0 and e['state'][0] == 1
+                        for e in self.enemies()), 30)
+                self.r.release()
+                # The finishing player stays nearest during the death update.
+                # P2 therefore also exercises the projected actor context.
+                self.r.input(0xff7f, owner ^ 1)
+                self.wait('owl-core-attacker-nearest', lambda v:
+                    v['players'][owner]['x'] - v['players'][owner ^ 1]['x'] >= 24, 8)
+                self.r.release()
+                core = next(e for e in self.enemies() if e['type'] == 70 and e['hp'] > 0)
+                self.sample('owl-core-live-' + str(owner), True)
+                self.r.fixture(6, core['slot'], 1)
+                deadline = time.monotonic() + 30
+                while time.monotonic() < deadline:
+                    if not any(e['type'] == 70 and e['hp'] > 0 and e['state'][0] == 1
+                               for e in self.enemies()):
+                        break
+                    self.r.input(0xbfff, owner)
+                    time.sleep(.10)
+                    self.r.input(0x7fff, owner)
+                    time.sleep(.10)
+                    self.r.input(0xffff, owner)
+                    time.sleep(.20)
+                else:
+                    raise TimeoutError('No native final hit on Generaid Core')
+                self.r.release()
+                self.wait('owl-core-retired', lambda v:
+                    not any(e['type'] == 70 for e in self.enemies()), 20)
+                self.sample('owl-core-retired-' + str(owner), True)
+                self.r.input(0xffdf, 0)
+                self.wait('owl-p1-clears-core-room', lambda v:
+                    v['players'][0]['x'] > 2600, 12)
+                self.r.release()
+                self.sample('owl-p1-ahead-core-' + str(owner), True)
+                # Unified constrains separation. Keep the leader walking
+                # while P2 follows, rather than demand an impossible gap.
+                self.r.input(0xffdf, 0)
+                self.r.input(0xffdf, 1)
+                self.wait('owl-p2-clears-core-room', lambda v:
+                    v['players'][1]['x'] > 2780, 12)
+                self.r.release()
+                after = self.wait('owl-core-both-idle', lambda v:
+                    not v['blocked'] and not v['freeze'] and all(
+                        p['active'] and p['visible'] and p['hp'] and
+                        p['state'] == 1 and p['action'] == 2 and
+                        not p['door'] and not p['script'] for p in v['players']), 12)
+                self.sample('owl-core-followed-' + str(owner), True)
+                cases.append(dict(final_hit_owner=owner, after=after))
+            finally:
+                self.r.release()
+        return dict(native_midboss_exits=cases)
 
     def x_armor(self):
         """Render each shared armor upgrade on X in either roster.
@@ -942,6 +1055,70 @@ class Scenarios:
             cases.append(dict(owner=owner,arrival=arrived,enemies=self.enemies()))
         return dict(native_approaches=cases,both_alive=True)
 
+    def teleport_fall(self):
+        """A setup teleport must retain native gravity without synthetic inputs."""
+        cases=[]
+        # Jungle can reinitialize acceleration in its native fall path; Frost's
+        # idle destination exposed the lost +2C value. Keep both native setups.
+        for stage,checkpoint,positions in((1,0,(500,556)),(2,1,(2213,2253))):
+            self.load(stage,0,checkpoint);self.r.fixture(5,3)
+            self.wait('teleport-fall-native-ready',lambda v:all(p['hp'] and p['visible'] and
+                p['state']==1 and p['action']==2 and not p['script'] for p in v['players']),15)
+            for seat,x in enumerate(positions):self.r.teleport(seat,x,300)
+            label='teleport-fall-'+str(stage)
+            before=self.sample(label+'-start',True)
+            after=self.wait(label+'-falling',lambda v:all(p['hp'] and p['y']>340
+                for p in v['players']),8)
+            grounded=self.wait(label+'-landed',lambda v:all(p['hp'] and p['grounded'] and
+                p['action']==2 for p in v['players']),8)
+            self.sample(label+'-grounded',True)
+            cases.append(dict(stage=stage,checkpoint=checkpoint,before=before['players'],
+                falling=after['players'],landed=grounded['players']))
+        return dict(native_falls=cases)
+
+    def intro_platform_leader(self):
+        """Either hero crosses a real falling-platform trigger in Intro part2."""
+        results=[]
+        for owner in (0,1):
+            self.load(0,1,1);self.r.fixture(5,3)
+            self.wait('intro-platform-arrivals-'+str(owner),lambda v:not v['blocked'] and
+                all(p['active'] and p['visible'] and p['hp'] and p['state']==1 and
+                    p['action']==2 and not p['script'] and not p['door'] for p in v['players']),15)
+            # Follow the original raised floor from checkpoint1. Avoid
+            # transplanting a lower corridor's443 root into its solid tiles.
+            self.r.input(0xffdf,0);self.r.input(0xffdf,1)
+            try:
+                self.wait('intro-platform-approach-'+str(owner),lambda v:
+                    max(p['x'] for p in v['players'])>=1872,8)
+            finally:self.r.release()
+            def platform():
+                pool=self.r.read(0x80165a30,32*0x8c)
+                for slot in range(32):
+                    body=pool[slot*0x8c:(slot+1)*0x8c]
+                    if body[0] and body[1:3]==bytes((1,5)):
+                        return dict(address=hex(0x80165a30+slot*0x8c),state=list(body[4:7]),
+                            x=struct.unpack_from('<i',body,8)[0]/65536,
+                            y=struct.unpack_from('<i',body,12)[0]/65536,body=body.hex())
+            self.wait('intro-platform-loaded-'+str(owner),lambda _:platform() is not None,8)
+            before=platform();assert before['state'][0:2]==[1,0],before
+            self.sample('intro-platform-before-'+str(owner),True)
+            self.r.input(0xffdf,owner)
+            try:
+                self.wait('intro-platform-native-crossing-'+str(owner),lambda v:v['players'][owner]['x']>=2010,8)
+            finally:self.r.release()
+            after=self.sample('intro-platform-after-'+str(owner),True)
+            deadline=time.monotonic()+3
+            while time.monotonic()<deadline:
+                moved=platform()
+                if moved and moved['y']>before['y']+8:break
+                time.sleep(.025)
+            result=dict(owner=owner,before=before,after=moved,players=after['players'])
+            results.append(result)
+            (self.output/'intro-platform-evidence.json').write_text(json.dumps(results,indent=2))
+            assert all(p['hp'] and p['visible'] for p in after['players']),after
+            assert moved and moved['y']>before['y']+8,('Native platform did not drop for leader',result)
+        return dict(native_platforms=results)
+
     def intro(self):
         self.load(0, 1, 2)
         self.r.teleport_both(4208, 443)
@@ -1519,6 +1696,119 @@ class Scenarios:
         return dict(native_orb_capture=True,withdrawal_while_captured=after-before,
                     capture_locks=captured['personal_locks'][1])
 
+    def cyber_course_leader(self):
+        """Finish a timed course as P2, including its native assessment.
+
+        Hub-only handoff coverage omits the targeting graphic that produces
+        the timed course's completion signal. Keep P1 behind the endpoint.
+        """
+        self.load(6,0);self.r.fixture(5,3)
+        def assessment_ready(_):
+            pool=self.r.read(0x80173ca0,64*0x60)
+            return any(pool[i*0x60] and pool[i*0x60+1]==34 and
+                pool[i*0x60+4:i*0x60+6]==bytes((1,2)) for i in range(64))
+        # An instantaneous P1 teleport can cull the initial native analysis
+        # graphic before the camera catches up, invalidating the setup itself.
+        # Move through observed36 route samples in bounded steps instead; let
+        # the native camera/graphic advance between them. No event or grading
+        # state is written. Coordinates are Zero's; X's floor origin is +1Y.
+        route=((131,162),(193,133),(259,166),(321,142),(387,147),(452,154),
+            (515,162),(577,134),(643,144),(705,141),(771,63),(836,170),
+            (897,134),(965,132),(1025,163),(1088,202),(1154,202),(1216,152),
+            (1280,74),(1346,59),(1408,125),(1474,186),(1539,174),(1601,122),
+            (1667,130),(1712,154))
+        tick=lambda:struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]
+        assessment_started=False
+        for x,y in route:
+            self.r.teleport_both(x,y+(self.campaign==0))
+            self.r.teleport(1,x,y+(self.campaign==1))
+            first=tick();deadline=time.monotonic()+5
+            while tick()-first<10:
+                if time.monotonic()>=deadline:raise TimeoutError('Cyber setup world clock stopped')
+                time.sleep(.005)
+            if x>=400 and not assessment_started:
+                # The actual native entry threshold is400, not stage load.
+                # Keep this first platform through its opening scan animation.
+                self.wait('cyber-course-initial-assessment-ready',assessment_ready,15)
+                assessment_started=True
+        # Last safe platform observed in the supplied36 recording, before
+        # the native1792 endpoint. P1 remains within Unified's normal bounds.
+        self.r.teleport(1,1744,154+(self.campaign==1))
+        before=self.sample('cyber-course-p2-before',True)
+        self.r.input(0xffdf,1)
+        try:
+            self.wait('cyber-course-p2-assessed',lambda v:v['players'][1]['script']!=0,12)
+            self.wait('cyber-course-native-checkpoint',lambda v:v['checkpoint']in(1,2),20)
+        finally:self.r.release()
+        after=self.wait('cyber-course-p2-both-return',lambda v:v['stage']==6 and
+            v['section']==0 and v['checkpoint']in(1,2) and v['mode'][:2]==[6,0] and
+            not v['freeze'] and all(p['active'] and p['visible'] and p['hp'] and
+                p['state']==1 and p['action']==2 for p in v['players']),40)
+        assert after['lives']==before['lives'],(before,after)
+        start_x=[p['x']for p in after['players']]
+        for seat in (0,1):self.r.input(0xffdf,seat)
+        time.sleep(.2);self.r.release()
+        moved=self.sample('cyber-course-p2-after',True)
+        assert all(p['x']>start_x[seat] and p['hp'] for seat,p in enumerate(moved['players'])),moved
+        return dict(before=before,after=after,movement=moved)
+
+    def cyber_indicator(self):
+        """Observe the one native course controller and both drawn indicators."""
+        self.load(6,0);self.r.fixture(5,3)
+        def marker():
+            pool=self.r.read(0x80173ca0,64*0x60)
+            for i in range(64):
+                b=pool[i*0x60:(i+1)*0x60]
+                if b[0] and b[1]==34 and b[4:6]==bytes((1,2)):
+                    return 0x80173ca0+i*0x60,b
+            return None
+        route=((131,162),(193,133),(259,166),(321,142),(387,147),(452,154))
+        opening=[]
+        for x,y in route:
+            self.r.teleport_both(x,y+(self.campaign==0))
+            self.r.teleport(1,x,y+(self.campaign==1))
+            start=struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]
+            deadline=time.monotonic()+5
+            while struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]-start<10:
+                if time.monotonic()>=deadline:raise TimeoutError('Cyber setup clock stopped')
+                time.sleep(.01)
+            if x>=400:
+                self.r.teleport(1,515,162+(self.campaign==1))
+                pool=self.r.read(0x80173ca0,64*0x60)
+                opening=[dict(address=hex(0x80173ca0+i*0x60),body=b.hex())
+                    for i in range(64) if (b:=pool[i*0x60:(i+1)*0x60])[0] and b[1]==34]
+                self.sample('cyber-indicator-opening',True)
+        self.wait('cyber-indicator-free-course',lambda v:marker() is not None and
+            not v['freeze'] and not v['blocked'],15)
+        self.r.teleport(1,515,162+(self.campaign==1))
+        address,body=marker()
+        before=self.sample('cyber-indicator-before',True)
+        ghost=self.r.diagnostic()+0x800
+        ghost_before=self.r.read(ghost,0x60)
+        # Observers only: these rings must never advance grading or completion.
+        peer=self.r.peers[0] if hasattr(self.r,'peers') else self.r
+        peer.request('fntrace_clear')
+        for target in(0x800ce894,0x80024334):peer.request('fntrace_arm',target=hex(target))
+        time.sleep(.6)
+        after=self.sample('cyber-indicator-after',True)
+        counters={c['name']:c['count']for c in self.r.request('mod_counters')['counters']}
+        evidence=dict(before=before,after=after,opening=opening,marker=hex(address),
+            marker_before=body.hex(),marker_after=self.r.read(address,0x60).hex(),
+            ghost_before=ghost_before.hex(),ghost_after=self.r.read(ghost,0x60).hex(),
+            counters=counters,functions=peer.request('fntrace_dump',count=8192))
+        (self.output/'cyber-indicator-evidence.json').write_text(json.dumps(evidence,indent=2))
+        assert all(p['hp'] and p['visible'] for p in after['players']),after
+        assert counters.get('mmx4.coop.p2-analysis-draws',0)>0,'P2 course indicator was never drawn'
+        assert evidence['ghost_before']==evidence['ghost_after'],'Draw actor leaked into saved guest state'
+        assert not counters.get('mmx4.coop.local-view-state-leak',0),counters
+        updates={}
+        for entry in evidence['functions']['entries']:
+            if entry['target']=='0x800CE894':updates[entry['frame']]=updates.get(entry['frame'],0)+1
+        assert len(updates)>=5 and max(updates.values())==1,updates
+        return dict(marker=hex(address),players=after['players'],
+                    analysis_draws=counters['mmx4.coop.p2-analysis-draws'],
+                    native_update_frames=len(updates),max_updates_per_frame=max(updates.values()))
+
     def cyber_course(self):
         cases=[]
         # The native spawn list800F41D0 has six assessment checkpoints.
@@ -1891,7 +2181,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit','intro_platform_leader','teleport_fall','balance_saved_control','balance_saved_slashes'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

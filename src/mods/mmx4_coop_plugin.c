@@ -678,7 +678,15 @@ static void development_teleport(unsigned seat,uint32_t x,uint32_t y) {
     }
     psx_mod_write_word(PLAYER+8,x);psx_mod_write_word(PLAYER+12,y);
     psx_mod_write_word(PLAYER+0x18,x);psx_mod_write_word(PLAYER+0x1C,y);
-    for(unsigned at=0x20;at<0x30;at+=4)psx_mod_write_word(PLAYER+at,0);
+    for(unsigned at=0x20;at<0x2C;at+=4)psx_mod_write_word(PLAYER+at,0);
+    /* +2C is acceleration, not residual velocity. Native32558/32608/326C0
+     * install4200 for an ordinary fall; clearing it after an idle teleport
+     * can leave a healthy character suspended at the destination indefinitely.
+     * Preserve action-specific gravity and attached/scripted movement. */
+    unsigned action=psx_mod_read_byte(PLAYER+5);
+    if(!psx_mod_read_byte(PLAYER+0xC5) && psx_mod_read_byte(PLAYER+4)==1 &&
+       action>=2 && action<0x10 && !psx_mod_read_word(PLAYER+0x2C))
+        psx_mod_write_word(PLAYER+0x2C,0x4200);
     psx_mod_write_byte(PLAYER+0x89,0);psx_mod_write_byte(PLAYER+0x70,0);
     psx_mod_write_byte(PLAYER+0x71,0);
     if(seat)leave_second();
@@ -751,12 +759,14 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
     }else if(command==3 && mmx4_coop_ready()) {
         unsigned checkpoint=first_arg;
         unsigned stage=psx_mod_read_byte(PLAY+0xC),section=psx_mod_read_byte(PLAY+0xD);
-        /* Only original spawn lists whose bounds have been verified. */
+        /* Only original spawn lists whose bounds have been verified. Frost part2
+         * has four pointers at800F417C..800F4188; the last two lead to the
+         * late corridor and boss checkpoint (800F3674/800F3698). */
         if((stage==0 && section==1 && checkpoint<3) ||
            (stage==1 && section==0 && checkpoint<5) ||
            (stage==1 && section==1 && checkpoint<6) ||
            (stage==2 && section==0 && checkpoint<5) ||
-           (stage==2 && section==1 && checkpoint<2) ||
+           (stage==2 && section==1 && checkpoint<4) ||
            (stage==3 && section<=1 && checkpoint<4) ||
            (stage==4 && section==0 && checkpoint<2) ||
            (stage==4 && section==1 && checkpoint<4) ||
@@ -809,6 +819,11 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         psx_mod_write_byte(PLAYER+0x93,(uint8_t)second_arg);
         guest(cpu,0x80037104u,PLAYER,0);guest(cpu,0x800371E4u,PLAYER,0);
         if(first_arg)leave_second();
+        psx_mod_write_word(diagnostic+0x54,1);
+    }else if(command==6 && first_arg==253 && second_arg<=1 &&
+             mmx4_coop_balance_development_mode(second_arg)) {
+        /* Matched saved-fight OFF/ON controls, through the same agreed
+         * developer input in local play and netplay. No actor edits. */
         psx_mod_write_word(diagnostic+0x54,1);
     }else if(command==6 && first_arg==254 && second_arg<4 && mmx4_coop_ready() &&
              psx_mod_read_byte(PLAY+0xC)==2 && psx_mod_read_byte(PLAY+0xD)==1 &&
@@ -1170,6 +1185,27 @@ static int render(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int render_owned_effect(CPUState *cpu,uint32_t address) {
+    uint8_t assessment[0x60];
+    if(!rendering && diagnostic && cpu->gpr[4]>=0x80173CA0u &&
+       cpu->gpr[4]<0x801754A0u && psx_mod_read_byte(cpu->gpr[4]+1)==34 && world_draw_visible() &&
+       mmx4_coop_assessment_copy(cpu->gpr[4],assessment)) {
+        /* Keep a distinct draw address for interpolation identity. This
+         * region is outside all diagnostics and native actor pools. Restore
+         * it before leaving the presentation scope, including private views. */
+        uint32_t actor=cpu->gpr[4],ghost=diagnostic+0x800u;
+        uint8_t saved[0x60];capture(ghost,saved,sizeof saved);
+        project(ghost,assessment,sizeof assessment);
+        rendering=1;
+        uint32_t result=mmx4_coop_split_sprite_outside(actor)?0:
+            guest(cpu,address,actor,cpu->gpr[5]);
+        if(!mmx4_coop_split_sprite_outside(ghost)) {
+            guest(cpu,address,ghost,cpu->gpr[5]);
+            psx_mod_counter_add("mmx4.coop.p2-analysis-draws",1);
+            if(assessment[5]<2)psx_mod_counter_add("mmx4.coop.p2-analysis-opening-draws",1);
+        }
+        project(ghost,saved,sizeof saved);rendering=0;
+        return mmx4_coop_finish(cpu,result);
+    }
     if(mmx4_coop_split_sprite_outside(cpu->gpr[4])) {
         psx_mod_counter_add("mmx4.coop.split-distant-sprite-culled",1);
         return mmx4_coop_finish(cpu,0);
@@ -1392,7 +1428,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x39503458u); /* X4P9, private floor momentum */
+    mmx4_snapshot_fixed(s,0x41503458u); /* X4PA, native per-player hit-table context */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_preference(s,hud_side_by_side);
@@ -1519,7 +1555,7 @@ static void activate(void) {
         assets[i].menu_gfx=space+0x50000;
         if(!space)failed=1;
     }
-    diagnostic=psx_mod_alloc_guest_memory(0x800,16);
+    diagnostic=psx_mod_alloc_guest_memory(0x860,16); /* +0x800: scoped draw actor */
     arena=psx_mod_alloc_texture_packet_memory(2*FRAME_ARENA,16);
     hud_arena=psx_mod_alloc_texture_packet_memory(0x10000,16);
     if(!diagnostic || !arena || !hud_arena)failed=1;

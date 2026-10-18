@@ -43,11 +43,15 @@ uint32_t mmx4_coop_bosses_digest(uint32_t seed);
 uint32_t mmx4_coop_counterpart_story_text(void);
 void mmx4_coop_balance_activate(void);
 void mmx4_coop_balance_reset(void);
+/* Development fixture only; production always refuses. Resets host balance
+ * bookkeeping without modifying any native actor or public mod preference. */
+int mmx4_coop_balance_development_mode(unsigned mode);
 void mmx4_coop_balance_forget(uint32_t actor);
 void mmx4_coop_balance_begin(uint32_t actor);
 void mmx4_coop_balance_end(void);
 int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat);
 int mmx4_coop_balance_contact_allowed(uint32_t actor,uint32_t shot,unsigned seat);
+int mmx4_coop_balance_project_contact(CPUState *cpu,uint32_t address);
 unsigned mmx4_coop_balance_flash_ticks(uint32_t actor);
 int mmx4_coop_balance_snapshot_ready(void);
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s);
@@ -121,6 +125,10 @@ int mmx4_coop_lifecycle_initial_arrival(void);
 int mmx4_coop_lifecycle_nova_active(void);
 /* A projected portal dispatch defers its shared collision until restoration. */
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor);
+/* Preserve the native course completion producer through owner-camera handoff. */
+int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address);
+/* Read-only course graphic copy; no extra native assessment update. */
+int mmx4_coop_assessment_copy(uint32_t actor,uint8_t copy[0x60]);
 /* Shared Mushroom lift admission; returns a handled native result in v0. */
 int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address);
 void mmx4_coop_lifecycle_room_entry(unsigned owner);

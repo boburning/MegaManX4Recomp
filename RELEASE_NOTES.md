@@ -1,4 +1,40 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.36
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.37
+
+**More reliable P2 progression and independent boss hits.**
+
+- Cyber Peacock's course assessment now finishes when P2 enters the portal.
+- Either living hero can trigger Storm Owl's section exit, including an
+  interrupted partner-death sequence. Both Split views leave the midboss room.
+- Intro-stage falling platforms respond to the leading P2.
+- Cyber's course analysis graphic now appears on both heroes.
+- A ready partner can damage a boss during the last shared recovery tick.
+  Scaling retains doubled effective durability and separate, shorter cooldowns.
+
+The owner compared Zero's Frost Walrus combos with scaling OFF and ON and
+accepted the shorter ON recovery. This is a bounded human playtest, not proof
+that every historical missed-hit sequence has been reproduced. Native local
+and two-peer Split checks cover the progression corrections and adjacent
+X/Zero hits. [Evidence and limits](docs/COOP_PLAYTEST37_INVESTIGATION.md).
+
+Still unconfirmed: the later Intro boss-approach recurrence, Owl's
+upgrade/death stranding, Web's missing-enemy recurrences, and Frost's reported
+survivor camera, post-death graphics and ice-bird slowdown. Those reports stay
+on the checklist; this release does not claim they are fixed. Local 8:3 split
+screen remains deferred.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+Production packages disable debug tools and development cheats.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.36
 
 **Boss-scaling slash recovery corrected.** Zero's fresh ground chains,
 finishers and aerial slashes now use short recovery with Separate cooldowns.

@@ -13,6 +13,12 @@ static unsigned enabled;
 static unsigned per_player;
 static uint8_t fraction[SLOTS][3];
 static uint8_t immunity[SLOTS][3][2];
+/* Native boss callers install a shared rejection table during recovery.
+ * Private timers must virtualize that table too: otherwise a ready partner
+ * can clang on 801060F0 and consume/stamp an attack before native expiry. */
+static uint32_t vulnerable_table[SLOTS][3],saved_vulnerable_table[3];
+static uint8_t cooldown_offset[SLOTS][3],cooldown_half[SLOTS][3];
+static unsigned contact_call;
 /* A sword's pose/contact byte is reusable, and changes within Kuuenzan.
  * Count native projectile initializations instead: one hit per actual blade
  * lifetime, independently for each boss health bank and player. */
@@ -72,6 +78,10 @@ static unsigned bank(uint32_t actor) {
 void mmx4_coop_balance_reset(void) {
     memset(fraction,0,sizeof fraction);memset(saved_fraction,0,sizeof saved_fraction);
     memset(immunity,0,sizeof immunity);
+    memset(vulnerable_table,0,sizeof vulnerable_table);
+    memset(saved_vulnerable_table,0,sizeof saved_vulnerable_table);
+    memset(cooldown_offset,0,sizeof cooldown_offset);
+    memset(cooldown_half,0,sizeof cooldown_half);contact_call=0;
     memset(melee_generation,0,sizeof melee_generation);memset(next_melee,0,sizeof next_melee);
     memset(melee_hits,0,sizeof melee_hits);memset(saved_melee_hits,0,sizeof saved_melee_hits);
     memset(melee_used,0,sizeof melee_used);memset(saved_melee_used,0,sizeof saved_melee_used);
@@ -84,10 +94,30 @@ void mmx4_coop_balance_activate(void) {
     mmx4_coop_balance_reset();
     if(enabled)psx_mod_counter_add("mmx4.coop.boss-scaling-enabled",1);
 }
+int mmx4_coop_balance_development_mode(unsigned mode) {
+#if MMX4_COOP_NETPLAY_DEBUG
+    char value[16];
+    if(mode>1 || !per_player || !mmx4_coop_ready() || mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || current_actor || contact_call ||
+       !psx_mod_current_option_value("boss_scaling",value,sizeof value) || strcmp(value,"true"))return 0;
+    /* Use only to prepare a control before combat. Returning to the saved
+     * mode before loading retains the existing strict snapshot validation.
+     * Both private counters and this existing mode enter the mod digest. */
+    enabled=mode;mmx4_coop_balance_reset();
+    psx_mod_counter_add(mode?"mmx4.coop.development-scaling-on":
+                            "mmx4.coop.development-scaling-off",1);
+    return 1;
+#else
+    (void)mode;return 0;
+#endif
+}
 void mmx4_coop_balance_forget(uint32_t actor) {
     int i=slot(actor);if(i>=0) {
         memset(fraction[i],0,sizeof fraction[i]);
         memset(immunity[i],0,sizeof immunity[i]);
+        memset(vulnerable_table[i],0,sizeof vulnerable_table[i]);
+        memset(cooldown_offset[i],0,sizeof cooldown_offset[i]);
+        memset(cooldown_half[i],0,sizeof cooldown_half[i]);
         memset(melee_hits[i],0,sizeof melee_hits[i]);
         memset(melee_used[i],0,sizeof melee_used[i]);
     }
@@ -116,6 +146,37 @@ int mmx4_coop_balance_contact_allowed(uint32_t actor,uint32_t shot,unsigned seat
         psx_mod_write_byte(actor+0x65,0);
     return 1;
 }
+int mmx4_coop_balance_project_contact(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(address!=0x8002DE30u || contact_call || !enabled || !per_player || current_actor!=actor ||
+       !mmx4_coop_ready() || psx_mod_local_view_scope() || !boss(actor))return 0;
+    unsigned i=(unsigned)slot(actor),b=bank(actor),offset=cooldown_offset[i][b];
+    uint32_t table=vulnerable_table[i][b];
+    /* Only the inspected post-hit rejection table and its live countdown
+     * qualify. A scene/attack phase that installs another table, or one
+     * without an active native hit timer, retains its native invulnerability. */
+    if(!offset || !table || psx_mod_read_word(actor+0x58)!=0x801060F0u)return 0;
+    unsigned ticks=cooldown_half[i][b]?psx_mod_read_half(actor+offset):
+        psx_mod_read_byte(actor+offset);
+    /* Separate mode deliberately leaves this one native expiry tick when
+     * a private seat is ready. Longer timers are not this proven boundary. */
+    if(ticks!=1u)return 0;
+    unsigned before=accepted_damage;
+    contact_call=1;
+    psx_mod_write_word(actor+0x58,table);
+    if(cooldown_half[i][b])psx_mod_write_half(actor+offset,0);
+    else psx_mod_write_byte(actor+offset,0);
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    if(accepted_damage==before) {
+        /* No hit: let the original caller perform its one expiry/cleanup
+         * pass. A duplicate contact must not reset the shared recovery. */
+        psx_mod_write_word(actor+0x58,0x801060F0u);
+        if(cooldown_half[i][b])psx_mod_write_half(actor+offset,(uint16_t)ticks);
+        else psx_mod_write_byte(actor+offset,(uint8_t)ticks);
+    }else psx_mod_counter_add("mmx4.coop.boss-ready-partner-table",1);
+    contact_call=0;
+    return mmx4_coop_finish(cpu,result);
+}
 unsigned mmx4_coop_balance_flash_ticks(uint32_t actor) {
     /* Rendering can query either local view without advancing simulation.
      * Native collision cleanup uses the earliest ready seat; show the longer
@@ -133,17 +194,29 @@ void mmx4_coop_balance_begin(uint32_t actor) {
     if(per_player)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         if(immunity[slot(actor)][b][seat])--immunity[slot(actor)][b][seat];
     memcpy(saved_fraction,fraction[slot(actor)],sizeof saved_fraction);
+    memcpy(saved_vulnerable_table,vulnerable_table[slot(actor)],sizeof saved_vulnerable_table);
     memcpy(saved_melee_hits,melee_hits[slot(actor)],sizeof saved_melee_hits);
     memcpy(saved_melee_used,melee_used[slot(actor)],sizeof saved_melee_used);
 }
 void mmx4_coop_balance_end(void) {
-    if(current_actor && !psx_mod_read_byte(current_actor+0x5C))
-        fraction[slot(current_actor)][bank(current_actor)]=0;
+    int index=slot(current_actor);
+    if(index>=0) {
+        unsigned i=(unsigned)index,b=bank(current_actor),off=cooldown_offset[i][b];
+        if(!psx_mod_read_byte(current_actor+0x5C))fraction[i][b]=0;
+        if(off && (psx_mod_read_word(current_actor+0x58)!=0x801060F0u ||
+           !(cooldown_half[i][b]?psx_mod_read_half(current_actor+off):
+             psx_mod_read_byte(current_actor+off)))) {
+            /* Do not carry a finished hit window into a later scripted
+             * invulnerable phase that happens to reuse the same table. */
+            cooldown_offset[i][b]=cooldown_half[i][b]=0;
+        }
+    }
     current_actor=0;accepted_damage=damage_owner=saber_chain=0;memset(saved_fraction,0,sizeof saved_fraction);
     memset(saved_melee_hits,0,sizeof saved_melee_hits);
     memset(saved_melee_used,0,sizeof saved_melee_used);
+    memset(saved_vulnerable_table,0,sizeof saved_vulnerable_table);
 }
-int mmx4_coop_balance_snapshot_ready(void) {return !current_actor;}
+int mmx4_coop_balance_snapshot_ready(void) {return !current_actor && !contact_call;}
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
     mmx4_snapshot_fixed(s,enabled);
     mmx4_snapshot_fixed(s,per_player);
@@ -158,6 +231,14 @@ int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
         MMX4_SNAPSHOT_U32(s,melee_hits[i][b][seat]);
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         MMX4_SNAPSHOT_U16(s,melee_used[i][b][seat]);
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b) {
+        MMX4_SNAPSHOT_U32(s,vulnerable_table[i][b]);
+        MMX4_SNAPSHOT_U8(s,cooldown_offset[i][b]);
+        MMX4_SNAPSHOT_BOOL(s,cooldown_half[i][b]);
+        uint32_t table=vulnerable_table[i][b];unsigned offset=cooldown_offset[i][b];
+        if((table && (table<0x80010000u || table>=0x80200000u || (table&1u))) ||
+           (offset && (offset<0x60u || offset+(cooldown_half[i][b]?2u:1u)>STRIDE)))s->ok=0;
+    }
     return s->ok;
 }
 uint32_t mmx4_coop_balance_digest(uint32_t seed) {
@@ -174,6 +255,11 @@ uint32_t mmx4_coop_balance_digest(uint32_t seed) {
         seed=(seed^melee_hits[i][b][seat])*16777619u;
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         seed=(seed^melee_used[i][b][seat])*16777619u;
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b) {
+        seed=(seed^vulnerable_table[i][b])*16777619u;
+        seed=(seed^cooldown_offset[i][b])*16777619u;
+        seed=(seed^cooldown_half[i][b])*16777619u;
+    }
     return seed;
 }
 static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
@@ -200,6 +286,13 @@ static void damage(CPUState *cpu,uint32_t address) {
     if(!hp || hp>=127 || !amount || amount>255)return;
     /* This site follows SUBU, after the separate damage-multiplier hook. */
     cpu->gpr[3]=scaled_damage(actor,amount);
+    /* DE30's A3 is the actual accepted damage table, before the boss caller
+     * replaces it with its temporary rejection table. Never cache that
+     * rejection table itself, or an uninitialized/synthetic pointer. */
+    uint32_t table=cpu->gpr[7];
+    if(current_actor==actor && table>=0x80010000u && table<0x80200000u &&
+       !(table&1u) && table!=0x801060F0u)
+        vulnerable_table[slot(actor)][bank(actor)]=table;
     /* Ground chains, finishers and aerials use one short recovery when a
      * native lifetime is known. Lifetime admission prevents the same blade
      * from hitting again when that recovery expires. */
@@ -234,6 +327,7 @@ static void rejected_hit(CPUState *cpu,uint32_t address) {
         memcpy(fraction[i],saved_fraction,sizeof saved_fraction);
         memcpy(melee_hits[i],saved_melee_hits,sizeof saved_melee_hits);
         memcpy(melee_used[i],saved_melee_used,sizeof saved_melee_used);
+        memcpy(vulnerable_table[i],saved_vulnerable_table,sizeof saved_vulnerable_table);
         accepted_damage=damage_owner=saber_chain=0;
     }
 }
@@ -246,7 +340,8 @@ static void damage_reaction(CPUState *cpu,uint32_t address) {
 }
 static void cooldown(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[address==0x80080C98u?17:16];
-    if(!enabled || !mmx4_coop_ready() || psx_mod_local_view_scope() || !boss(actor))return;
+    int index=slot(actor);
+    if(!enabled || index<0 || !mmx4_coop_ready() || psx_mod_local_view_scope() || !boss(actor))return;
     unsigned ticks=cpu->gpr[2];
     if(ticks>1 && ticks<255) {
         if(per_player) {
@@ -259,8 +354,19 @@ static void cooldown(CPUState *cpu,uint32_t address) {
                 ticks=4;
                 psx_mod_counter_add("mmx4.coop.zero-combo-cooldown",1);
             }
-            uint8_t *timers=immunity[slot(actor)][bank(actor)];
+            unsigned b=bank(actor);
+            uint8_t *timers=immunity[index][b];
             timers[damage_owner-1u]=(uint8_t)ticks;
+            /* These registered sites are real SB/SH V0,offset(S0/S1).
+             * Sigma's global timer store is deliberately not projected. */
+            uint32_t instruction=psx_mod_read_word(address);
+            unsigned op=instruction>>26,base=(instruction>>21)&31u;
+            unsigned offset=instruction&0xFFFFu,half=op==0x29u;
+            if((op==0x28u || half) && (base==16u || base==17u) &&
+               offset>=0x60u && offset+(half?2u:1u)<=STRIDE) {
+                cooldown_offset[index][b]=(uint8_t)offset;
+                cooldown_half[index][b]=(uint8_t)half;
+            }
             /* Native collision/flash gates see the earliest available seat.
              * The filter above retains the halved duration for the attacker.
              * Reactions and AI still execute once in the original caller. */

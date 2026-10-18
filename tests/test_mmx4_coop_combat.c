@@ -50,6 +50,9 @@ int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {(void)actor;ret
 int mmx4_coop_balance_contact_allowed(uint32_t actor,uint32_t shot,unsigned seat) {
     (void)shot;return mmx4_coop_balance_hit_allowed(actor,seat);
 }
+int mmx4_coop_balance_project_contact(CPUState *cpu,uint32_t address) {
+    (void)cpu;(void)address;return 0;
+}
 uint32_t mmx4_coop_web_digest(uint32_t seed) {return seed;}
 static uint8_t ram[0x200000];
 static uint8_t scratchpad[1024];

@@ -1462,6 +1462,49 @@ static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t act
         (uint8_t)(psx_mod_read_byte(0x80166BB0u)|shared_palette_refresh));
     write_bytes(PAD,pad,sizeof pad);return result;
 }
+static int cyber_assessment(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(scene_guard || !mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12)!=6 ||
+       psx_mod_read_byte(PLAY+13) || actor<0x80173CA0u || actor>=0x801754A0u ||
+       (actor-0x80173CA0u)%0x60u || psx_mod_read_byte(actor+1)!=34)return 0;
+    uint32_t parent=psx_mod_read_word(actor+0x50);
+    if(parent<0x80142F98u || parent>=0x80143598u || (parent-0x80142F98u)%0x30u ||
+       !psx_mod_read_byte(parent) || psx_mod_read_byte(parent+1)!=38)return 0;
+    SceneOwner *record=scene_record(parent,0);
+    unsigned owner=record && record->owner==1 && record->serial==script_serial &&
+        script_active && script_owner==1;
+    if(!owner)owner=!mmx4_coop_alive(0) && mmx4_coop_alive(1);
+    if(!owner || departed || mmx4_coop_lifecycle_hidden(1) ||
+       !(mmx4_coop_second_body()[0x5C]&127u))return 0;
+    /* The assessment graphic is also the course controller's completion
+     * producer (CEF6C writes parent+16). If it follows hidden P1 after a P2
+     * portal admission, native camera culling destroys it before that write.
+     * Keep its single native update attached to the actual scene owner,
+     * including the ordinary target motion, grading and completion signal. */
+    scene_guard=1;
+    uint32_t result=call_story_as_second(cpu,address,actor,cpu->gpr[5]);
+    scene_guard=0;
+    psx_mod_counter_add("mmx4.coop.p2-assessment-ticks",1);
+    return mmx4_coop_finish(cpu,result);
+}
+int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[4];
+    /* During the owner projection above, preserve the completion producer
+     * through the shared camera handoff. Bounds is a read-only query. Native
+     * target motion, grading, timers and its final self-deletion still run;
+     * a render may hide it, but must not destroy it before parent+0x16. */
+    if(scene_guard && mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+       cpu->gpr[31]==0x800CEA8Cu && psx_mod_read_byte(PLAY+12)==6 &&
+       !psx_mod_read_byte(PLAY+13) && actor>=0x80173CA0u && actor<0x801754A0u &&
+       !((actor-0x80173CA0u)%0x60u) && psx_mod_read_byte(actor+1)==34 &&
+       psx_mod_read_byte(actor+4)==1) {
+        psx_mod_counter_add("mmx4.coop.assessment-completion-protected",1);
+        return mmx4_coop_finish(cpu,0);
+    }
+    return 0;
+}
 static int gameplay_scene(void) {
     unsigned mode=psx_mod_read_byte(PLAY);
     /* Mode7 is the campaign's weapon/technique reward screen. P2's last
@@ -1515,15 +1558,37 @@ static int stage_scripts(CPUState *cpu,uint32_t address) {
     uint32_t result=call_story_as_second(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     script_pool_guard=0;return mmx4_coop_finish(cpu,result);
 }
+static void completed_survivor_exit(CPUState *cpu,uint32_t address) {
+    (void)address;
+    const uint8_t *body=mmx4_coop_second_body();
+    /* Native stage_normal tests only PLAYER.state3. A shared forward fade
+     * can suspend P1's death dispatcher before it reaches that state, while
+     * the surviving P2 has already finished the real outgoing beam. Admit
+     * that completed owner at this predicate only; keep both bodies and the
+     * native stage/world calls intact. A temporary or voluntary passenger
+     * departure is not completion, nor is a retry (negative PLAY+0F). */
+    if(mmx4_coop_ready() && !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+       psx_mod_read_byte(PLAY)==6 && !psx_mod_read_byte(PLAY+1) &&
+       (int8_t)psx_mod_read_byte(PLAY+0x0F)>0 &&
+       !(psx_mod_read_byte(PLAYER+0x5C)&127u) && !departed &&
+       !mmx4_coop_lifecycle_hidden(1) && (body[0x5C]&127u) && body[4]==3 &&
+       cpu->gpr[3]!=3) {
+        cpu->gpr[3]=3;
+        psx_mod_counter_add("mmx4.coop.survivor-completed-exits",1);
+    }
+}
 static void storm_survivor_exit(CPUState *cpu,uint32_t address) {
     (void)address;
     /* Storm Owl's background controller checks PLAYER.x at 800DA440,
      * outside the small stage-script pool. Keep its one world update and
-     * native X>=6352 warp predicate, but read the surviving seat's X. */
+     * native X>=6352 warp predicate, but allow either living hero to reach
+     * it. A distant living P1 must not suppress the leading P2's exit. */
     if(mmx4_coop_ready() && !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
        psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+12)==7 &&
-       !psx_mod_read_byte(PLAY+13) && !mmx4_coop_alive(0) && mmx4_coop_alive(1))
-        cpu->gpr[2]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+       !psx_mod_read_byte(PLAY+13) && mmx4_coop_alive(1)) {
+        int32_t second=(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+        if(!mmx4_coop_alive(0) || second>(int32_t)cpu->gpr[2])cpu->gpr[2]=(uint32_t)second;
+    }
 }
 static void frost_ice_activation(CPUState *cpu,uint32_t address) {
     (void)address;
@@ -1574,6 +1639,25 @@ static int frost_path_contact(CPUState *cpu,uint32_t address) {
         if(result)psx_mod_counter_add("mmx4.coop.p2-ice-path-collapse",1);
     }
     frost_path_contact_call=0;return mmx4_coop_finish(cpu,result);
+}
+static void intro_platform_activation(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[16];
+    /* BEED4 arms one authored falling-platform sequence when PLAYER.x
+     * reaches the subtype's threshold. A living P1 behind the leader must
+     * not leave the shared floor/ceiling edits waiting indefinitely. Only
+     * extend that loaded coordinate; native fall, tile and sound run once. */
+    if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12) ||
+       psx_mod_read_byte(PLAY+13)!=1 || !mmx4_coop_alive(1) ||
+       !door_pool_actor(actor) || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=1 || psx_mod_read_byte(actor+2)>=14 ||
+       psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5))return;
+    int32_t second=(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+    if(!mmx4_coop_alive(0) || second>(int32_t)cpu->gpr[3]) {
+        cpu->gpr[3]=(uint32_t)second;
+        psx_mod_counter_add("mmx4.coop.p2-intro-platform-predicate",1);
+    }
 }
 static void intro_survivor_crusher(CPUState *cpu,uint32_t address) {
     (void)address;
@@ -2260,6 +2344,8 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_instruction_plugin(ID,0x800BA39Cu,0x28420C60u,frost_path_activation);
     psx_mod_register_function_filter_plugin(ID,0x8002C160u,frost_path_contact);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
+    psx_mod_register_instruction_plugin(ID,0x80020018u,0x14620007u,completed_survivor_exit);
+    psx_mod_register_instruction_plugin(ID,0x800BEEF4u,0x00041100u,intro_platform_activation);
     psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);
     psx_mod_register_function_filter_plugin(ID,0x8002AD7Cu,shared_ride_ready);
@@ -2285,6 +2371,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
      * Keep C1390's intact obstacle/contact update outside this projection. */
     psx_mod_register_function_filter_plugin(ID,0x800C165Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C169Cu,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800CE894u,cyber_assessment);
     /* Intro rescue actors live in the small sprite pool, outside the enemy
      * and stage-script projections. Their initialization and camera wait
      * must use the same body that owns the boss victory. Native D12C0 sets
