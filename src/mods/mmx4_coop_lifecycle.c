@@ -519,6 +519,20 @@ void mmx4_coop_lifecycle_enrolled(CPUState *cpu) {
         warp_owner=0;warp_active=body[0];warp_visible=body[3];
         warp_vehicle_active=warp_vehicle_visible=0;
         warp_origin_x=body_word(body,8);warp_origin_y=body_word(body,12);
+        if(!together && !direct_together && psx_mod_read_byte(PLAY+0x0C)==12 &&
+           !psx_mod_read_byte(PLAY+0x0D) && psx_mod_read_byte(PLAY+0x1D)>=11 &&
+           psx_mod_read_byte(PLAY+0x1D)<=18) {
+            /* The refight hub's authored return pads can abut a wall. The
+             * enrollment preference of +24 pixels puts X inside the wall
+             * beside Slash's pad; an incoming beam has no usable terrain
+             * box until it is already too late to avoid the crush. Reuse
+             * the grounded partner-return gate: align each hero's feet,
+             * probe the native standing box and only then start the beam.
+             * P1's checkpoint pose and the actual portal state stay native. */
+            body[0]=body[3]=0;warp_phase=1;warp_unlocked_ticks=0;
+            psx_mod_counter_add("mmx4.coop.refight-safe-arrivals",1);
+            return;
+        }
         if(direct_together) {
             start_arrival(cpu,0);
             psx_mod_write_byte(PLAY+0x1C,1);

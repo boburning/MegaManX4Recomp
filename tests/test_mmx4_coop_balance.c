@@ -123,23 +123,48 @@ int main(void){
      * The first hit leaves the partner eligible; then both timers coexist. */
     enabled=1;per_player=2;mmx4_coop_balance_activate();actor(73,48);
     CHECK(timed_hit(0,1,64)==1);
+    /* The native expiry tick must not make the visual recovery disappear
+     * while one attacker remains immune. A render query changes no state. */
+    CHECK(mmx4_coop_balance_flash_ticks(BOSS)==32);
+    digest=mmx4_coop_balance_digest(1);local=1;
+    CHECK(mmx4_coop_balance_flash_ticks(BOSS)==32);
+    CHECK(mmx4_coop_balance_digest(1)==digest);local=0;
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && mmx4_coop_balance_hit_allowed(BOSS,1));
     CHECK(timed_hit(1,1,64)==31);
+    CHECK(mmx4_coop_balance_flash_ticks(BOSS)==32);
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
     CHECK(psx_mod_read_byte(BOSS+0x5C)==47);
     for(unsigned i=0;i<30;++i){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
     mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();
     CHECK(mmx4_coop_balance_hit_allowed(BOSS,0) && !mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(mmx4_coop_balance_flash_ticks(BOSS)==1);
     digest=mmx4_coop_balance_digest(1);
     io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
     CHECK(mmx4_coop_balance_snapshot(&io));
     mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();CHECK(mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
     CHECK(digest!=mmx4_coop_balance_digest(1));
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_READ,1};
     CHECK(mmx4_coop_balance_snapshot(&io) && digest==mmx4_coop_balance_digest(1));
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(mmx4_coop_balance_flash_ticks(BOSS)==1);
     mmx4_coop_balance_forget(BOSS);CHECK(mmx4_coop_balance_hit_allowed(BOSS,1));
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    /* Hidden Sigma health banks and recycled/dead actors must not borrow
+     * another pool's recovery flash; only an active boss can display it. */
+    actor(74,48);psx_mod_write_byte(BOSS+0x91,1);CHECK(timed_hit(0,2,64)==1);
+    psx_mod_write_byte(BOSS+0x91,2);CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    CHECK(timed_hit(1,2,10)==1);CHECK(mmx4_coop_balance_flash_ticks(BOSS)==5);
+    psx_mod_write_byte(BOSS+0x91,1);CHECK(mmx4_coop_balance_flash_ticks(BOSS)==31);
+    ready=0;CHECK(!mmx4_coop_balance_flash_ticks(BOSS));ready=1;
+    psx_mod_write_byte(BOSS+0x5C,0);CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    psx_mod_write_byte(BOSS+0x5C,48);psx_mod_write_byte(BOSS+4,2);
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS));psx_mod_write_byte(BOSS+4,1);
+    psx_mod_write_byte(BOSS+1,58);CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    psx_mod_write_byte(BOSS+1,74);psx_mod_write_byte(BOSS,0);
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS+1));
     /* Independent timers retain Zero's short first/second saber chain,
      * followed by half-length finisher/aerial immunity. Both seats qualify. */
     for(unsigned seat=0;seat<2;++seat)for(unsigned kind=57;kind<=68;kind+=11) {
@@ -190,11 +215,13 @@ int main(void){
         CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
     }
     per_player=0;mmx4_coop_balance_activate();
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
     io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
     CHECK(!mmx4_coop_balance_snapshot(&io));
     actor(57,48);cpu.gpr[16]=BOSS;cpu.gpr[2]=5;
     hook(&cpu,0x800725A0u);CHECK(cpu.gpr[2]==3);
     enabled=0;mmx4_coop_balance_activate();
     CHECK(timed_hit(1,2,64)==64); /* Original balance stays native. */
+    CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
     puts("Boss scaling preserves weak hits, separate pools, rejected hits and snapshots.");return 0;
 }

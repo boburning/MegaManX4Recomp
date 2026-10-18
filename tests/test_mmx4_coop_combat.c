@@ -21,6 +21,8 @@
 #define SLIDE_EFFECT 0x800AEAC0u
 #define DASH_EFFECT 0x800AED18u
 #define HOVER_EFFECT 0x800B2AD0u
+#define SHOT_EFFECT 0x800B28CCu
+#define SHOTS 0x801406F8u
 #define MIRROR 0x80110000u
 #define ARMOR_UPDATE 0x8003D3F8u
 #define ARMOR_MOUNT 0x8003E0D0u
@@ -51,6 +53,7 @@ static uint8_t scratchpad[1024];
 static uint8_t second[0xE4], first_saved[0xE4];
 static uint8_t second_vehicle[0xB0], first_vehicle[0xB0];
 static uint8_t second_double[0xE4], first_double[0xE4];
+static uint8_t second_shots[16*0x9C],first_shots[16*0x9C];
 static unsigned projected, ready, alive[2],split;
 static int script_owner=-1;
 static uint32_t deferred_portal;
@@ -63,6 +66,10 @@ static PSXModFunctionEntryCallback reaction_hooks[7];
 static const uint32_t reaction_sites[]={0x80050998u,0x80071DE4u,0x80072514u,
     0x800753FCu,0x80082644u,0x800850DCu,0x80091344u};
 static unsigned reaction_model,reaction_expected,reaction_checks;
+static PSXModFunctionEntryCallback owl_release_hooks[6];
+static const uint32_t owl_release_sites[]={0x80075694u,0x800763D0u,0x800764D4u,
+    0x800767E4u,0x8007687Cu,0x800778C8u};
+static unsigned owl_release_model;
 static unsigned pool_updates,actor_updates[2],bounds_updates,ai_contact,ai_solid;
 static unsigned ai_direct_write,ai_canonical;
 static uint8_t saved_campaign;
@@ -123,6 +130,9 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
     for(unsigned i=0;i<7;++i)if(address==reaction_sites[i]) {
         CHECK(!word);reaction_hooks[i]=callback;return 1;
     }
+    for(unsigned i=0;i<6;++i)if(address==owl_release_sites[i]) {
+        CHECK(word==0xA0201982u);owl_release_hooks[i]=callback;return 1;
+    }
     CHECK(word==0x0040F809u);
     CHECK(address==0x80021300u || address==0x80021518u);
     redirects[address==0x80021518u]=callback;return 1;
@@ -163,9 +173,11 @@ void mmx4_coop_enter_second(void) {
     memcpy(first_saved,address_ptr(MMX4_PLAYER),sizeof first_saved);
     memcpy(first_vehicle,address_ptr(MMX4_VEHICLE),sizeof first_vehicle);
     memcpy(first_double,address_ptr(DOUBLE_BODY),sizeof first_double);
+    memcpy(first_shots,address_ptr(SHOTS),sizeof first_shots);
     memcpy(address_ptr(MMX4_PLAYER),second,sizeof second);
     memcpy(address_ptr(MMX4_VEHICLE),second_vehicle,sizeof second_vehicle);
     memcpy(address_ptr(DOUBLE_BODY),second_double,sizeof second_double);
+    memcpy(address_ptr(SHOTS),second_shots,sizeof second_shots);
     saved_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
     psx_mod_write_byte(MMX4_PLAY+0x43,second[2]);
     saved_assembly=psx_mod_read_word(0x1F80001Cu);
@@ -177,9 +189,11 @@ void mmx4_coop_leave_second(void) {
     memcpy(second,address_ptr(MMX4_PLAYER),sizeof second);
     memcpy(second_vehicle,address_ptr(MMX4_VEHICLE),sizeof second_vehicle);
     memcpy(second_double,address_ptr(DOUBLE_BODY),sizeof second_double);
+    memcpy(second_shots,address_ptr(SHOTS),sizeof second_shots);
     memcpy(address_ptr(MMX4_PLAYER),first_saved,sizeof first_saved);
     memcpy(address_ptr(MMX4_VEHICLE),first_vehicle,sizeof first_vehicle);
     memcpy(address_ptr(DOUBLE_BODY),first_double,sizeof first_double);
+    memcpy(address_ptr(SHOTS),first_shots,sizeof first_shots);
     CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==second[2]);
     psx_mod_write_byte(MMX4_PLAY+0x43,saved_campaign);
     psx_mod_write_word(0x1F80001Cu,saved_assembly);
@@ -299,6 +313,16 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         psx_mod_write_byte(a0+4,1);
         return 0xABCDEF01u;
     }
+    if(address==SHOT_EFFECT) {
+        /* B28E0/B2924 follow the saved parent address in the current shot
+         * arena. Identical guest pointers refer to different seats' shots. */
+        uint32_t parent=psx_mod_read_word(a0+0x50);
+        if(!psx_mod_read_byte(parent)) {psx_mod_write_byte(a0,0);return 0;}
+        psx_mod_write_word(a0+0x38,psx_mod_read_word(parent+0x38));
+        psx_mod_write_word(a0+0x3C,psx_mod_read_word(parent+0x3C));
+        psx_mod_write_word(a0+8,psx_mod_read_word(parent+8));
+        return 0x10203041u;
+    }
     if(address==0x800B2A3Cu) {
         ++weapon_uploads;
         CHECK(projected && !psx_mod_read_byte(MMX4_PLAYER+2));
@@ -408,6 +432,13 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         CHECK(mmx4_coop_combat_actor_context());
         ++actor_updates[seat];
         ai_target_x[seat]=psx_mod_read_word(MMX4_PLAYER+8);
+        if(owl_release_model) {
+            unsigned i=owl_release_model-1;
+            CPUState release={.gpr={[16]=a0,[17]=a0}};
+            owl_release_hooks[i](&release,owl_release_sites[i]);
+            psx_mod_write_byte(MMX4_PLAYER+0xBA,0); /* Retail SB follows hook. */
+            return 0;
+        }
         if(reaction_model) {
             uint32_t actor=cpu->gpr[4];
             CHECK(filter(HIT)(cpu,HIT));
@@ -464,6 +495,7 @@ static void setup(void) {
     memset(second,0,sizeof second);
     memset(second_vehicle,0,sizeof second_vehicle);
     memset(second_double,0,sizeof second_double);
+    memset(second_shots,0,sizeof second_shots);
     projected=split=0;ready=1;alive[0]=alive[1]=1;script_owner=-1;deferred_portal=arriving=0;
     pool_updates=bounds_updates=ai_contact=ai_solid=ai_direct_write=ai_canonical=0;
     memset(actor_updates,0,sizeof actor_updates);
@@ -471,6 +503,7 @@ static void setup(void) {
     allocated_actor=ACTOR;
     mount_accept[0]=mount_accept[1]=0;
     token_model=double_model=local_view=reaction_model=0;attack_present[0]=attack_present[1]=0;
+    owl_release_model=0;
     attack_type[0]=attack_type[1]=0;
     attack_token[0]=attack_token[1]=0;
     psx_mod_write_byte(MMX4_PLAY,6);
@@ -811,6 +844,32 @@ static void split_native_targets(void) {
     }
     setup();CPUState cpu={0};cpu.gpr[2]=NATIVE_AI;cpu.gpr[4]=0x8013BED0u;
     redirects[0](&cpu,0x80021300u);CHECK(cpu.gpr[2]==NATIVE_AI);
+}
+static void owl_grab_release(void) {
+    const uint32_t actor=0x8013BED0u;
+    const uint8_t commands[]={0,1,0xFE,0xFF};
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned seat=0;seat<2;++seat)
+    for(unsigned site=0;site<6;++site)for(unsigned c=0;c<sizeof commands;++c) {
+        setup_split_actors(0);script_owner=(int)seat;owl_release_model=site+1;
+        psx_mod_write_byte(actor+0x9C,0);psx_mod_write_byte(actor+1,60);
+        psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)campaign);second[2]=(uint8_t)(campaign^1);
+        psx_mod_write_byte(MMX4_PLAYER+0xBA,seat?commands[c]:1);
+        second[0xBA]=seat?1:commands[c];
+        invoke(0x80021234u);
+        CHECK(psx_mod_read_byte(MMX4_PLAYER+0xBA)==(seat && commands[c]!=1?commands[c]:0));
+        CHECK(second[0xBA]==(!seat && commands[c]!=1?commands[c]:0));
+        CHECK(psx_mod_read_byte(MMX4_PLAYER+0x5C)==32 && second[0x5C]==32);
+        CHECK(actor_updates[seat]==1 && !actor_updates[seat^1] && !projected);
+        CHECK(mmx4_coop_combat_snapshot_ready());
+    }
+    /* The callback cannot clear a capture outside Owl's shared AI update. */
+    setup();second[0xBA]=1;
+    CPUState release={.gpr={[16]=actor,[17]=actor}};
+    for(unsigned i=0;i<6;++i)owl_release_hooks[i](&release,owl_release_sites[i]);
+    CHECK(second[0xBA]==1);
+    setup_split_actors(0);owl_release_model=1;script_owner=0;
+    psx_mod_write_byte(actor+0x9C,0);psx_mod_write_byte(actor+1,57);second[0xBA]=1;
+    invoke(0x80021234u);CHECK(second[0xBA]==1);
 }
 static void slash_intro_leader(void) {
     for(unsigned leader=0;leader<2;++leader) {
@@ -1160,6 +1219,7 @@ int main(void) {
     double_counterpart_damage();
     iris_counterpart_damage();
     slash_intro_leader();
+    owl_grab_release();
     vehicle_secondary_ownership();
     spider_capture_ownership();
     attached_dash_slide_effects();
@@ -1181,6 +1241,34 @@ int main(void) {
         /* Reusing this shared effect slot for P1 clears P2 ownership. */
         invoke(EFFECT_ALLOC);CHECK(!filter(WATER)(&(CPUState){.gpr={[4]=EFFECT}},WATER));
     }
+    /* A deferred charged-fire attachment must follow its own parent shot,
+     * even when the same guest slot contains the other hero's live attack.
+     * Once its own parent disappears it expires instead of following P1. */
+    setup();allocated_actor=EFFECT;
+    psx_mod_write_byte(SHOTS,1);
+    psx_mod_write_word(SHOTS+0x38,0x80101000u);
+    psx_mod_write_word(SHOTS+0x3C,0x80102000u);
+    psx_mod_write_word(SHOTS+8,10u<<16);
+    mmx4_coop_enter_second();invoke(EFFECT_ALLOC);
+    psx_mod_write_byte(SHOTS,1);
+    psx_mod_write_word(SHOTS+0x38,0x80103000u);
+    psx_mod_write_word(SHOTS+0x3C,0x80104000u);
+    psx_mod_write_word(SHOTS+8,80u<<16);
+    mmx4_coop_leave_second();
+    psx_mod_write_byte(EFFECT,1);psx_mod_write_byte(EFFECT+1,26);
+    psx_mod_write_word(EFFECT+0x50,SHOTS);
+    CPUState attachment={.gpr={[4]=EFFECT}};
+    CHECK(filter(SHOT_EFFECT)(&attachment,SHOT_EFFECT));
+    CHECK(attachment.gpr[2]==0x10203041u && !projected);
+    CHECK(psx_mod_read_word(EFFECT+0x38)==0x80103000u);
+    CHECK(psx_mod_read_word(EFFECT+0x3C)==0x80104000u);
+    CHECK(psx_mod_read_word(EFFECT+8)==80u<<16);
+    CHECK(psx_mod_read_word(SHOTS+0x38)==0x80101000u);
+    second_shots[0]=0;
+    CHECK(filter(SHOT_EFFECT)(&attachment,SHOT_EFFECT));
+    CHECK(!psx_mod_read_byte(EFFECT) && psx_mod_read_byte(SHOTS));
+    invoke(EFFECT_ALLOC);CHECK(!filter(SHOT_EFFECT)(&attachment,SHOT_EFFECT));
+
     /* Ground Hunter's deferred one-shot graphics upload must bind X/P2 even
      * if that owner has died before the shared effect-pool update. */
     for(unsigned dead=0;dead<2;++dead) {

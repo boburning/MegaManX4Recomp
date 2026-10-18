@@ -1161,6 +1161,27 @@ static int render_owned_effect(CPUState *cpu,uint32_t address) {
         psx_mod_counter_add("mmx4.coop.split-distant-sprite-culled",1);
         return mmx4_coop_finish(cpu,0);
     }
+    if(!rendering && mmx4_coop_ready() && world_draw_visible()) {
+        uint32_t actor=cpu->gpr[4];
+        unsigned ticks=mmx4_coop_balance_flash_ticks(actor);
+        if(ticks) {
+            /* Separate hit admission keeps the shared native timer at the
+             * earliest available seat. It can expire after one tick while
+             * the attacker is still cooling down. Show the native white
+             * hit palette for that remaining window in either view, without
+             * changing collision tables, boss AI or saved simulation bytes.
+             * 24334/24574 consumes +42 bit8000 solely for the drawn CLUT. */
+            uint16_t color=psx_mod_read_half(actor+0x42);
+            rendering=1;
+            psx_mod_write_half(actor+0x42,(uint16_t)((color&0x7FFFu)|
+                ((ticks&1u)?0u:0x8000u)));
+            uint32_t result=guest(cpu,address,actor,cpu->gpr[5]);
+            psx_mod_write_half(actor+0x42,color);
+            rendering=0;
+            psx_mod_counter_add("mmx4.coop.per-player-boss-flash-draws",1);
+            return mmx4_coop_finish(cpu,result);
+        }
+    }
     if(rendering || projected || !mmx4_coop_ready() || !world_draw_visible())return 0;
     uint32_t actor=cpu->gpr[4],assembly=psx_mod_read_word(actor+0x3C);
     unsigned vehicle_owner=mmx4_coop_vehicle_effect_owner(actor);

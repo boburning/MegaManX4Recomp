@@ -66,6 +66,15 @@ int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {
     psx_mod_counter_add("mmx4.coop.boss-repeat-hit-blocked",1);
     return 0;
 }
+unsigned mmx4_coop_balance_flash_ticks(uint32_t actor) {
+    /* Rendering can query either local view without advancing simulation.
+     * Native collision cleanup uses the earliest ready seat; show the longer
+     * private recovery so a still-immune attacker sees the original flash. */
+    if(!enabled || !per_player || !mmx4_coop_ready() || !boss(actor) ||
+       psx_mod_read_byte(actor+4)!=1 || !psx_mod_read_byte(actor+0x5C))return 0;
+    const uint8_t *timers=immunity[slot(actor)][bank(actor)];
+    return timers[0]>timers[1]?timers[0]:timers[1];
+}
 void mmx4_coop_balance_begin(uint32_t actor) {
     if(!enabled || psx_mod_local_view_scope() || slot(actor)<0)return;
     if(!psx_mod_read_byte(actor+4))mmx4_coop_balance_forget(actor);
