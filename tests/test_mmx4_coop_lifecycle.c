@@ -72,6 +72,7 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
            (address==0x800B9F74u && expected==0x2442FD5Fu) ||
            (address==0x800BA39Cu && expected==0x28420C60u) ||
            (address==0x800C0574u && expected==0x00041100u) ||
+           (address==0x800BEEF4u && expected==0x00041100u) ||
            (address==0x800D0580u && expected==0x14620006u) ||
            (address==0x80081250u && expected==0x14620005u) ||
            (address==0x80020018u && expected==0x14620007u));return 1;
@@ -1584,6 +1585,39 @@ int main(void) {
             CHECK(ice_contact_calls[1]==(test==0 || test==12));
             ice_contact_model=0;
         }
+    /* The platform's native threshold still decides admission. Extend only
+     * its loaded X for either a leading living P2 or a P2 survivor. */
+    for(unsigned test=0;test<16;++test) {
+        reset();uint32_t platform=0x80165A30u+0x8Cu;
+        psx_mod_write_byte(PLAY+12,0);psx_mod_write_byte(PLAY+13,1);
+        psx_mod_write_byte(platform,1);psx_mod_write_byte(platform+1,1);
+        psx_mod_write_byte(platform+2,5);psx_mod_write_byte(platform+4,1);
+        p2[10]=0xD1;p2[11]=7; /*2001, past subtype5's2000 threshold. */
+        cpu.gpr[16]=platform;cpu.gpr[3]=1872;cpu.gpr[2]=0x12345678;
+        switch(test) {
+        case 1:psx_mod_write_byte(PLAYER+0x5C,0);cpu.gpr[3]=2500;break;
+        case 2:cpu.gpr[3]=2010;break; /* P1 remains the farther live hero. */
+        case 3:p2[0x5C]=0;break;
+        case 4:ready=0;break;
+        case 5:projected=1;break;
+        case 6:local_view=1;break;
+        case 7:psx_mod_write_byte(PLAY,7);break;
+        case 8:psx_mod_write_byte(PLAY+12,1);break;
+        case 9:psx_mod_write_byte(PLAY+13,0);break;
+        case 10:cpu.gpr[16]=platform+1;break;
+        case 11:psx_mod_write_byte(platform,0);break;
+        case 12:psx_mod_write_byte(platform+1,2);break;
+        case 13:psx_mod_write_byte(platform+2,14);break;
+        case 14:psx_mod_write_byte(platform+4,2);break;
+        case 15:psx_mod_write_byte(platform+5,1);break;
+        }
+        uint32_t before=cpu.gpr[3];uint8_t saved[0x8C];read_bytes(platform,saved,sizeof saved);
+        intro_platform_activation(&cpu,0x800BEEF4u);
+        CHECK(cpu.gpr[3]==(test<2?2001u:before));
+        CHECK(cpu.gpr[2]==0x12345678);
+        uint8_t after[0x8C];read_bytes(platform,after,sizeof after);CHECK(!memcmp(saved,after,sizeof saved));
+        projected=0;local_view=0;
+    }
     /* The recorded P1 corpse stays at Y394 while P2 reaches the crusher
      * floor at Y955. Only that survivor may satisfy the native Y predicate. */
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned ineligible=0;ineligible<9;++ineligible) {

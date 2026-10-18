@@ -1640,6 +1640,25 @@ static int frost_path_contact(CPUState *cpu,uint32_t address) {
     }
     frost_path_contact_call=0;return mmx4_coop_finish(cpu,result);
 }
+static void intro_platform_activation(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[16];
+    /* BEED4 arms one authored falling-platform sequence when PLAYER.x
+     * reaches the subtype's threshold. A living P1 behind the leader must
+     * not leave the shared floor/ceiling edits waiting indefinitely. Only
+     * extend that loaded coordinate; native fall, tile and sound run once. */
+    if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12) ||
+       psx_mod_read_byte(PLAY+13)!=1 || !mmx4_coop_alive(1) ||
+       !door_pool_actor(actor) || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=1 || psx_mod_read_byte(actor+2)>=14 ||
+       psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5))return;
+    int32_t second=(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+    if(!mmx4_coop_alive(0) || second>(int32_t)cpu->gpr[3]) {
+        cpu->gpr[3]=(uint32_t)second;
+        psx_mod_counter_add("mmx4.coop.p2-intro-platform-predicate",1);
+    }
+}
 static void intro_survivor_crusher(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[16];
@@ -2326,6 +2345,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x8002C160u,frost_path_contact);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
     psx_mod_register_instruction_plugin(ID,0x80020018u,0x14620007u,completed_survivor_exit);
+    psx_mod_register_instruction_plugin(ID,0x800BEEF4u,0x00041100u,intro_platform_activation);
     psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);
     psx_mod_register_function_filter_plugin(ID,0x8002AD7Cu,shared_ride_ready);

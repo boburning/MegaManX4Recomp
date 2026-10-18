@@ -420,3 +420,48 @@ No original game assets or executable bytes are included in that archive.
 
 Item172 is qualified. The numbered checklist is140 checked/33 unchecked of173.
 This feature does not resolve157 or qualify a release by itself.
+
+## Intro falling-platform admission (168)
+
+The supplied paired Intro recording1792323436112052 leaves P1 near1671 while
+P2 traverses part2. A fresh native Split run reproduces suspended General1
+platforms5..10 while P2 advances beyond2500 and living P1 stays1671. That
+walking-only observation ends at an ordinary terrain obstacle; it is not
+proof of the later boss-entry softlock2.
+
+The bounded native counterexample walks both heroes from original checkpoint1
+along the raised floor, stops one below the trigger and advances the other.
+P1 crossing2000 moves subtype5's Y from288 to408.83. Repeating with P1 stopped
+at1881.5 and healthy P2 crossing2033 leaves that same platform at288/phase0.
+Both heroes remain32HP. This establishes the P2 trigger exclusion without
+placing either body beyond the relevant terrain or writing any platform state.
+
+Native BEED4 loads only PLAYER.x atBEEF0, compares it with the subtype's
+authored threshold at8010C164, then starts one original fall/map sequence.
+The checked BEEF4 instruction hook extends only that loaded X to a farther
+living P2, or to the surviving P2 when P1 is dead. It checks Intro part2,
+the actual aligned General pool, live type1/subtype0..13 and the waiting phase.
+Native threshold comparison, falling movement, tile edits, effects and sound
+still execute once. It adds no persistent state and applies by default.
+Both source configs declare the exact00041100 instruction; generated shard57
+was regenerated from the original executable.
+
+| Check | Evidence |
+|---|---|
+| Local Unified | Both rosters pass with each seat leading. Subtype5 leaves288 and moves through its native falling phase; both heroes remain healthy/visible. |
+| Actual Split, X/P1 Zero/P2 | Both leaders trigger the original fall, no local-view state leak, matching peer core/mod state through6628. |
+| Actual Split, Zero/P1 X/P2 | Both leaders also pass with the reversed assignment; matching peers through6212. Presented captures show the changed platform/floor and living P2. |
+| Scope/counterexamples |16 new lifecycle cases cover leading P2, a P2 survivor despite a farther stale P1 coordinate, P1 already ahead, and exclusions for dead P2, projections, presentation, stage/section, pool alignment, type/subtype and phase. Platform bytes and the other CPU result register remain unchanged by the predicate hook. |
+| Regression checks | MinGW lifecycle and Linux GCC lifecycle pass; the Linux fixture's existing missing-field-initializer warning remains. All36 Windows title checks pass in13.00s. |
+
+Excluded setups remain recorded: two fixtures used the lower corridor's443
+root in this raised floor and died before the crossing; another airborne
+placement did not settle. The qualified scenario uses native walking from
+the authored checkpoint instead. No excluded attempt is counted as a game
+reproduction or acceptance. The source-owned case is intro_platform_leader.
+
+Private native controls, input receipts, captures, exact source/script
+snapshots, generated-hook provenance and executable digests are retained in
+the verified qualification37/intro-platform-controls.zip and SHA256 receipt.
+Item168 is qualified;141 checked/32 unchecked of173. Intro boss approach2,
+scaling157 and the remaining release scope remain open.

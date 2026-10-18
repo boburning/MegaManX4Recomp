@@ -1047,6 +1047,49 @@ class Scenarios:
             cases.append(dict(owner=owner,arrival=arrived,enemies=self.enemies()))
         return dict(native_approaches=cases,both_alive=True)
 
+    def intro_platform_leader(self):
+        """Either hero crosses a real falling-platform trigger in Intro part2."""
+        results=[]
+        for owner in (0,1):
+            self.load(0,1,1);self.r.fixture(5,3)
+            self.wait('intro-platform-arrivals-'+str(owner),lambda v:not v['blocked'] and
+                all(p['active'] and p['visible'] and p['hp'] and p['state']==1 and
+                    p['action']==2 and not p['script'] and not p['door'] for p in v['players']),15)
+            # Follow the original raised floor from checkpoint1. Avoid
+            # transplanting a lower corridor's443 root into its solid tiles.
+            self.r.input(0xffdf,0);self.r.input(0xffdf,1)
+            try:
+                self.wait('intro-platform-approach-'+str(owner),lambda v:
+                    max(p['x'] for p in v['players'])>=1872,8)
+            finally:self.r.release()
+            def platform():
+                pool=self.r.read(0x80165a30,32*0x8c)
+                for slot in range(32):
+                    body=pool[slot*0x8c:(slot+1)*0x8c]
+                    if body[0] and body[1:3]==bytes((1,5)):
+                        return dict(address=hex(0x80165a30+slot*0x8c),state=list(body[4:7]),
+                            x=struct.unpack_from('<i',body,8)[0]/65536,
+                            y=struct.unpack_from('<i',body,12)[0]/65536,body=body.hex())
+            self.wait('intro-platform-loaded-'+str(owner),lambda _:platform() is not None,8)
+            before=platform();assert before['state'][0:2]==[1,0],before
+            self.sample('intro-platform-before-'+str(owner),True)
+            self.r.input(0xffdf,owner)
+            try:
+                self.wait('intro-platform-native-crossing-'+str(owner),lambda v:v['players'][owner]['x']>=2010,8)
+            finally:self.r.release()
+            after=self.sample('intro-platform-after-'+str(owner),True)
+            deadline=time.monotonic()+3
+            while time.monotonic()<deadline:
+                moved=platform()
+                if moved and moved['y']>before['y']+8:break
+                time.sleep(.025)
+            result=dict(owner=owner,before=before,after=moved,players=after['players'])
+            results.append(result)
+            (self.output/'intro-platform-evidence.json').write_text(json.dumps(results,indent=2))
+            assert all(p['hp'] and p['visible'] for p in after['players']),after
+            assert moved and moved['y']>before['y']+8,('Native platform did not drop for leader',result)
+        return dict(native_platforms=results)
+
     def intro(self):
         self.load(0, 1, 2)
         self.r.teleport_both(4208, 443)
@@ -2109,7 +2152,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit','intro_platform_leader'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())
