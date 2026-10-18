@@ -195,3 +195,88 @@ warnings in the fixture. This is not cross-OS match compatibility qualification.
 Production-package validation and the rest of the burndown remain pending;
 157 is still open and no release has been authorized as validated by these
 portal/Owl checks alone.
+
+
+## Frame-scheduled slash controls and remaining instrumentation gap
+
+The next discovery controls use the debug server's queued, vblank-counted pad
+route instead of alternating short TCP presses with diagnostic reads. Basic
+Zero/P1 air, single, combo and cancel trials complete with scaling OFF and
+Separate ON. OFF admits 2/2/3/3 native damage stores; ON admits 5/4/17/6.
+Those totals do not reproduce157: Frost walks past the fixed-facing player,
+so many later swings are visibly out of range. Initial AI states also differ.
+Neither totals nor these controls qualify the owner's contrast.
+
+A sustained upgraded class34 aerial at a safe left-side position also completes
+OFF and ON, with one initialized blade and one accepted hit in each. Captures
+show the blade and impact; the existing lifetime guard rejects eight later
+ON contacts, but the OFF control does not accept a second damage opportunity.
+This case therefore does not prove that removing that guard fixes157. The
+first two wall setups use unqualified floor coordinates; the second records
+both setup deaths. They are explicitly excluded. The successful setup uses Zero1120/X1144 and
+retains native boss movement. It still has different initial boss AI timing.
+
+Source/native executable checks narrow the remaining investigation:
+
+- Native801060F0 rejects all inspected Zero types24-28/34/35. Frost's normal
+  80107A78 table gives those blades2/2/3/2/2/3/5 raw damage respectively.
+  Fractional scaling therefore cannot explain a zero-integer-damage basic
+  Frost slash: these particular accepted blade hits have at least two raw HP.
+- Native8002DD04 normalizes the child7E duplicate result to zero before the
+  co-op wrapper considers the other seat. A private immunity rejection does
+  not by itself skip P2 through a nonzero outer result. Do not patch this
+  ruled-out hypothesis.
+- The existing queued route only drives guest port1. It cannot establish
+  frame-scheduled P2 controls merely by passing a port argument it ignores.
+  Shared debug-tool task `beads-eio.3.358` adds a validated1/2 selector,
+  preserving port1 by default. Source-function tests cover port isolation,
+  exact segment boundaries, deferred start, invalid ports, clearing and the
+  legacy route on Windows and Linux. Native P2 input qualification is recorded
+  below.
+  This guest override is not an authoritative netplay host input route.
+
+Private discovery archive: `qualification37/route-investigation/` beneath
+`build-pr23/followup36/`, with source-script snapshots and SHA256 manifest.
+No gameplay fix, acceptance of157, or release is claimed from these controls.
+
+
+### Native P2 route qualification
+
+The rebuilt debug executable830e110c46b62404a47075c06f6f8f90086e258f1717798cd76eeecb73194efd
+runs the same queued basic-air pattern in fresh scaling-OFF and Separate-ON
+Frost encounters, with Zero/P2 and X/P1. Both native diagnostic recordings
+contain190 consecutive verified input frames: five identical38-frame cycles
+(4 Cross,3 neutral,4 Square,27 neutral). P1 is neutral throughout. This verifies
+actual native P2 delivery rather than accepting the new command's response.
+Input receipts are `pad-route-verification.json` beside each report.
+
+The OFF encounter admits class27 then class24 (48->44); ON admits five class27
+hits, exactly38 backend frames apart (48->43). Native captures show basic green
+blades, repeated jumps and impact/white-palette reactions. The OFF hit pause
+changes the later player's attack state; not every Square pulse there becomes
+a fresh aerial. Initial AI timing also differs. This comparison qualifies the
+instrumentation and the bounded ON contacts, **not** the reported failure or
+acceptance of157. Source-function checks also run on Linux GCC, without claiming
+native Linux controller or cross-OS netplay qualification from those checks.
+
+The next negative control disables only4985's ready-table projection in a
+separate local executable, retaining the normal working binary and source.
+Its provenance explicitly distinguishes it from an unchanged36 build; it must
+not be used as a qualified netplay/replay identity. Repeat the now-verified P2
+route to determine whether that correction explains the observed admissions.
+
+
+The local-only no-projection negative control also completes with five class27
+hits,38 backend frames apart (48->43). Its native190-frame P2 input window is
+verified against the same pattern with P1 neutral. Thus4985's shared-table
+correction does not explain this particular solo aerial control, even though
+its independent paired-hit defect was reproduced and fixed separately. This
+narrows the next comparison to the remaining upgraded/ground/cancel cases and
+the actual reported encounter; it does not resolve157.
+
+Shared input-route implementation: framework commitf2344be7,
+[PR686](https://github.com/RetroPortingToolKit/psxrecomp/pull/686), assigned to
+TechnicallyComputers. Its base retains the existing X4 framework line; unrelated
+framework master changes have not been pulled into this investigation.
+Native source/capture/input receipts are retained in the verified private
+`qualification37/p2-route-controls.zip` with a separate size/SHA256 receipt.
