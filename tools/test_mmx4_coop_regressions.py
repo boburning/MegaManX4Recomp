@@ -516,6 +516,33 @@ class Scenarios:
         self.watch_enemy=None
         return dict(native_p2_section_transfer=True,before=before['players'],after=after['players'],lives=after['lives'])
 
+    def frost_late_path(self):
+        """The later outdoor ice bridge has a different P1-only trigger."""
+        self.load(2,0,0)
+        self.r.fixture(5,3)
+        before=self.sample('frost-late-path-start')
+        self.r.teleport(1,3246,361)  # Observed safe ledge before the gap.
+        rows=[]
+        deadline=time.monotonic()+8
+        while time.monotonic()<deadline:
+            row=self.sample('frost-late-path-p2-ahead')
+            data=self.r.read(0x80142F98,32*0x30)
+            row['controllers']=[list(b[1:7]) for i in range(32)
+                if (b:=data[i*0x30:(i+1)*0x30])[0] and b[1]==21 and b[2]==3]
+            data=self.r.read(0x80165A30,32*0x8C)
+            row['path_platforms']=sum(bool(b[0] and b[1]==17) for i in range(32)
+                if (b:=data[i*0x8C:(i+1)*0x8C]))
+            rows.append(row)
+            assert row['players'][0]['x']<3168 and row['players'][1]['hp']>0,row
+            if row['path_platforms']:break
+            time.sleep(.08)
+        (self.output/'frost-late-path.json').write_text(json.dumps(rows,indent=2))
+        assert any(c[4]>0 for r in rows for c in r['controllers']),('Bridge never armed',rows)
+        assert rows[-1]['path_platforms']>0,('No native ice-path platforms',rows[-1])
+        return dict(p1_remains_behind=True,p2_activates_native_bridge=True,
+                    before=before['players'],after=rows[-1]['players'],
+                    platforms=rows[-1]['path_platforms'])
+
     def section_health(self):
         self.load(1,0)
         self.r.fixture(2,1,8)
@@ -1862,7 +1889,7 @@ def main():
     parser.add_argument('--both-story-bosses',action='store_true')
     parser.add_argument('--boss-scaling',action='store_true')
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
-    parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
+    parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()

@@ -1,4 +1,22 @@
-# Co-op playtest 31
+# Co-op playtest 35
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.35)
+with Windows ZIP and Linux x86_64 AppImage. Includes fresh saber-contact cleanup,
+distant intro red-palette isolation, and the leading-P2 trigger for Frost's
+later outdoor ice path. [Qualification and limits](COOP_FEEDBACK34_FOLLOWUP.md).
+
+**Report157 remains unconfirmed:** the tester's exact missed follow-up slash
+sequence has not been reproduced or confirmed resolved. The contact-history
+fix and independent X/Zero hits have separate passing qualification.
+
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Both peers must update. Campaign memory-card saves carry forward.
+Production packages disable both debug tools and synchronized development controls.
+
+Release issue: `beads-eio.9.181`. Private production, package and publication
+receipts: `build-pr23/release35-qa/`.
+
+## Previous co-op playtest 31
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.31)
 with Windows ZIP and Linux x86_64 AppImage. Includes controller instance-zero

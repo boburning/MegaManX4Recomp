@@ -65,6 +65,7 @@ int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t
     (void)id;(void)callback;
     assert((address==0x800DA44Cu && expected==0x284218D0u) ||
            (address==0x800B9F74u && expected==0x2442FD5Fu) ||
+           (address==0x800BA39Cu && expected==0x28420C60u) ||
            (address==0x800C0574u && expected==0x00041100u) ||
            (address==0x800D0580u && expected==0x14620006u) ||
            (address==0x80081250u && expected==0x14620005u));return 1;
@@ -1410,6 +1411,30 @@ int main(void) {
             if(test==11)ready=0;
             frost_ice_activation(&cpu,0x800B9F74u);
             unsigned wanted=test==0 || test==2 || test==3?x:test==10?900u:144u;
+            CHECK(cpu.gpr[2]==wanted);
+        }
+    /* The later bridge is a separate signed X>=3168 predicate. Include the
+     * exact boundary, dead/hidden seats, and presentation/projection guards. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+        for(unsigned test=0;test<15;++test) {
+            reset();split_views=mode;psx_mod_write_byte(PLAY+12,2);
+            psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+            int x=test==1?3167:test==2?3168:test==3?-1:3246;
+            p2[10]=(uint8_t)x;p2[11]=(uint8_t)((uint16_t)x>>8);cpu.gpr[2]=144;
+            if(test==4)p2[0x5C]=0;
+            if(test==5)projected=1;
+            if(test==6)local_view=1;
+            if(test==7)psx_mod_write_byte(PLAY+12,1);
+            if(test==8)psx_mod_write_byte(PLAY+13,1);
+            if(test==9)cpu.gpr[2]=4000;
+            if(test==10)ready=0;
+            if(test==11)psx_mod_write_byte(PLAY,7);
+            if(test==12)cpu.gpr[2]=(uint32_t)-1;
+            if(test==13)psx_mod_write_byte(PLAYER+0x5C,0);
+            if(test==14)p2[0]=0;
+            frost_path_activation(&cpu,0x800BA39Cu);
+            unsigned wanted=test==0 || test==2 || test==12 || test==13?
+                (unsigned)x:test==9?4000u:144u;
             CHECK(cpu.gpr[2]==wanted);
         }
     reset();

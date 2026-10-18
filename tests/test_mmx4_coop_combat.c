@@ -230,6 +230,14 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     }
     if (address==CONTACT || address==HIT) {
         ++native_calls[seat];
+        /* DD04 calls DE30 only after finding a live overlapping shot. */
+        if(address==HIT && (!(token_model || double_model) || attack_present[seat]) &&
+           !psx_mod_read_byte(a0+0x61) && !psx_mod_read_byte(a0+0x7A)) {
+            CPUState shot={.gpr={[4]=a0,[5]=SHOTS}};
+            if(filter(0x8002DE30u)(&shot,0x8002DE30u)) {
+                CHECK(shot.gpr[2]==0x7Eu);return 0;
+            }
+        }
         if(address==HIT && double_model) {
             /* DD04 overlap and DE30's signed-byte token gate precede the
              * admission load. A rejected repeated hit returns DD04 zero. */
@@ -561,9 +569,9 @@ static void death_particle_ownership(void) {
 }
 static void accepted_events(void) {
     setup();boss_immunity[0]=1;hit_result[0]=1;hit_result[1]=2;
-    CHECK(invoke(HIT)==2 && !native_calls[0] && native_calls[1]==1);
+    CHECK(invoke(HIT)==2 && native_calls[0]==1 && native_calls[1]==1);
     setup();boss_immunity[0]=boss_immunity[1]=1;hit_result[0]=1;hit_result[1]=2;
-    CHECK(!invoke(HIT) && !native_calls[0] && !native_calls[1]);
+    CHECK(!invoke(HIT) && native_calls[0]==1 && native_calls[1]==1);
     CHECK(invoke(CONTACT)==1); /* Offensive immunity never suppresses contact. */
     const uint32_t addresses[]={CONTACT,HIT};
     for (unsigned i=0;i<2;++i) {
@@ -787,6 +795,19 @@ static void independent_hit_tokens(void) {
     CHECK(invoke(HIT)==1 && consumed==5); /* Reused target has no old tokens. */
     setup();token_model=1;attack_present[1]=1;attack_token[1]=0;
     CHECK(invoke(HIT)==1 && invoke(HIT)==1 && consumed==2); /* Native zero-token semantics. */
+    for(unsigned seat=0;seat<2;++seat) {
+        setup();token_model=1;attack_present[seat]=1;attack_token[seat]=1;
+        CHECK(invoke(HIT)==1 && consumed==1);
+        boss_immunity[seat]=1;
+        CHECK(!invoke(HIT) && consumed==1); /* Held contact stays one hit. */
+        attack_present[seat]=0;CHECK(!invoke(HIT)); /* The sword leaves contact. */
+        attack_present[seat]=1;CHECK(!invoke(HIT) && consumed==1);
+        boss_immunity[seat]=0;
+        CHECK(invoke(HIT)==1 && consumed==2); /* Fresh same-key swing can hit. */
+        CHECK(!invoke(HIT) && consumed==2);
+        boss_immunity[seat]=1;CHECK(!invoke(HIT));boss_immunity[seat]=0;
+        CHECK(!invoke(HIT) && consumed==2); /* No fresh gap: still same swing. */
+    }
 }
 static void setup_split_actors(unsigned shots) {
     setup();split=target_camera_mode;

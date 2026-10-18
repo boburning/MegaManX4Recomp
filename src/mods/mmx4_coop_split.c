@@ -45,6 +45,52 @@ static void read_bytes(uint32_t source,uint8_t *bytes,unsigned size) {
 static void write_bytes(uint32_t destination,const uint8_t *bytes,unsigned size) {
     mmx4_coop_project(destination,bytes,size);
 }
+void mmx4_coop_split_local_explosion_palette(CPUState *cpu,const uint8_t camera[0xFC]) {
+    /* BBC14's type28 controller centres its explosions at CAMERA+(160,128)
+     * in BBDF4, but BBEA4 applies red to the shared palette. Intro part2 also
+     * has B5960's type2/subtype0 red pulse (0..3) around the native view.
+     * Remove those local effects from a distant independent viewport.
+     * This helper runs inside the local-render RAM/VRAM transaction: native
+     * colors, upload flags and working palettes restore with that scope. */
+    if(!state || !mmx4_coop_split_views() || !mmx4_coop_ready() || mmx4_coop_projected() ||
+       !psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6 ||
+       psx_mod_read_byte(MMX4_PLAY+1) || psx_mod_read_byte(MMX4_PLAY+12) ||
+       psx_mod_read_byte(MMX4_PLAY+0x0F) || psx_mod_read_byte(MMX4_PLAY+0x10) ||
+       psx_mod_read_byte(0x80175E9Cu) || !psx_mod_read_half(0x80175EA0u) ||
+       psx_mod_read_half(0x80175EA0u)>31 ||
+       psx_mod_read_half(0x80141BE6u) || psx_mod_read_half(0x8013E1BEu))return;
+    int x=(int16_t)((uint16_t)camera[10]|(uint16_t)camera[11]<<8)+160;
+    int y=(int16_t)((uint16_t)camera[14]|(uint16_t)camera[15]<<8)+128;
+    int margin=psx_mod_widescreen_x_margin();
+    unsigned sources=0,pulse=0;
+    for(unsigned i=0;i<32;++i) {
+        uint32_t actor=0x80142F98u+i*0x30u;
+        if(!psx_mod_read_byte(actor) || psx_mod_read_byte(actor+4)!=1)continue;
+        if(psx_mod_read_byte(actor+1)==2 && !psx_mod_read_byte(actor+2) &&
+           psx_mod_read_byte(MMX4_PLAY+13)==1 && psx_mod_read_half(0x80175EA0u)<=3)
+            pulse=1;
+        if(psx_mod_read_byte(actor+1)!=28)continue;
+        ++sources;
+        int dx=(int16_t)psx_mod_read_half(actor+10)-x;
+        int dy=(int16_t)psx_mod_read_half(actor+14)-y;
+        if(dx>-320-2*margin && dx<320+2*margin && dy>-240 && dy<240)return;
+    }
+    if(!sources && pulse) {
+        /* The looping palette actor's XY is its allocation position, not
+         * the region it lights. Its global pulse belongs to the native
+         * camera being drawn before this private viewport is substituted. */
+        int dx=(int16_t)psx_mod_read_half(CAMERA+10)+160-x;
+        int dy=(int16_t)psx_mod_read_half(CAMERA+14)+128-y;
+        if(dx>-320-2*margin && dx<320+2*margin && dy>-240 && dy<240)return;
+        sources=1;
+    }
+    if(!sources)return; /* Other red flashes and ordinary fades remain native. */
+    psx_mod_write_half(0x80175EA0u,0);
+    psx_mod_write_byte(0x80166BB0u,(uint8_t)(psx_mod_read_byte(0x80166BB0u)|4u));
+    mmx4_coop_call(cpu,0x8002A484u,0,0); /* Rebuild the unlit working palette. */
+    mmx4_coop_call(cpu,0x80016004u,0,0); /* Upload within the private GPU pass. */
+    psx_mod_counter_add("mmx4.coop.split-distant-explosion-flash-removed",1);
+}
 static int available(void) {
     return state && mmx4_coop_split_views() && mmx4_coop_ready() &&
         (!mmx4_coop_projected() || mmx4_coop_combat_actor_context() || spatial_call) &&

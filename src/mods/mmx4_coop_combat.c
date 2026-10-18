@@ -191,8 +191,7 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
      * The shared pool runs for P1, so apply the same gate to each projected
      * seat. Otherwise a persistent Zero saber reasserts +BD every world pass
      * and the next player tick restarts the five-tick hit pause forever. */
-    if (mmx4_coop_alive(0) && !psx_mod_read_byte(MMX4_PLAYER+0xBC) &&
-        (address!=ENEMY_HIT || mmx4_coop_balance_hit_allowed(actor,0))) {
+    if (mmx4_coop_alive(0) && !psx_mod_read_byte(MMX4_PLAYER+0xBC)) {
         result=mmx4_coop_call(cpu,address,actor,arg);
         if(result)attacker=1;
         if (history) {
@@ -201,8 +200,7 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
             if (history) history->token[0]=first_token;
         }
     }
-    if (!result && mmx4_coop_alive(1) && !mmx4_coop_second_body()[0xBC] &&
-        (address!=ENEMY_HIT || mmx4_coop_balance_hit_allowed(actor,1))) {
+    if (!result && mmx4_coop_alive(1) && !mmx4_coop_second_body()[0xBC]) {
         if (history) psx_mod_write_byte(actor+0x65,history->token[1]);
         mmx4_coop_enter_second();
         result=mmx4_coop_call(cpu,address,actor,arg);
@@ -226,6 +224,22 @@ static int accepted_hit_canonical(CPUState *cpu, uint32_t address) {
     /* The original actor caller applies the selected result and advances its
      * state once. In particular, one consumable attack cannot hit both seats. */
     return mmx4_coop_finish(cpu,result);
+}
+
+static int private_boss_hit(CPUState *cpu,uint32_t address) {
+    (void)address;
+    /* DD04 must keep testing overlap during private immunity: when a blade
+     * leaves the boss, its no-contact path clears that seat's previous +65
+     * token. Blocking DD04 itself retains the old token and can reject the
+     * next same-key swing after immunity expires. Zero's native 800981AC
+     * derives these keys from subtype/pose, so new swings can reuse them.
+     * Gate only DE30's accepted
+     * overlap, before it stores a token, consumes a shot or applies damage.
+     * Its native duplicate result 7E preserves a still-held contact. */
+    if(combat_call && mmx4_coop_ready() && !psx_mod_local_view_scope() &&
+       !mmx4_coop_balance_hit_allowed(cpu->gpr[4],mmx4_coop_projected()?1u:0u))
+        return mmx4_coop_finish(cpu,0x7Eu);
+    return 0;
 }
 
 static void attack_reaction_character(CPUState *cpu,uint32_t address) {
@@ -871,6 +885,7 @@ uint32_t mmx4_coop_combat_digest(uint32_t seed) {
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_combat) {
     psx_mod_register_function_filter_plugin(COOP_ID,CONTACT,accepted_hit);
     psx_mod_register_function_filter_plugin(COOP_ID,ENEMY_HIT,accepted_hit);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x8002DE30u,private_boss_hit);
     psx_mod_register_function_filter_plugin(COOP_ID,SOLID_CONTACT,solid_player_contact);
     psx_mod_register_function_filter_plugin(COOP_ID,0x8002AB74u,allocate_actor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x8002ACA4u,allocate_actor);
