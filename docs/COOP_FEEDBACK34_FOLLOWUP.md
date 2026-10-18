@@ -1,6 +1,7 @@
 # Playtest34 follow-up: saber contacts, local flashes and Frost ice path
 
-These are source fixes for the next build, not a published Playtest35.
+Playtest35 packages these corrections. The exact missed-hit report157 remains
+unconfirmed; the evidence and limits below are retained.
 Tracking: `beads-eio.9.177`, `beads-eio.9.179`, `beads-eio.9.180`.
 
 ## Evidence intake
@@ -148,4 +149,6 @@ correction) and `feedback35-continued/red-after/`.
 
 All35 Windows title checks pass after the palette change. Linux GCC split,
 combat and lifecycle executables also pass. Automated launches are hidden/headless and use a dummy audio output.
-The production Playtest34 executable and published release remain unchanged.
+Production Playtest35 qualification and publication receipts are recorded
+under `build-pr23/release35-qa/`; these developer receipts do not by themselves
+claim cross-platform gameplay compatibility.

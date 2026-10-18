@@ -1,4 +1,33 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.34
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.35
+
+**Frost ice paths, isolated split-screen flashes, and a saber-contact correction.**
+
+- A leading Player 2 can activate Frost Walrus's later outdoor ice path while
+  Player 1 remains behind.
+- Distant split-camera views keep their normal colors during intro-stage red
+  flashes. The nearby view retains the effect.
+- Fixed stale saber-contact history during per-player boss cooldowns, allowing
+  a fresh swing to reuse its native contact key after recovery. A held swing
+  still counts as one hit. Cooldown lengths are unchanged.
+
+**Issue 157 remains unconfirmed.** The contact-cleanup correction and independent
+X/Zero hits have been validated, but the tester's exact missed follow-up slash
+sequence has not been reproduced or confirmed resolved. This release does not
+claim that every reported missed hit is fixed.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.34
 
 **Safer boss fights and clearer co-op hit feedback.**
 
