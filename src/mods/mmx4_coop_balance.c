@@ -13,11 +13,38 @@ static unsigned enabled;
 static unsigned per_player;
 static uint8_t fraction[SLOTS][3];
 static uint8_t immunity[SLOTS][3][2];
+/* A sword's pose/contact byte is reusable, and changes within Kuuenzan.
+ * Count native projectile initializations instead: one hit per actual blade
+ * lifetime, independently for each boss health bank and player. */
+static uint32_t melee_generation[2][16],next_melee[2];
+static uint32_t melee_hits[SLOTS][3][2],saved_melee_hits[3][2];
+static uint16_t melee_used[SLOTS][3][2],saved_melee_used[3][2];
 static uint32_t current_actor;
 static uint8_t saved_fraction[3];
 static unsigned accepted_damage;
 static unsigned damage_owner;
 static unsigned saber_chain;
+
+static int melee_slot(uint32_t shot) {
+    if(shot<0x801406F8u || shot>=0x801406F8u+16u*0x9Cu ||
+       (shot-0x801406F8u)%0x9Cu || psx_mod_read_byte(MMX4_PLAYER+2)!=1)return -1;
+    unsigned type=psx_mod_read_byte(shot+1);
+    return (type>=24 && type<=28) || type==34?(int)((shot-0x801406F8u)/0x9Cu):-1;
+}
+static void melee_spawned(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!enabled || !per_player || !mmx4_coop_ready() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(cpu->gpr[4]+4))return;
+    int i=melee_slot(cpu->gpr[4]);if(i<0)return;
+    unsigned seat=(unsigned)(mmx4_coop_projected()!=0);
+    if(!++next_melee[seat])++next_melee[seat];
+    melee_generation[seat][i]=next_melee[seat];
+    /* More than one native blade can coexist. A later hit from another
+     * slot must not make this older, already accepted blade eligible again. */
+    for(unsigned target=0;target<SLOTS;++target)for(unsigned b=0;b<3;++b)
+        melee_used[target][b][seat]&=(uint16_t)~(1u<<(unsigned)i);
+    psx_mod_counter_add("mmx4.coop.boss-melee-lifetimes",1);
+}
 
 static int slot(uint32_t actor) {
     if(actor<POOL || actor>=POOL+SLOTS*STRIDE || (actor-POOL)%STRIDE)return -1;
@@ -45,6 +72,9 @@ static unsigned bank(uint32_t actor) {
 void mmx4_coop_balance_reset(void) {
     memset(fraction,0,sizeof fraction);memset(saved_fraction,0,sizeof saved_fraction);
     memset(immunity,0,sizeof immunity);
+    memset(melee_generation,0,sizeof melee_generation);memset(next_melee,0,sizeof next_melee);
+    memset(melee_hits,0,sizeof melee_hits);memset(saved_melee_hits,0,sizeof saved_melee_hits);
+    memset(melee_used,0,sizeof melee_used);memset(saved_melee_used,0,sizeof saved_melee_used);
     current_actor=0;accepted_damage=damage_owner=saber_chain=0;
 }
 void mmx4_coop_balance_activate(void) {
@@ -58,6 +88,8 @@ void mmx4_coop_balance_forget(uint32_t actor) {
     int i=slot(actor);if(i>=0) {
         memset(fraction[i],0,sizeof fraction[i]);
         memset(immunity[i],0,sizeof immunity[i]);
+        memset(melee_hits[i],0,sizeof melee_hits[i]);
+        memset(melee_used[i],0,sizeof melee_used[i]);
     }
 }
 int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {
@@ -65,6 +97,24 @@ int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {
     if(!immunity[slot(actor)][bank(actor)][seat])return 1;
     psx_mod_counter_add("mmx4.coop.boss-repeat-hit-blocked",1);
     return 0;
+}
+int mmx4_coop_balance_contact_allowed(uint32_t actor,uint32_t shot,unsigned seat) {
+    if(!mmx4_coop_balance_hit_allowed(actor,seat))return 0;
+    if(!enabled || !per_player || seat>1 || psx_mod_local_view_scope() || !boss(actor))return 1;
+    int i=melee_slot(shot);if(i<0)return 1;
+    uint32_t generation=melee_generation[seat][i];
+    uint32_t previous=melee_hits[slot(actor)][bank(actor)][seat];
+    if(!generation)return 1; /* Uninstrumented/non-native projectiles stay conservative. */
+    if(melee_used[slot(actor)][bank(actor)][seat]&(1u<<(unsigned)i)) {
+        psx_mod_counter_add("mmx4.coop.boss-held-melee-blocked",1);return 0;
+    }
+    /* A fresh sword may reuse the old contact key without an empty overlap
+     * frame (cancelled ground slashes). Only a new native blade lifetime may
+     * clear that duplicate key; an old blade remains blocked above. */
+    if(previous && psx_mod_read_byte(shot+0x64) &&
+       psx_mod_read_byte(actor+0x65)==psx_mod_read_byte(shot+0x64))
+        psx_mod_write_byte(actor+0x65,0);
+    return 1;
 }
 unsigned mmx4_coop_balance_flash_ticks(uint32_t actor) {
     /* Rendering can query either local view without advancing simulation.
@@ -83,11 +133,15 @@ void mmx4_coop_balance_begin(uint32_t actor) {
     if(per_player)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         if(immunity[slot(actor)][b][seat])--immunity[slot(actor)][b][seat];
     memcpy(saved_fraction,fraction[slot(actor)],sizeof saved_fraction);
+    memcpy(saved_melee_hits,melee_hits[slot(actor)],sizeof saved_melee_hits);
+    memcpy(saved_melee_used,melee_used[slot(actor)],sizeof saved_melee_used);
 }
 void mmx4_coop_balance_end(void) {
     if(current_actor && !psx_mod_read_byte(current_actor+0x5C))
         fraction[slot(current_actor)][bank(current_actor)]=0;
     current_actor=0;accepted_damage=damage_owner=saber_chain=0;memset(saved_fraction,0,sizeof saved_fraction);
+    memset(saved_melee_hits,0,sizeof saved_melee_hits);
+    memset(saved_melee_used,0,sizeof saved_melee_used);
 }
 int mmx4_coop_balance_snapshot_ready(void) {return !current_actor;}
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
@@ -96,6 +150,14 @@ int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)MMX4_SNAPSHOT_BOOL(s,fraction[i][b]);
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         MMX4_SNAPSHOT_U8(s,immunity[i][b][seat]);
+    for(unsigned seat=0;seat<2;++seat) {
+        MMX4_SNAPSHOT_U32(s,next_melee[seat]);
+        for(unsigned i=0;i<16;++i)MMX4_SNAPSHOT_U32(s,melee_generation[seat][i]);
+    }
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        MMX4_SNAPSHOT_U32(s,melee_hits[i][b][seat]);
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        MMX4_SNAPSHOT_U16(s,melee_used[i][b][seat]);
     return s->ok;
 }
 uint32_t mmx4_coop_balance_digest(uint32_t seed) {
@@ -104,6 +166,14 @@ uint32_t mmx4_coop_balance_digest(uint32_t seed) {
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)seed=(seed^fraction[i][b])*16777619u;
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         seed=(seed^immunity[i][b][seat])*16777619u;
+    for(unsigned seat=0;seat<2;++seat) {
+        seed=(seed^next_melee[seat])*16777619u;
+        for(unsigned i=0;i<16;++i)seed=(seed^melee_generation[seat][i])*16777619u;
+    }
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        seed=(seed^melee_hits[i][b][seat])*16777619u;
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
+        seed=(seed^melee_used[i][b][seat])*16777619u;
     return seed;
 }
 static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
@@ -130,14 +200,18 @@ static void damage(CPUState *cpu,uint32_t address) {
     if(!hp || hp>=127 || !amount || amount>255)return;
     /* This site follows SUBU, after the separate damage-multiplier hook. */
     cpu->gpr[3]=scaled_damage(actor,amount);
-    /* Keep Zero's first two grounded strikes chainable in the independent
-     * cooldown mode. The finisher and other moves use the halved timer.
-     * A1 is the native projectile accepted by 2DE30, after overlap/tokens. */
+    /* Ground chains, finishers and aerials use one short recovery when a
+     * native lifetime is known. Lifetime admission prevents the same blade
+     * from hitting again when that recovery expires. */
     uint32_t shot=cpu->gpr[5];
     if(current_actor==actor) {
-        saber_chain=shot>=0x801406F8u && shot<0x801406F8u+16u*0x9Cu &&
-            !((shot-0x801406F8u)%0x9Cu) && psx_mod_read_byte(MMX4_PLAYER+2)==1 &&
-            (psx_mod_read_byte(shot+1)==24 || psx_mod_read_byte(shot+1)==25);
+        int i=melee_slot(shot);
+        saber_chain=i>=0 && (melee_generation[damage_owner-1u][i] ||
+            psx_mod_read_byte(shot+1)==24 || psx_mod_read_byte(shot+1)==25);
+        if(per_player && i>=0) {
+            melee_hits[slot(actor)][bank(actor)][damage_owner-1u]=melee_generation[damage_owner-1u][i];
+            melee_used[slot(actor)][bank(actor)][damage_owner-1u]|=(uint16_t)(1u<<(unsigned)i);
+        }
     }
 }
 static void cut_web(CPUState *cpu,uint32_t address) {
@@ -153,10 +227,13 @@ static void cut_web(CPUState *cpu,uint32_t address) {
 static void rejected_hit(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[16];
+    int i=slot(actor);if(i<0)return;
     /* Cyber Peacock restores his pre-hit HP while his native cooldown runs.
      * A discarded hit must also discard its fractional damage. */
     if(enabled && current_actor==actor && !psx_mod_local_view_scope()) {
-        memcpy(fraction[slot(actor)],saved_fraction,sizeof saved_fraction);
+        memcpy(fraction[i],saved_fraction,sizeof saved_fraction);
+        memcpy(melee_hits[i],saved_melee_hits,sizeof saved_melee_hits);
+        memcpy(melee_used[i],saved_melee_used,sizeof saved_melee_used);
         accepted_damage=damage_owner=saber_chain=0;
     }
 }
@@ -201,6 +278,7 @@ static void cooldown(CPUState *cpu,uint32_t address) {
 }
 
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_balance) {
+    psx_mod_register_function_entry_plugin(ID,0x80097EECu,melee_spawned);
     /* Exact SLUS-00561 post-hit stores. Never shorten general AI/door timers
      * or rerun a boss update: native weakness reactions still execute once. */
     psx_mod_register_instruction_plugin(ID,0x8002DF08u,0x94820042u,damage);

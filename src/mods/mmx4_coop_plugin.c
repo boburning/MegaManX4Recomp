@@ -810,6 +810,19 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         guest(cpu,0x80037104u,PLAYER,0);guest(cpu,0x800371E4u,PLAYER,0);
         if(first_arg)leave_second();
         psx_mod_write_word(diagnostic+0x54,1);
+    }else if(command==6 && first_arg==254 && second_arg<4 && mmx4_coop_ready() &&
+             psx_mod_read_byte(PLAY+0xC)==2 && psx_mod_read_byte(PLAY+0xD)==1 &&
+             !psx_mod_read_byte(PLAY+0x1C)) {
+        /* Private QA: start the original ice-bird field controller without
+         * skipping the intervening platforms, enemies and camera regions.
+         * Its native update owns the fade, tile edits and lifetime. This is
+         * a synchronized setup fixture, never a production gameplay rule. */
+        uint32_t effect=guest(cpu,0x8002AD7Cu,0,0);
+        if(effect) {
+            psx_mod_write_word(effect,1u|(17u<<8)|(second_arg<<16));
+            psx_mod_write_word(effect+4,0);
+            psx_mod_write_word(diagnostic+0x54,1);
+        }
     }else if(command==6 && first_arg==255 && second_arg<2 && mmx4_coop_ready()) {
         /* Private QA: request the existing native room handoff directly.
          * This shares its ordinary departure, scene gates and terrain-safe
@@ -1283,10 +1296,14 @@ static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
 }
 static int present_local_view(CPUState *cpu,uint32_t address) {
     unsigned paired=mmx4_coop_lifecycle_paired_door();
+    /* An ordinary world freeze (including an ice bird's field effect) is
+     * not a request to replace the partner's view with the canonical image.
+     * The existing private transaction can redraw the frozen saved camera;
+     * real story owners, fades and transition locks retain their gates. */
     if(!split_views || local_view_call || projected || inside || !mmx4_coop_ready() ||
        psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+1)!=0 ||
        cpu->gpr[31]!=0x80012080u || (mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
-       psx_mod_read_byte(PLAY+0x0F) || psx_mod_read_byte(PLAY+0x10) ||
+       psx_mod_read_byte(PLAY+0x0F) ||
        (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
         !mmx4_coop_lifecycle_nova_active() && !paired))return 0;
     uint32_t buffer=psx_mod_read_word(0x80142F80u);

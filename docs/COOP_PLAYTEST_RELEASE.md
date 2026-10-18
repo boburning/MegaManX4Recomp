@@ -1,4 +1,23 @@
-# Co-op playtest 35
+# Co-op playtest 36
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.36)
+with Windows ZIP and Linux x86_64 AppImage. Corrects scaled Zero melee recovery,
+P2's later Frost ice collapse contact, and Split camera fallback during native
+field freezes. [Qualification and limits](COOP_FEEDBACK35_FROST.md).
+
+Reports161 and164 remain unchecked: enemy corruption was not reproduced in
+the bounded early part2 route, and first-entry door warp remains unqualified.
+Report163 is qualified native bird-retirement behavior, not a duplicate-spawn fix.
+
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Scaling and Fight Double and Iris remain optional, default off.
+Both peers must update. Campaign memory-card saves carry forward.
+Production packages disable debug tools and synchronized development controls.
+
+Release issue: `beads-eio.9.182`. Private production/package/publication receipts:
+`build-pr23/release36-qa/`.
+
+## Previous co-op playtest 35
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.35)
 with Windows ZIP and Linux x86_64 AppImage. Includes fresh saber-contact cleanup,

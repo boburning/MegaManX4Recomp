@@ -1,4 +1,36 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.35
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.36
+
+**Boss-scaling slash recovery corrected.** Zero's fresh ground chains,
+finishers and aerial slashes now use short recovery with Separate cooldowns.
+Each native blade still damages a boss once; a held spin cannot repeatedly hit.
+Both players retain independent cooldowns and doubled effective boss health.
+
+- Leading P2 now starts the native collapse of Frost Walrus's later ice path.
+- Split cameras retain their own view and HUD during ice-bird field freezes.
+- Added a synchronized native field-effect fixture to development netplay.
+  It is excluded from public builds.
+
+The Frost enemy-sprite corruption and reported first-entry second-door warp
+remain unconfirmed. Completed ice-bird events retain the original shared-stage
+retirement behavior; they are not duplicated for the trailing player.
+
+Windows title tests, both-seat native Zero combat, held-spin and mixed-attack
+controls, and real Split LAN collapse/freeze checks pass. Input excerpts are
+transplanted into fresh native fights; this is not exact playback of a netplay
+recording. [Evidence and limits](docs/COOP_FEEDBACK35_FROST.md).
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.35
 
 **Frost ice paths, isolated split-screen flashes, and a saber-contact correction.**
 

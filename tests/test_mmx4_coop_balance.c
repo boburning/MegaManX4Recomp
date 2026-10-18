@@ -4,10 +4,11 @@
 #include <string.h>
 #define CHECK(x) do {if(!(x)){fprintf(stderr,"line%d: %s\n",__LINE__,#x);exit(1);}}while(0)
 #define BOSS 0x8013BED0u
-#define SAVE_BYTES (8+48*3+48*3*2)
+#define SAVE_BYTES (8+48*3+48*3*2+2*17*4+48*3*2*4+48*3*2*2)
 static uint8_t ram[0x200000];
 static int enabled,local,ready=1,per_player,projected;
 static unsigned shot_type=255,hero;
+static uint32_t shot_address=0x801406F8u;
 static struct {uint32_t address;PSXModFunctionEntryCallback fn;} hooks[32];
 static unsigned count;
 uint8_t psx_mod_read_byte(uint32_t a){return ram[a&0x1fffff];}
@@ -27,6 +28,9 @@ int psx_mod_current_option_value(const char *key,char *value,uint32_t cap){
 void psx_mod_counter_add(const char *name,uint32_t v){(void)name;CHECK(v<=255);}
 int psx_mod_register_instruction_plugin(const char *id,uint32_t a,uint32_t expected,PSXModFunctionEntryCallback fn){
     (void)id;(void)expected;CHECK(count<32);hooks[count].address=a;hooks[count++].fn=fn;return 1;
+}
+int psx_mod_register_function_entry_plugin(const char *id,uint32_t a,PSXModFunctionEntryCallback fn) {
+    return psx_mod_register_instruction_plugin(id,a,0,fn);
 }
 static void hook(CPUState *cpu,uint32_t a){
     for(unsigned i=0;i<count;++i)if(hooks[i].address==a){hooks[i].fn(cpu,a);return;}
@@ -53,7 +57,7 @@ static unsigned timed_hit(unsigned seat,unsigned amount,unsigned ticks) {
     projected=(int)seat;
     unsigned hp=psx_mod_read_byte(BOSS+0x5C);
     CPUState cpu={0};cpu.gpr[4]=cpu.gpr[16]=BOSS;cpu.gpr[2]=amount;cpu.gpr[3]=hp-amount;
-    cpu.gpr[5]=0x801406F8u;psx_mod_write_byte(cpu.gpr[5]+1,(uint8_t)shot_type);
+    cpu.gpr[5]=shot_address;psx_mod_write_byte(cpu.gpr[5]+1,(uint8_t)shot_type);
     psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)hero);
     mmx4_coop_balance_begin(BOSS);hook(&cpu,0x8002DF08u);
     psx_mod_write_byte(BOSS+0x5C,(uint8_t)cpu.gpr[3]);
@@ -202,6 +206,58 @@ int main(void){
     actor(57,48);shot_type=24;hero=0;CHECK(timed_hit(0,2,64)==1);
     for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0));shot_type=255;hero=0;
+    /* Native short aerial/finisher recovery must admit the next actual
+     * sword, while a held Kuuenzan with changing pose keys stays one hit.
+     * A missed blade is not consumed, each owner/bank remains independent,
+     * and recycled targets and restored snapshots retain correct lifetimes. */
+    for(unsigned seat=0;seat<2;++seat)for(unsigned type=26;type<=34;type+=type==28?6:1) {
+        actor(57,48);hero=1;shot_type=type;projected=(int)seat;
+        psx_mod_write_byte(MMX4_PLAYER+2,1);
+        const uint32_t shot=0x801406F8u;
+        psx_mod_write_byte(shot+1,(uint8_t)type);psx_mod_write_byte(shot+4,0);
+        cpu.gpr[4]=shot;hook(&cpu,0x80097EECu);
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        CHECK(timed_hit(seat,2,64)==1);
+        CHECK(mmx4_coop_balance_flash_ticks(BOSS)==4);
+        for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+        projected=(int)seat;
+        CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
+        psx_mod_write_byte(shot+0x64,3);psx_mod_write_byte(BOSS+0x65,2);
+        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,shot,seat)); /* Same blade, new pose. */
+        /* A non-initializing update must not turn it into a fresh blade. */
+        psx_mod_write_byte(shot+4,1);hook(&cpu,0x80097EECu);
+        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
+        CHECK(mmx4_coop_balance_snapshot(&io));digest=mmx4_coop_balance_digest(1);
+        /* Fresh native initialization, even with the same slot/contact key. */
+        psx_mod_write_byte(shot+4,0);hook(&cpu,0x80097EECu);
+        psx_mod_write_byte(BOSS+0x65,3);
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        CHECK(!psx_mod_read_byte(BOSS+0x65));
+        CHECK(digest!=mmx4_coop_balance_digest(1));
+        io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_READ,1};
+        CHECK(mmx4_coop_balance_snapshot(&io));
+        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        mmx4_coop_balance_forget(BOSS);
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        projected=0;
+    }
+    /* Interleaved native blade slots cannot re-arm one another. */
+    actor(57,48);hero=1;shot_type=27;projected=1;
+    psx_mod_write_byte(MMX4_PLAYER+2,1);
+    for(unsigned index=0;index<2;++index) {
+        cpu.gpr[4]=0x801406F8u+index*0x9Cu;
+        psx_mod_write_byte(cpu.gpr[4]+1,27);hook(&cpu,0x80097EECu);
+    }
+    for(unsigned index=0;index<2;++index) {
+        shot_address=0x801406F8u+index*0x9Cu;
+        projected=1;CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot_address,1));
+        CHECK(timed_hit(1,2,64)==1);
+        for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
+    }
+    for(unsigned index=0;index<2;++index)
+        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,0x801406F8u+index*0x9Cu,1));
+    shot_address=0x801406F8u;shot_type=255;hero=0;
     /* Odd native durations round up, for either owner. The last blocked
      * tick remains blocked; the partner is available throughout. */
     for(unsigned seat=0;seat<2;++seat) {
