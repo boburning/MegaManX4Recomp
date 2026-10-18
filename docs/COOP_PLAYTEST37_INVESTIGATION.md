@@ -538,3 +538,20 @@ snapshots are retained in verified qualification37/saved-slash-controls.zip,
 with a separate SHA256 receipt. Saved images and original game assets are
 excluded. The comparison returns slash_acceptance=false deliberately.
 Checklist141/32 is unchanged; no release is qualified.
+
+Two further bounded controls retain the same348-input/60-setup-row checks.
+A deliberately relinked local-only variant removes both the blade-lifetime
+veto and four-tick override, retaining half-native private recovery. Its own
+saved-fight pair admits two class34/spinning damage stores in each mode:
+OFF48 to42, ON48 to45. This supplies the gameplay result missing from the
+earlier half-native variant's failed setup. It does not reproduce suppression
+or qualify this variant for production/netplay. Exact altered source,
+compile/link commands and executable hash remain in its private provenance.
+
+A separate current-code control places idle X initially closer to Frost than
+Zero. That saved pair admits two class34 stores OFF and three ON. These are
+different saved setups, so do not compare totals between the variant and
+current-code experiments as though they shared a world. Neither demonstrates
+the reported ON-worse behavior. Private verified native-half-saved-controls.zip
+and x-near-saved-controls.zip retain their inputs, observations, captures,
+source snapshots and separate SHA256 receipts.157 remains open.

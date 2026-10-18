@@ -81,7 +81,8 @@ def balance_saved_slashes(s):
     r=s.r;zero=s.campaign^1;xseat=s.campaign
     boss=next(e for e in s.enemies() if e['type']==57 and e['hp']==48)
     r.fixture(7,zero,0,1)
-    r.teleport(xseat,int(boss['x'])-100,443)
+    x_distance=getattr(s,'saved_x_distance',100)
+    r.teleport(xseat,int(boss['x'])-x_distance,443)
     r.teleport(zero,int(boss['x'])-36,442)
     r.input(0xffdf,zero);time.sleep(.035);r.release()
     def operation(op):
@@ -95,7 +96,7 @@ def balance_saved_slashes(s):
             time.sleep(.02)
         raise TimeoutError('Saved slash operation: '+op)
     actor=0x8013bed0+boss['slot']*0x9c
-    result=dict(save=operation('save'),zero_seat=zero,trials=[])
+    result=dict(save=operation('save'),zero_seat=zero,trials=[],x_distance=x_distance)
     steps=[(60,0xffff)]+[(4,0xbfff),(3,0xffff),(4,0x7fff),(27,0xffff)]*6+[(60,0xffff)]
     result['steps']=steps
     sessions=s.output/'saves/diagnostics'
