@@ -333,3 +333,47 @@ build-pr23/followup36/qualification37/owl-midboss-controls.zip with a separate
 size/SHA256 receipt. The main checklist now has139 checked/34 unchecked of173.
 Item157 and the remaining progression/feature scope remain open; no release
 is qualified by this correction alone.
+
+## Further native slash controls: no acceptance of157
+
+The development checkpoint whitelist now admits all four verified Frost part2
+spawns. Its pointer list occupies800F417C..800F4188; the next section's list
+starts800F418C. Checkpoints2/3 point to800F3674/800F3698. The original stage's
+boss checkpoint3 now loads through the ordinary initializer, with both heroes
+healthy. This is development setup support, not a gameplay/slash correction.
+Actual combat in both the original stage and fortress uses live kind57; a
+probe that waited for kind56 in the original stage never began its trial.
+
+| Control | Observation | Limit |
+|---|---|---|
+| Unified, P2 upgraded ground-to-jump cancels | Ten native blade initializations in each fresh fight. Scaling off accepts3 damage events; current Separate accepts10. Captures show ground and spinning blades. | Does not reproduce scaling-on being worse. Initial AI substates differ. |
+| Unified, sustained/double-jump schedule | OFF has1 initialized spinning blade/1 hit; current ON has2/2. | Native hit pause changes the later attack state despite the same scheduled buttons. This is not a matched blade-lifetime experiment. |
+| Private local-only removal of the lifetime veto | With the existing four-tick recovery unchanged, the cancel schedule admits30 hits from10 initializations; the double-jump schedule admits13 from2. | Demonstrates that deleting this guard alone changes repeated damage and aerial hit pause substantially. Does not establish the owner's failure or qualify a fix. Never used in netplay. |
+| Actual two-peer Split, X/P1 Zero/P2 | Six requested jump/slash cycles per skill set. Current Separate accepts6 basic and6 upgraded hits, both heroes healthy. OFF has3 and4 health-decreasing cycles. Native traces include27/basic and34/spinning blades. | Authoritative host inputs and synchronized setup; wait-tick/capture overhead remains. Not an exact source replay. The unfiltered write dump limit also omits later individual stores, so use per-cycle health/counters rather than claiming a complete store trace. |
+| Original Frost stage, local Unified | OFF accepts27 then24 (48→44); current ON accepts three27 aerials (48→45). The inspected video shows Frost moving out of the later fixed-facing swings. | Additional attacks/initializations are not proof of additional overlaps. Again no ON-worse failure. |
+
+The real Split peers retain matching core/mod checkpoints through9539 with
+scaling enabled and9475 disabled. Both option states are verified by the native
+scaling activation counter. Guest input_route was not used to bypass network
+input ownership. No boss positions, timers, hit tables or attack outcomes were
+written during these combat trials.
+
+Rejected setup attempts remain excluded: the old whitelist rejected original
+checkpoint3; the kind56 predicate never found the live fighter; an exact
+ground-Y predicate missed the one-pixel character-root difference; several
+setups requested a teleport before P1's post-intro arrival was complete. The
+final local setup waits for both healthy, visible, idle heroes after the actual
+fight starts. These are not reported as game reproductions. A second private
+half-native-timer variant also stopped in setup and supplies no gameplay result.
+
+The idle Windows suite passes all35 checks in2.20s. An earlier concurrent run
+had a detached logging child exceed its10s fixture deadline (34/35); it is
+preserved alongside the clean idle run. The source change here only broadens
+the verified development spawn list.
+
+Private receipts, inputs, captures, script snapshots and variant provenance
+are retained in qualification37/slash-controls-continued.zip with a separate
+size/SHA256 receipt. The silent6.87s comparison video is
+build-pr23/slash-comparison37.mp4: it explicitly labels fresh fights with
+different boss movement, not a deterministic matched-world comparison.
+Item157 remains unresolved; checklist139/34 is unchanged. No release is cut.
