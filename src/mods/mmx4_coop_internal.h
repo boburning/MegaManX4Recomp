@@ -48,6 +48,7 @@ void mmx4_coop_balance_begin(uint32_t actor);
 void mmx4_coop_balance_end(void);
 int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat);
 int mmx4_coop_balance_contact_allowed(uint32_t actor,uint32_t shot,unsigned seat);
+int mmx4_coop_balance_project_contact(CPUState *cpu,uint32_t address);
 unsigned mmx4_coop_balance_flash_ticks(uint32_t actor);
 int mmx4_coop_balance_snapshot_ready(void);
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s);
