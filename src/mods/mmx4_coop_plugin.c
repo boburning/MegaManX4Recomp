@@ -812,6 +812,11 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         guest(cpu,0x80037104u,PLAYER,0);guest(cpu,0x800371E4u,PLAYER,0);
         if(first_arg)leave_second();
         psx_mod_write_word(diagnostic+0x54,1);
+    }else if(command==6 && first_arg==253 && second_arg<=1 &&
+             mmx4_coop_balance_development_mode(second_arg)) {
+        /* Matched saved-fight OFF/ON controls, through the same agreed
+         * developer input in local play and netplay. No actor edits. */
+        psx_mod_write_word(diagnostic+0x54,1);
     }else if(command==6 && first_arg==254 && second_arg<4 && mmx4_coop_ready() &&
              psx_mod_read_byte(PLAY+0xC)==2 && psx_mod_read_byte(PLAY+0xD)==1 &&
              !psx_mod_read_byte(PLAY+0x1C)) {

@@ -43,6 +43,9 @@ uint32_t mmx4_coop_bosses_digest(uint32_t seed);
 uint32_t mmx4_coop_counterpart_story_text(void);
 void mmx4_coop_balance_activate(void);
 void mmx4_coop_balance_reset(void);
+/* Development fixture only; production always refuses. Resets host balance
+ * bookkeeping without modifying any native actor or public mod preference. */
+int mmx4_coop_balance_development_mode(unsigned mode);
 void mmx4_coop_balance_forget(uint32_t actor);
 void mmx4_coop_balance_begin(uint32_t actor);
 void mmx4_coop_balance_end(void);

@@ -94,6 +94,23 @@ void mmx4_coop_balance_activate(void) {
     mmx4_coop_balance_reset();
     if(enabled)psx_mod_counter_add("mmx4.coop.boss-scaling-enabled",1);
 }
+int mmx4_coop_balance_development_mode(unsigned mode) {
+#if MMX4_COOP_NETPLAY_DEBUG
+    char value[16];
+    if(mode>1 || !per_player || !mmx4_coop_ready() || mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || current_actor || contact_call ||
+       !psx_mod_current_option_value("boss_scaling",value,sizeof value) || strcmp(value,"true"))return 0;
+    /* Use only to prepare a control before combat. Returning to the saved
+     * mode before loading retains the existing strict snapshot validation.
+     * Both private counters and this existing mode enter the mod digest. */
+    enabled=mode;mmx4_coop_balance_reset();
+    psx_mod_counter_add(mode?"mmx4.coop.development-scaling-on":
+                            "mmx4.coop.development-scaling-off",1);
+    return 1;
+#else
+    (void)mode;return 0;
+#endif
+}
 void mmx4_coop_balance_forget(uint32_t actor) {
     int i=slot(actor);if(i>=0) {
         memset(fraction[i],0,sizeof fraction[i]);

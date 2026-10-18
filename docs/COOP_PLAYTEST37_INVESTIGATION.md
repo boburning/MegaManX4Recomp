@@ -465,3 +465,37 @@ snapshots, generated-hook provenance and executable digests are retained in
 the verified qualification37/intro-platform-controls.zip and SHA256 receipt.
 Item168 is qualified;141 checked/32 unchecked of173. Intro boss approach2,
 scaling157 and the remaining release scope remain open.
+
+## Saved-fight scaling controls: preparation, not acceptance
+
+Fresh OFF/ON fights have repeatedly diverged in native boss movement, even
+with the same requested buttons. A private development fixture6/253 now
+selects a reference OFF or Separate ON control without changing public mod
+preferences or any native actor bytes. It resets the existing balance
+bookkeeping, retains its existing mode in the snapshot/digest, and refuses
+when an actor/contact update, projection or local presentation is active.
+It requires configured Separate scaling and the explicit development build;
+production always refuses. There is no new shipping toggle or cooldown rule.
+
+The native original Frost scenario balance_saved_control saves an active
+48HP fight, admits the OFF control, returns to ON and successfully loads the
+real saved image. Both heroes remain visible32HP, the same kind57/slot0 boss
+retains48HP, and save/load completion generations1/2 report success. Snapshot
+validation stays strict: the unit rejects restoring the ON image while the
+current mode is OFF, and accepts it after returning to ON. No native HP,
+boss AI, position or hit timer is edited by this mode fixture.
+
+Actual Split peers agree after OFF and ON fixtures through3041/3140, with
+both heroes healthy and no local-view state leak. Production and development
+balance checks pass MinGW and Linux GCC; Linux uses Wall/Wextra/Werror. All36
+Windows title checks pass in2.96s. Private source/native/check receipts are
+retained in verified qualification37/scaling-mode-controls.zip and its SHA256
+receipt; saved images, original assets and executable bytes are excluded.
+
+This only qualifies the comparison setup. It has not yet produced a matched
+slash trial or resolved157. TCP acknowledgements and host input-route start
+times are asynchronous; the runtime's route frame counter is host history and
+is not restored with a game snapshot. Starting a queued route at the actual
+load boundary would remove that remaining timing ambiguity. The existing
+source-function route tests and native P2 route support remain separate from
+authoritative network input replay. Checklist141/32 is unchanged; no release.

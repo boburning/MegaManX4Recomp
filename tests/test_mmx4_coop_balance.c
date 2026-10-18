@@ -70,6 +70,11 @@ static void actor(unsigned kind,unsigned hp){
     psx_mod_write_byte(BOSS,0x41);psx_mod_write_byte(BOSS+1,(uint8_t)kind);
     psx_mod_write_byte(BOSS+4,1);psx_mod_write_byte(BOSS+0x5C,(uint8_t)hp);
 }
+static uint32_t memory_digest(void) {
+    uint32_t value=2166136261u;
+    for(unsigned i=0;i<sizeof ram;++i)value=(value^ram[i])*16777619u;
+    return value;
+}
 static unsigned hit(unsigned amount,int rejected){
     unsigned hp=psx_mod_read_byte(BOSS+0x5C);
     CPUState cpu={0};cpu.gpr[4]=cpu.gpr[16]=BOSS;
@@ -366,5 +371,31 @@ int main(void){
     enabled=0;mmx4_coop_balance_activate();
     CHECK(timed_hit(1,2,64)==64); /* Original balance stays native. */
     CHECK(!mmx4_coop_balance_flash_ticks(BOSS));
+    enabled=per_player=1;mmx4_coop_balance_activate();actor(57,48);
+    uint32_t before_memory=memory_digest();
+#if MMX4_COOP_NETPLAY_DEBUG
+    io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
+    CHECK(mmx4_coop_balance_snapshot(&io));
+    CHECK(mmx4_coop_balance_development_mode(0));
+    CHECK(memory_digest()==before_memory);
+    io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(!mmx4_coop_balance_snapshot(&io)); /* No weakened cross-mode restore. */
+    CHECK(hit(2,0)==46);
+    CHECK(mmx4_coop_balance_development_mode(1));CHECK(hit(2,0)==45);
+    io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(mmx4_coop_balance_snapshot(&io));
+    CHECK(!mmx4_coop_balance_development_mode(2));
+    local=1;CHECK(!mmx4_coop_balance_development_mode(0));local=0;
+    projected=1;CHECK(!mmx4_coop_balance_development_mode(0));projected=0;
+    ready=0;CHECK(!mmx4_coop_balance_development_mode(0));ready=1;
+    mmx4_coop_balance_begin(BOSS);
+    CHECK(!mmx4_coop_balance_development_mode(0));mmx4_coop_balance_end();
+    enabled=0;CHECK(!mmx4_coop_balance_development_mode(1));
+    enabled=1;per_player=0;mmx4_coop_balance_activate();
+    CHECK(!mmx4_coop_balance_development_mode(0));
+#else
+    CHECK(!mmx4_coop_balance_development_mode(0));
+    CHECK(memory_digest()==before_memory);CHECK(hit(2,0)==47);
+#endif
     puts("Boss scaling preserves weak hits, separate pools, rejected hits and snapshots.");return 0;
 }
