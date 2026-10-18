@@ -1,7 +1,8 @@
 # Playtest35 Frost follow-up
 
 Tracking: `beads-eio.9.177`, `.182` through `.187`. Work branch:
-`fix/frost-slashes36`. This is investigation evidence, not a released Playtest36.
+`fix/frost-slashes36`. Playtest36 qualification evidence; production/package
+and publication receipts are retained under `build-pr23/release36-qa/`.
 
 ## Intake
 
@@ -134,6 +135,11 @@ remain unchecked for a more specific capture/timestamp.
 Zero as P1 also completes fresh ground chains and basic aerial slashes against
 the original Frost refight. Both native blade classes27 and34 therefore have
 gameplay qualification in addition to the both-seat lifetime unit coverage.
+The P1 ground trial accepts11 initialized blades. Its moving basic-air trial
+initializes9 blades of classes27/28, with6 accepted hits; this is not claimed
+as9 connected attacks or a deterministic retail comparison. The primary
+recovery counterexample remains the formerly blocked fresh ground-chain
+openers and the both-seat lifetime/cooldown tests.
 Private receipts reside in the per-case directories under
 `C:/Users/Matthew/AppData/Local/Temp/mmx4-feedback36/`; source-cadence and field
 reports are archived under the private `build-pr23/feedback36/` evidence root.
