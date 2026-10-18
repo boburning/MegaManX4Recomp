@@ -1,14 +1,16 @@
 # October 10 co-op feedback
 
-Current status, October17: **157 numbered items; 133 checked and 24 unchecked.**
+Current status, October17: **159 numbered items; 134 checked and 25 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
 Items126/155/156 are qualified for [Playtest34](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.34). Saber report157 is partly
-addressed by restored recovery flashing; exact missed damage is unconfirmed.
+addressed by restored recovery flashing and a subsequent contact-cleanup fix;
+the complete missed-hit experience remains unqualified. The later Frost path159
+is fixed in source for the next build. [Playtest34 follow-up evidence](COOP_FEEDBACK34_FOLLOWUP.md).
 Unchecked reports include
 older bounded investigations, the parked online-startup cases and an elective
-story-scene enhancement. They are not24 confirmed current defects.
+story-scene enhancement. They are not25 confirmed current defects.
 [Release dispositions](COOP_PLAYTEST32_DISPOSITIONS.md)
 record the checks and limits without relabeling unreproduced reports as fixes.
 The full numbered table remains the source for evidence and validation limits.
@@ -18,7 +20,8 @@ arrivals in `3b471b9`; the Playtest32 integration also fixes overlapping transpo
 | Status | Items | Current work |
 |---|---|---|
 | Fixed and qualified for Playtest34 | 126, 155, 156 | Charged X fire follows its own projected parent shot; hub returns validate the landing; Owl's native release clears both captured bodies. Native reproductions and post-fix control checks pass; [release scope and limits](COOP_PLAYTEST34_DISPOSITIONS.md). |
-| Partly addressed; exact missed damage remains unconfirmed | 157 | Supplied clips, native ground/aerial/source-cadence fights, normal hurt and a no-co-op control reviewed. Recovery flashing is fixed and qualified locally and in actual Split LAN; complete damaging chains and partner overlap pass. [Evidence and limits](COOP_HITREG_FEEDBACK_20261017.md). |
+| Source fix qualified for the next build | 159 | P2 can arm the later outdoor Frost ice path while P1 remains at spawn. Native activation, formed platforms and P2 crossing pass in actual Split LAN. [Evidence](COOP_FEEDBACK34_FOLLOWUP.md). |
+| Partly addressed; complete missed-hit experience remains unqualified | 157 | Playtest34 recurrence adds a contact-history bug: private immunity skipped native no-overlap cleanup. A fresh same-key swing regression fails baseline and passes the correction. Fresh source-cadence and aerial fights reviewed; broader symptom remains open. [Follow-up and limits](COOP_FEEDBACK34_FOLLOWUP.md). |
 | Fixed and validated for Playtest32 | 145, 146, 147, 148, 149 | Mushroom hatch/lift admission, interrupted Cyber portal arrivals, grounded occupied Armor return anchors, and owner-bound X hover jets. |
 | Fixed and validated for Playtest33 | 152, 153, 154 | Scaling now halves boss hit cooldowns in either method, including Zero's aerial/finisher in separate mode. X's armor capsules use Dr Light's conversation in Zero's campaign. Native before/after checks and regression suites pass; [qualification limits](COOP_PLAYTEST33_DISPOSITIONS.md) remain explicit. |
 | Current recurrence; exact cause still unqualified | 109 | First Web Spider part2 bees with P2 leading. Fresh Playtest31 paired recordings and video supplement the earlier native checks that did spawn the candidate groups. |
@@ -191,7 +194,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 154 | [x] | X's armor capsule shows Iris/Colonel story text in Zero's campaign | Reproduced with the real Spider boots capsule: Zero's campaign opened HUNTER H.Q./Mavericks emerged, while X's campaign opened DR. LIGHT/This battle. Capsule text, portrait and cue selectors now use X's bank while the shared textbox retains P1's campaign and palette. Native after-check shows Dr Light's hologram and correct later pages, completes the conversation and restores both players' control. All35 Windows checks and focused Linux lifecycle/story-selector checks pass. Qualified for Playtest33. `beads-eio.9.174` |
 | 155 | [x] | Simultaneous fire-weakness hits reset the game to character selection | Reproduced on current source with charged X/P2 Rising Fire plus Zero/P1 Ryuuenjin: deferred effect26 copied the wrong shot's graphics and decompression overwrote PLAY. Bind that native update to its allocating seat and emit the required callback. Both rosters now defeat native Frost and return healthy after repeated charged overlaps; fire graphics inspected. Sigma's arena setup was not matched, so this is qualification of the shared parent-ownership fix and exact Frost reproduction. `beads-eio.9.176` |
 | 156 | [x] | P2 returns inside a wall and dies during fortress refights | Bound to three Metadata9 Slash returns, then reproduced: X/P2 at1960 is crushed beside P1's safe1936 pad. Gate hub arrivals on a grounded partner and native terrain validation. Actual Slash defeat/return passes both rosters, with both heroes controllable at1936 and their native foot heights; also passes when P1 died before P2's final hit. `beads-eio.9.176` |
-| 157 | [ ] | Zero follow-up slashes still appear not to register in Playtest33 | Paired Split recordings and all three local clips reviewed. Both-seat single/combo/aerial, normal damage, right-side, partner-overlap and source-cadence probes accept hits; co-op-disabled control confirms native Frost recovery. Fixed the missing private-cooldown hit flashing, with visual before/after and both Split views inspected. Actual LAN overlap passes with matching core/mod CRCs through6668. The exact unexplained lost-damage condition remains unconfirmed, so this broader report stays open. [Evidence](COOP_HITREG_FEEDBACK_20261017.md). `beads-eio.9.177` |
+| 157 | [ ] | Zero follow-up slashes still appear not to register in Playtests33/34 | Recovery flashing shipped34. The new paired34 recording led to a contact-history fix: let native overlap cleanup run during private immunity and gate only actual damage admission. Both-seat fresh-swing regression fails old code and passes the fix; held swings remain single hits. Fresh source-cadence accepts3 hits versus2 before, while repeated aerials work in both. These are fresh fights, not an exact replay; complete symptom qualification remains open. [Follow-up evidence](COOP_FEEDBACK34_FOLLOWUP.md). `beads-eio.9.177` |
+| 158 | [ ] | Opening-stage explosions flash red on the distant Split partner's screen | New low-priority report; user explicitly says it does not realistically need fixing. Track separately from gameplay and saber qualification. No reproduction or fix claimed. `beads-eio.9.179` |
+| 159 | [x] | Leading P2 does not trigger the later outdoor Frost ice path | Distinct from opening-cycle111. Native type21/subtype3 checks only P1.x>=3168. Baseline waits with P2 ahead; P1 crossing starts it. Allow an eligible living P2 to satisfy that initial predicate, preserving one native path sequence. Actual Split LAN creates six platforms and P2 walks onto the path while P1 remains at144; inspected presentation and matching core/mod CRCs through5081. Fixed in source for the next build. [Evidence](COOP_FEEDBACK34_FOLLOWUP.md). `beads-eio.9.180` |
 
 ### October17 scaling cooldown clarification
 
