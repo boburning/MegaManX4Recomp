@@ -76,10 +76,11 @@ Private source scripts and intake: `build-pr23/followup36/` and
 Durable initial archive: `build-pr23/followup36/qualification37/`,623 files,
 1,554,030,205 bytes verified against source hashes. It contains original local
 observations/captures and the initial counterexample. Later native overlap
-and LAN receipts currently live under
-`C:/Users/Matthew/AppData/Local/Temp/mmx4-feedback37/` and must also be archived
-before the release qualification is finalized. Failed/insufficient setups
-remain distinguishable from passing evidence.
+and LAN receipts originated under
+`C:/Users/Matthew/AppData/Local/Temp/mmx4-feedback37/`; the incremental manifests
+below now retain those receipts in the qualification directory. The local
+candidate has its own `overlap-candidate-manifest.json`. Failed/insufficient
+setups remain distinguishable from passing evidence.
 
 ## Storm Owl leading-player exit and interrupted death
 
@@ -130,7 +131,9 @@ post-miniboss and Buster-upgrade/death reports166/167 share the same cause.
 An incremental verified archive now adds115 files (57,194,007 bytes), covering
 Owl baseline/candidate receipts, recent overlapping-hit LAN receipts and the
 initial Cyber portal investigation. See `incremental-owl-cyber-manifest.json`
-under the qualification directory. Later Cyber candidates remain pending.
+under the qualification directory. The full Cyber qualification adds176 files,
+77,745,601 bytes and22 executable hashes in `cyber-qualification-manifest.json`,
+including excluded/failed setups as well as the qualified native receipts.
 
 ## Cyber timed-course portal (investigation in progress)
 
