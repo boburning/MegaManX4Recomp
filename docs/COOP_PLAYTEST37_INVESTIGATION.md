@@ -590,3 +590,29 @@ not qualify the full rising-ice shaft or post-respawn camera report.
 All36 Windows title checks pass in6.04s. The helper correction is confined to
 the synchronized development fixtures; no new production camera fix or release
 acceptance is claimed.157 and the remaining progression reports stay open.
+
+## Matched basic-air and grounded follow-up controls
+
+Two additional Zero/P2 controls start each OFF/ON pair from the same native
+Frost saved fight. The basic-air pair has576 scheduled input frames; the
+grounded pair has588. Both qualify the exact selected-pad sequence, a neutral
+partner and60 identical initial recorder rows, including the restored guest
+clock and full diagnostic player-state hash. Skills are disabled for these
+controls; fixed leftward inputs attempt to retain contact as Frost moves.
+Neither uses attack, cooldown, damage, terrain or AI edits during combat.
+
+The basic-air control admits native class27 damage once OFF and twice ON;
+both finish at46 displayed HP because ON halves each accepted two-point hit.
+The grounded control admits two native damage stores OFF and ten ON. The ON
+sequence contains successive24/25/26 blade classes, with the first ten stores
+13 write-trace frame ticks apart. Those trace timestamps are host observations;
+the matched native controller sequence is qualified separately above.
+Captures show the basic aerial arc, grounded
+chain poses and connected impacts. Later positioning diverges after native
+reactions, and many later attacks are visibly out of range.
+
+These are bounded negative controls for the reported ON-worse behavior, not
+acceptance of157. In particular, faster accepted grounded follow-ups in this
+one saved setup do not establish that the tester's missed slashes are fixed.
+The private pattern adapter, exact executed scenario source, both input logs,
+native traces and captures are retained in saved-basic-ground-controls.zip.
