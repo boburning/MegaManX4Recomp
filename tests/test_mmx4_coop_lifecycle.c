@@ -24,6 +24,8 @@ static uint8_t ram[0x200000],p2[0xE4],p1_backup[0xE4];
 static uint8_t p2_vehicle[0xB0],p1_vehicle_backup[0xB0];
 static unsigned projected,ready=1,world_calls,observed_campaign,collect_calls[2];
 static unsigned pause_commit,pause_exit,world_draws;
+static unsigned assessment_calls[2];
+static unsigned assessment_cull;
 static unsigned reward_calls,save_calls,observed_menu_select;
 static uint8_t saved_palette_dirty;
 static unsigned stage_palette_phase,palette_swap_model,palette_uploads;
@@ -89,7 +91,9 @@ void psx_mod_write_word(uint32_t a,uint32_t v) {
     psx_mod_write_half(a,(uint16_t)v);psx_mod_write_half(a+2,(uint16_t)(v>>16));
 }
 int psx_mod_register_function_filter_plugin(const char *id,uint32_t a,PSXModFunctionFilterCallback f) {
-    (void)id;assert(filter_count<64);filters[filter_count++]=(Filter){a,f};return 1;
+    (void)id;assert(filter_count<64);
+    for(unsigned i=0;i<filter_count;++i)assert(((filters[i].address^a)&0x1FFFFFFFu)!=0);
+    filters[filter_count++]=(Filter){a,f};return 1;
 }
 int psx_mod_register_function_entry_plugin(const char *id,uint32_t a,PSXModFunctionEntryCallback f) {
     (void)id;(void)a;(void)f;return 1;
@@ -265,6 +269,25 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         break;
     case 0x80021158:
         ++world_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);break;
+    case 0x800CE894:
+        ++assessment_calls[projected];
+        observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        /* The actual native graphic reads PLAYER as its target and later
+         * signals parent+16. The native before/after probe checks its real
+         * motion, camera cull and completion; this model checks ownership. */
+        psx_mod_write_word(a0+8,psx_mod_read_word(MMX4_PLAYER+8));
+        if(assessment_cull) {
+            uint32_t saved_ra=cpu->gpr[31];cpu->gpr[31]=0x800CEA8Cu;
+            if(mmx4_coop_call(cpu,0x8002B160u,a0,0))psx_mod_write_byte(a0,0);
+            else psx_mod_write_byte(psx_mod_read_word(a0+0x50)+0x16,1);
+            cpu->gpr[31]=saved_ra;
+        }
+        break;
+    case 0x8002B160:
+        /* The real registered Split dispatcher owns this address. It must
+         * call the lifecycle exception, rather than a duplicate registration. */
+        result=mmx4_coop_lifecycle_assessment_bounds(cpu,address)?cpu->gpr[2]:assessment_cull;
+        break;
     case 0x80023D68:
         ++world_draws;assert(!projected);
         assert(psx_mod_read_byte(MMX4_PLAY+0x43)==psx_mod_read_byte(MMX4_PLAYER+2));
@@ -607,6 +630,8 @@ static void reset(void) {
     memset(p2_vehicle,0,sizeof p2_vehicle);
     fresh_game(&cpu,0);projected=local_view=0;inputs[0]=inputs[1]=0;
     world_calls=observed_campaign=pause_commit=pause_exit=world_draws=0;
+    memset(assessment_calls,0,sizeof assessment_calls);
+    assessment_cull=0;
     stage_script_calls=scene_calls=observed_controls=p2_solid_bits=canonical_portal_solids=0;
     memset(boundary_calls,0,sizeof boundary_calls);
     dialogue_calls=dialogue_edge=dialogue_init_calls=dialogue_init_character=stage_script_projected=0;
@@ -1398,6 +1423,51 @@ int main(void) {
     local_view=1;cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
     local_view=0;p2[0x5C]=0;
     storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
+    /* The Cyber assessment completion producer belongs to the hero who
+     * entered the course portal. Keep its native update once and preserve
+     * the campaign and P1 body; reject unrelated effects/scenes and hidden,
+     * voluntarily withdrawn or dead P2. A survivor may own the course too. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+    for(unsigned gate=0;gate<17;++gate) {
+        reset();const uint32_t effect=0x80173D00u,parent=0x80143028u;
+        psx_mod_write_byte(PLAY+12,6);psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_word(PLAYER+8,72u<<16);put32(p2+8,1792u<<16);
+        psx_mod_write_byte(effect,65);psx_mod_write_byte(effect+1,34);
+        psx_mod_write_word(effect+0x50,parent);
+        psx_mod_write_byte(parent,1);psx_mod_write_byte(parent+1,38);
+        script_active=1;script_owner=1;script_serial=7;
+        assessment_cull=mode;psx_mod_write_half(0x801419BAu,100);
+        psx_mod_write_byte(effect+4,1);
+        SceneOwner *record=scene_record(parent,1);record->owner=1;record->serial=7;
+        switch(gate) {
+        case 1:psx_mod_write_byte(PLAYER+0x5C,0);script_active=0;break;
+        case 2:warp_owner=1;warp_phase=1;break;
+        case 3:p2[4]=3;break;
+        case 4:record->owner=0;break;
+        case 5:record->serial=6;break;
+        case 6:script_active=0;break;
+        case 7:script_owner=0;break;
+        case 8:psx_mod_write_byte(parent+1,37);break;
+        case 9:psx_mod_write_word(effect+0x50,parent+1);break;
+        case 10:psx_mod_write_byte(effect+1,33);break;
+        case 11:psx_mod_write_byte(PLAY+13,1);break;
+        case 12:local_view=1;break;
+        case 13:departed=1;break;
+        case 14:warp_owner=0;warp_phase=1;break;
+        case 15:p2[0x5C]=0;break;
+        case 16:psx_mod_write_byte(PLAY,7);break;
+        }
+        uint8_t original[0xE4];read_bytes(PLAYER,original,sizeof original);
+        mmx4_coop_call(&cpu,0x800CE894u,effect,0);
+        CHECK(assessment_calls[0]==(gate>=4) && assessment_calls[1]==(gate<4));
+        CHECK(psx_mod_read_word(effect+8)==((gate<4?1792u:72u)<<16));
+        CHECK(psx_mod_read_half(0x801419BAu)==100);
+        CHECK((psx_mod_read_byte(effect)!=0)==(!mode || gate<4));
+        CHECK(psx_mod_read_byte(parent+0x16)==(mode && gate<4));
+        CHECK(!memcmp(ram+(PLAYER&0x1FFFFFu),original,sizeof original) && !projected);
+        CHECK(observed_campaign==campaign && psx_mod_read_byte(PLAY+0x43)==campaign);
+    }
     /* Owl's adjacent entry/release areas can observe different heroes: the
      * rear hero at2680 releases the minimum after the leader crossed2648.
      * The real boss introduction must own its authored enclosure, including

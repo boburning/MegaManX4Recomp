@@ -1462,6 +1462,49 @@ static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t act
         (uint8_t)(psx_mod_read_byte(0x80166BB0u)|shared_palette_refresh));
     write_bytes(PAD,pad,sizeof pad);return result;
 }
+static int cyber_assessment(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(scene_guard || !mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12)!=6 ||
+       psx_mod_read_byte(PLAY+13) || actor<0x80173CA0u || actor>=0x801754A0u ||
+       (actor-0x80173CA0u)%0x60u || psx_mod_read_byte(actor+1)!=34)return 0;
+    uint32_t parent=psx_mod_read_word(actor+0x50);
+    if(parent<0x80142F98u || parent>=0x80143598u || (parent-0x80142F98u)%0x30u ||
+       !psx_mod_read_byte(parent) || psx_mod_read_byte(parent+1)!=38)return 0;
+    SceneOwner *record=scene_record(parent,0);
+    unsigned owner=record && record->owner==1 && record->serial==script_serial &&
+        script_active && script_owner==1;
+    if(!owner)owner=!mmx4_coop_alive(0) && mmx4_coop_alive(1);
+    if(!owner || departed || mmx4_coop_lifecycle_hidden(1) ||
+       !(mmx4_coop_second_body()[0x5C]&127u))return 0;
+    /* The assessment graphic is also the course controller's completion
+     * producer (CEF6C writes parent+16). If it follows hidden P1 after a P2
+     * portal admission, native camera culling destroys it before that write.
+     * Keep its single native update attached to the actual scene owner,
+     * including the ordinary target motion, grading and completion signal. */
+    scene_guard=1;
+    uint32_t result=call_story_as_second(cpu,address,actor,cpu->gpr[5]);
+    scene_guard=0;
+    psx_mod_counter_add("mmx4.coop.p2-assessment-ticks",1);
+    return mmx4_coop_finish(cpu,result);
+}
+int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[4];
+    /* During the owner projection above, preserve the completion producer
+     * through the shared camera handoff. Bounds is a read-only query. Native
+     * target motion, grading, timers and its final self-deletion still run;
+     * a render may hide it, but must not destroy it before parent+0x16. */
+    if(scene_guard && mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+       cpu->gpr[31]==0x800CEA8Cu && psx_mod_read_byte(PLAY+12)==6 &&
+       !psx_mod_read_byte(PLAY+13) && actor>=0x80173CA0u && actor<0x801754A0u &&
+       !((actor-0x80173CA0u)%0x60u) && psx_mod_read_byte(actor+1)==34 &&
+       psx_mod_read_byte(actor+4)==1) {
+        psx_mod_counter_add("mmx4.coop.assessment-completion-protected",1);
+        return mmx4_coop_finish(cpu,0);
+    }
+    return 0;
+}
 static int gameplay_scene(void) {
     unsigned mode=psx_mod_read_byte(PLAY);
     /* Mode7 is the campaign's weapon/technique reward screen. P2's last
@@ -2308,6 +2351,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
      * Keep C1390's intact obstacle/contact update outside this projection. */
     psx_mod_register_function_filter_plugin(ID,0x800C165Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C169Cu,scene_actor);
+    psx_mod_register_function_filter_plugin(ID,0x800CE894u,cyber_assessment);
     /* Intro rescue actors live in the small sprite pool, outside the enemy
      * and stage-script projections. Their initialization and camera wait
      * must use the same body that owns the boss victory. Native D12C0 sets

@@ -812,6 +812,7 @@ static int scan_players(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int actor_bounds(CPUState *cpu,uint32_t address) {
+    if(address==0x8002B160u && mmx4_coop_lifecycle_assessment_bounds(cpu,address))return 1;
     uint32_t actor=cpu->gpr[4];
     if(bounds_call || !available() || (int8_t)psx_mod_read_byte(actor+0x14u)<0)return 0;
     uint32_t native=address;

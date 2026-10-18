@@ -17,6 +17,11 @@ static unsigned native_directional_scans,scan_direction;
 static uint32_t native_table=TABLE;
 static int script_owner=-1;
 static unsigned paired_door;
+static unsigned assessment_override;
+int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address) {
+    CHECK(address==0x8002B160u);
+    return assessment_override?mmx4_coop_finish(cpu,0):0;
+}
 static unsigned palette_rebuilds,palette_uploads;
 int mmx4_coop_lifecycle_paired_door(void) {return (int)paired_door;}
 static unsigned nova_active;
@@ -51,6 +56,7 @@ uint32_t psx_mod_memory_alloc(uint32_t size,uint32_t alignment) {
 }
 int psx_mod_register_function_filter_plugin(const char *id,uint32_t address,PSXModFunctionFilterCallback callback) {
     CHECK(!strcmp(id,"mmx4.coop") && filter_count<24);
+    for(unsigned i=0;i<filter_count;++i)CHECK(((filters[i].address^address)&0x1FFFFFFFu)!=0);
     filters[filter_count++]=(Filter){address,callback};return 1;
 }
 int psx_mod_register_function_entry_plugin(const char *id,uint32_t address,PSXModFunctionEntryCallback callback) {
@@ -1129,6 +1135,12 @@ static void local_explosion_flash(CPUState *cpu) {
 int main(void) {
     CPUState cpu={0};cpu.gpr[29]=0x801FF000u;
     psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAYER,1);
+    /* The existing bounds dispatcher owns the registration. Its course
+     * completion exception must run even when player projection excludes
+     * ordinary Split bounds handling. No second handler can be registered. */
+    projected=1;split=0;assessment_override=1;
+    CHECK(mmx4_coop_call(&cpu,0x8002B160u,ACTOR,0)==0);
+    projected=0;split=1;assessment_override=0;
     /* The native intro flyby is screen-relative only to the canonical
      * camera. Its body and attached type10 sprites must become world
      * coordinates in a private draw, while UI and unrelated effects stay. */

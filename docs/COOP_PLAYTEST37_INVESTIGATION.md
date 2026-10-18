@@ -126,3 +126,69 @@ before boot; it is a setup failure, not gameplay evidence.
 
 This qualifies checklist25. It does not establish that Owl's separate
 post-miniboss and Buster-upgrade/death reports166/167 share the same cause.
+
+An incremental verified archive now adds115 files (57,194,007 bytes), covering
+Owl baseline/candidate receipts, recent overlapping-hit LAN receipts and the
+initial Cyber portal investigation. See `incremental-owl-cyber-manifest.json`
+under the qualification directory. Later Cyber candidates remain pending.
+
+## Cyber timed-course portal (investigation in progress)
+
+The old hub-only tests pass but do not cover the reported timed-course portal.
+Native Split reproduction starts P1 at72/203 and moves P2 from the observed
+last platform1712/154 to1792 with ordinary Right input. P2 enters command20;
+P1 completes its temporary outgoing passenger beam. Both peers stay in sync,
+but the course actor (kind38,80143028) remains in phase4. Its wait timer wraps
+because +0x16 is never signaled. Captures match the supplied portal scene.
+
+The original targeting graphic is particle34, native800CE894, linked to this
+controller at +0x50. It follows canonical P1. At the P2 portal handoff it
+reaches native camera cull8002B160 from800CEA8C, disappears, and never reaches
+its ordinary completion write800CEF6C. Trace/captures establish this; no timer
+or completion flag was manually forced.
+
+An initial owner-body projection alone still allows that cull. A scoped camera
+copy is also insufficient in the native test. Neither trial is accepted as a
+fix. Temporary guard instrumentation confirmed correct P2 ownership and has
+been removed. The current candidate keeps the one native assessment update
+with the actual P2 scene owner and protects its completion producer from that
+specific bounds-based deletion during projection. The original grading,
+animations, timers, completion write and final self-deletion remain native.
+The protection is delegated inside Split's already registered bounds handler,
+before its ordinary projection/availability gate. A separate registration was
+rejected by the runtime's one-handler-per-plugin/address contract. Unit stubs
+now reject duplicate addresses and test this pre-availability delegation.
+A literal/macro source audit finds no remaining same-plugin function-hook
+collisions; different plugin IDs may intentionally share an address.
+
+Actual native before/after now qualifies the full assessment and return with
+both Split rosters. With X/P1-Zero/P2, the original S-rank result renders and
+checkpoint1 loads with both heroes visible32HP/idle, no personal locks and
+matching core/mod checks through4578. Reversing the roster also completes,
+with matching peers through4323, and subsequent ordinary input moves both
+heroes from72/96 to87.5/111.5 with32HP. Captures are retained. These are real
+native grading, checkpoint loading and movement, not forced completion flags.
+The expanded bounded harness covers the subsequent native100-frame result
+animation; one earlier short trial stopped in this active phase5, not another
+softlock. Local Unified also qualifies both rosters: the timed P2 assessment completes,
+both heroes return healthy/visible and ordinary input moves each after return.
+The existing hub1 P2 handoff and hub5 P1 section handoff still pass. The reversed
+local roster also repeats both Owl exit-race cases successfully. Checklist165
+is qualified by this bounded before/after evidence. The separate all-course P2 targeting-graphic
+feature172 remains open regardless of this portal correction.
+
+Local test setup is part of the evidence boundary: an instantaneous P1
+teleport could delete the initial targeting graphic before its opening scan
+finished. Another setup waited for that scan before crossing its actual native
+entry threshold400. Both failed setups are excluded. The tracked native test
+now uses observed36 route positions in bounded steps, waits through the opening
+scan on its first platform, then uses ordinary P2 Right input across1792.
+It does not force a grade, completion flag, checkpoint or warp state.
+
+All35 Windows title CTests pass in one complete run (12.75s), including the
+previous detached-pointer logging fixture. Linux portable lifecycle and Split
+regressions also pass; the latter reports two existing misleading-indentation
+warnings in the fixture. This is not cross-OS match compatibility qualification.
+Production-package validation and the rest of the burndown remain pending;
+157 is still open and no release has been authorized as validated by these
+portal/Owl checks alone.

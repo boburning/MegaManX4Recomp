@@ -117,7 +117,7 @@ reach the trigger. These are investigation leads, not a validated new fix.
 |25 | Validated correction | Native before/after leading-P2 and death/fade race checks reach part2 in local Unified and real Split LAN; see [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
 |2 | Reopened | Intro P2 boss approach walks left, loses P1 and corrupts graphics; upstream missing platforms may be related. |
 |107 | Still open | Web part1 spiked enemy also missing when both traverse. |
-|165 | Reported | Cyber P2 course portal stalls progression; distinct native wait must be identified. |
+|165 | Validated correction | Preserve the original assessment completion producer through P2 portal admission. Native grade/checkpoint/movement checks pass local Unified and real Split with both rosters; see [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
 |166 | Reported | Owl part2 P2 stuck after miniboss. |
 |167 | Reported | Owl Buster Upgrade followed by X's death strands Zero above; additional secondhand report, not automatically attributed to this archive. |
 |168 | Reported | Intro falling platforms do not trigger for leading P2. |

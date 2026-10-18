@@ -1551,6 +1551,62 @@ class Scenarios:
         return dict(native_orb_capture=True,withdrawal_while_captured=after-before,
                     capture_locks=captured['personal_locks'][1])
 
+    def cyber_course_leader(self):
+        """Finish a timed course as P2, including its native assessment.
+
+        Hub-only handoff coverage omits the targeting graphic that produces
+        the timed course's completion signal. Keep P1 behind the endpoint.
+        """
+        self.load(6,0);self.r.fixture(5,3)
+        def assessment_ready(_):
+            pool=self.r.read(0x80173ca0,64*0x60)
+            return any(pool[i*0x60] and pool[i*0x60+1]==34 and
+                pool[i*0x60+4:i*0x60+6]==bytes((1,2)) for i in range(64))
+        # An instantaneous P1 teleport can cull the initial native analysis
+        # graphic before the camera catches up, invalidating the setup itself.
+        # Move through observed36 route samples in bounded steps instead; let
+        # the native camera/graphic advance between them. No event or grading
+        # state is written. Coordinates are Zero's; X's floor origin is +1Y.
+        route=((131,162),(193,133),(259,166),(321,142),(387,147),(452,154),
+            (515,162),(577,134),(643,144),(705,141),(771,63),(836,170),
+            (897,134),(965,132),(1025,163),(1088,202),(1154,202),(1216,152),
+            (1280,74),(1346,59),(1408,125),(1474,186),(1539,174),(1601,122),
+            (1667,130),(1712,154))
+        tick=lambda:struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]
+        assessment_started=False
+        for x,y in route:
+            self.r.teleport_both(x,y+(self.campaign==0))
+            self.r.teleport(1,x,y+(self.campaign==1))
+            first=tick();deadline=time.monotonic()+5
+            while tick()-first<10:
+                if time.monotonic()>=deadline:raise TimeoutError('Cyber setup world clock stopped')
+                time.sleep(.005)
+            if x>=400 and not assessment_started:
+                # The actual native entry threshold is400, not stage load.
+                # Keep this first platform through its opening scan animation.
+                self.wait('cyber-course-initial-assessment-ready',assessment_ready,15)
+                assessment_started=True
+        # Last safe platform observed in the supplied36 recording, before
+        # the native1792 endpoint. P1 remains within Unified's normal bounds.
+        self.r.teleport(1,1744,154+(self.campaign==1))
+        before=self.sample('cyber-course-p2-before',True)
+        self.r.input(0xffdf,1)
+        try:
+            self.wait('cyber-course-p2-assessed',lambda v:v['players'][1]['script']!=0,12)
+            self.wait('cyber-course-native-checkpoint',lambda v:v['checkpoint']in(1,2),20)
+        finally:self.r.release()
+        after=self.wait('cyber-course-p2-both-return',lambda v:v['stage']==6 and
+            v['section']==0 and v['checkpoint']in(1,2) and v['mode'][:2]==[6,0] and
+            not v['freeze'] and all(p['active'] and p['visible'] and p['hp'] and
+                p['state']==1 and p['action']==2 for p in v['players']),40)
+        assert after['lives']==before['lives'],(before,after)
+        start_x=[p['x']for p in after['players']]
+        for seat in (0,1):self.r.input(0xffdf,seat)
+        time.sleep(.2);self.r.release()
+        moved=self.sample('cyber-course-p2-after',True)
+        assert all(p['x']>start_x[seat] and p['hp'] for seat,p in enumerate(moved['players'])),moved
+        return dict(before=before,after=after,movement=moved)
+
     def cyber_course(self):
         cases=[]
         # The native spawn list800F41D0 has six assessment checkpoints.
@@ -1923,7 +1979,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_course_leader','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

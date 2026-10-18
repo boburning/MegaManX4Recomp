@@ -122,6 +122,8 @@ int mmx4_coop_lifecycle_initial_arrival(void);
 int mmx4_coop_lifecycle_nova_active(void);
 /* A projected portal dispatch defers its shared collision until restoration. */
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor);
+/* Preserve the native course completion producer through owner-camera handoff. */
+int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address);
 /* Shared Mushroom lift admission; returns a handled native result in v0. */
 int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address);
 void mmx4_coop_lifecycle_room_entry(unsigned owner);
