@@ -678,7 +678,15 @@ static void development_teleport(unsigned seat,uint32_t x,uint32_t y) {
     }
     psx_mod_write_word(PLAYER+8,x);psx_mod_write_word(PLAYER+12,y);
     psx_mod_write_word(PLAYER+0x18,x);psx_mod_write_word(PLAYER+0x1C,y);
-    for(unsigned at=0x20;at<0x30;at+=4)psx_mod_write_word(PLAYER+at,0);
+    for(unsigned at=0x20;at<0x2C;at+=4)psx_mod_write_word(PLAYER+at,0);
+    /* +2C is acceleration, not residual velocity. Native32558/32608/326C0
+     * install4200 for an ordinary fall; clearing it after an idle teleport
+     * can leave a healthy character suspended at the destination indefinitely.
+     * Preserve action-specific gravity and attached/scripted movement. */
+    unsigned action=psx_mod_read_byte(PLAYER+5);
+    if(!psx_mod_read_byte(PLAYER+0xC5) && psx_mod_read_byte(PLAYER+4)==1 &&
+       action>=2 && action<0x10 && !psx_mod_read_word(PLAYER+0x2C))
+        psx_mod_write_word(PLAYER+0x2C,0x4200);
     psx_mod_write_byte(PLAYER+0x89,0);psx_mod_write_byte(PLAYER+0x70,0);
     psx_mod_write_byte(PLAYER+0x71,0);
     if(seat)leave_second();

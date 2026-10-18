@@ -1055,6 +1055,27 @@ class Scenarios:
             cases.append(dict(owner=owner,arrival=arrived,enemies=self.enemies()))
         return dict(native_approaches=cases,both_alive=True)
 
+    def teleport_fall(self):
+        """A setup teleport must retain native gravity without synthetic inputs."""
+        cases=[]
+        # Jungle can reinitialize acceleration in its native fall path; Frost's
+        # idle destination exposed the lost +2C value. Keep both native setups.
+        for stage,checkpoint,positions in((1,0,(500,556)),(2,1,(2213,2253))):
+            self.load(stage,0,checkpoint);self.r.fixture(5,3)
+            self.wait('teleport-fall-native-ready',lambda v:all(p['hp'] and p['visible'] and
+                p['state']==1 and p['action']==2 and not p['script'] for p in v['players']),15)
+            for seat,x in enumerate(positions):self.r.teleport(seat,x,300)
+            label='teleport-fall-'+str(stage)
+            before=self.sample(label+'-start',True)
+            after=self.wait(label+'-falling',lambda v:all(p['hp'] and p['y']>340
+                for p in v['players']),8)
+            grounded=self.wait(label+'-landed',lambda v:all(p['hp'] and p['grounded'] and
+                p['action']==2 for p in v['players']),8)
+            self.sample(label+'-grounded',True)
+            cases.append(dict(stage=stage,checkpoint=checkpoint,before=before['players'],
+                falling=after['players'],landed=grounded['players']))
+        return dict(native_falls=cases)
+
     def intro_platform_leader(self):
         """Either hero crosses a real falling-platform trigger in Intro part2."""
         results=[]
@@ -2160,7 +2181,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit','intro_platform_leader','balance_saved_control','balance_saved_slashes'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit','intro_platform_leader','teleport_fall','balance_saved_control','balance_saved_slashes'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

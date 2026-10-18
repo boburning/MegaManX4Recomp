@@ -555,3 +555,38 @@ current-code experiments as though they shared a world. Neither demonstrates
 the reported ON-worse behavior. Private verified native-half-saved-controls.zip
 and x-near-saved-controls.zip retain their inputs, observations, captures,
 source snapshots and separate SHA256 receipts.157 remains open.
+
+## Survivor-camera controls and a teleport setup correction
+
+A native Web camera-area crossing now passes both with P1 alive and with P1
+dead. At the authored Y416..432 region, P2's saved camera bounds change from
+5584/5376/1280/256 to6048/5376/256/256. The survivor case also retains the
+canonical camera update. Both actual Split peers match through4581/6306.
+The projected stage-pool guard alone is therefore insufficient evidence of
+a survivor-camera defect; no broad camera-guard change was made.
+
+The first Frost opening-ice setup instead exposed a developer-tool error.
+Teleporting idle players to2213/300 and2253/300 clears PLAYER+2C along with
+velocity. P1 lands, but P2 stays healthy atY300/action7 for the entire10-second
+wait. Native ordinary fall paths32558/32608/326C0 install4200 in that vertical
+acceleration field. This failed setup is not a reproduction of169 or170.
+
+The development teleport now preserves nonzero acceleration and supplies that
+native fall acceleration only to normal on-foot actions2..15 with a zero
+value. Mounted, beam and story movement remain excluded. The source-owned
+teleport_fall case includes both Jungle and the affected Frost setup; both
+players fall and land through native physics. The old Jungle-only control
+already passed before the correction, so it is not presented as a failing
+baseline for the Frost problem.
+
+The corrected real Split Frost control reaches the recorded opening-ice death
+location: P1 at2213/443, P2 at2253/410. After P1's native death, native P2
+movement reaches2742/431, with both saved camera origins following to2582/266,
+32HP and matching core/mod checks through8326. Inspected before/after captures
+show the surviving player and stage correctly. The corresponding both-alive
+control also completes. This bounded route does not reproduce169/170 and does
+not qualify the full rising-ice shaft or post-respawn camera report.
+
+All36 Windows title checks pass in6.04s. The helper correction is confined to
+the synchronized development fixtures; no new production camera fix or release
+acceptance is claimed.157 and the remaining progression reports stay open.
