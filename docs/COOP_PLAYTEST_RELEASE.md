@@ -1,4 +1,22 @@
-# Co-op playtest 36
+# Co-op playtest 37
+
+[Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.37)
+with Windows ZIP and Linux x86_64 AppImage. Includes native P2 course completion,
+Storm Owl section and midboss exits, Intro falling-platform triggers, a second
+Cyber analysis graphic and the ready-partner boss-recovery correction.
+The owner accepted the saved-fight OFF/ON Zero combo comparison.
+[Qualification and limits](COOP_PLAYTEST37_INVESTIGATION.md).
+
+Unconfirmed reports2/107/109/167/169-171 remain open. Local8:3 split is deferred.
+Unified cameras, Stacked HUD and Either-player doors remain defaults; Split is
+experimental. Scaling and Fight Double and Iris remain optional, default off.
+Both peers must update. Campaign memory-card saves carry forward.
+Production packages disable debug tools and synchronized development controls.
+
+Release issue: `beads-eio.9.191`. Private production/package/publication receipts:
+`build-pr23/release37-qa/`.
+
+## Previous co-op playtest 36
 
 [Release page](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.36)
 with Windows ZIP and Linux x86_64 AppImage. Corrects scaled Zero melee recovery,

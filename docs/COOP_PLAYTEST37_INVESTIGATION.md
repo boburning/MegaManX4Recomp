@@ -1,8 +1,8 @@
 # Playtest36 burndown: implementation evidence
 
 Scope: the owner's attached goal and [the recurrence review](COOP_FEEDBACK36_REVIEW.md).
-This is a working investigation record. Item157 remains open; no new release
-has been qualified or published by this work.
+This is a working investigation record. The owner now accepts the current157
+Frost comparison; production package qualification and publication are pending.
 
 ## Original local scaling controls
 
@@ -646,3 +646,22 @@ The fight and reset panel were verified live and the ready image inspected.
 No owner result has been received. Item157 remains unresolved, and no release
 is qualified. Further unattended gameplay reproduction is stopped for this
 handoff; the owner's active instance must remain untouched.
+
+## Owner playtest result
+
+The owner requested controller input, so the private comparison was relaunched
+with the detected PlayStation controller assigned to Zero/P2, normal audio,
+and P2-native pause ownership. No physical-input overrides remained during
+the handoff. The owner reports that scaling OFF has longer recovery and ON
+allows shorter combo recovery, confirms this is the intended result, then
+accepts the comparison and requests commit/integration and release.
+
+This closes157 for the current release on bounded human acceptance alongside
+the native adjacent-partner correction and recorded control cases. It does
+not retroactively prove the historical ON-worse sequence reproduced, qualify
+every boss/attack combination, or restore the withdrawn Playtest36 automated
+acceptance. Reports2/107/109/167/169-171 remain explicitly unconfirmed.
+
+Framework PR686 merged as32eefd90, with a tree identical to qualifiedc647d27c.
+Production Windows and Linux packages must disable both PSX_DEBUG_TOOLS and
+MMX4_COOP_NETPLAY_DEBUG; package qualification remains a separate release gate.
