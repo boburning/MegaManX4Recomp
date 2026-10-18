@@ -616,3 +616,33 @@ acceptance of157. In particular, faster accepted grounded follow-ups in this
 one saved setup do not establish that the tester's missed slashes are fixed.
 The private pattern adapter, exact executed scenario source, both input logs,
 native traces and captures are retained in saved-basic-ground-controls.zip.
+
+## Owner playtest handoff
+
+The owner requested a short manual comparison instead of further unattended
+reproduction attempts. A private development copy is prepared under
+`build-pr23/manual37-frost`, with a visible Frost Walrus fight, normal system
+audio, fresh private saves and a separate reset panel. The existing saved
+native fight supplies the baseline; neither this setup nor its ready image
+constitutes a new successful slash reproduction.
+
+Zero is P2 with basic skills and normal incoming damage. Idle X is protected
+so a second operator is unnecessary. Arrow keys move Zero; Z attacks, X jumps
+and C dashes. The reset panel restores the same native image, applies scaling
+OFF or ON with independent cooldowns, releases setup input overrides and
+pauses for the owner. It restores ON before loading because snapshot
+compatibility validation remains strict. The Resume button uses the native
+pause input; no removed TCP pause API is required.
+
+The requested comparison is repeated basic jumping slashes and standing
+combos in each mode. Look for connected follow-ups being rejected or requiring
+extra delay when scaling is ON; reduced integer health-bar movement alone is
+expected from doubled durability. Diagnostics and input recording use the
+private `saves/diagnostics` directory. `manual-events.jsonl` records reset mode
+and wall-clock time, since the persisted mod settings still describe ON while
+the development fixture temporarily selects OFF.
+
+The fight and reset panel were verified live and the ready image inspected.
+No owner result has been received. Item157 remains unresolved, and no release
+is qualified. Further unattended gameplay reproduction is stopped for this
+handoff; the owner's active instance must remain untouched.

@@ -114,7 +114,7 @@ reach the trigger. These are investigation leads, not a validated new fix.
 
 | Item | Status | Scope |
 |---|---|---|
-|157 | Reopened | Entire scaled independent-hit pipeline; earlier36 acceptance withdrawn. |
+|157 | Reopened; owner comparison prepared | Entire scaled independent-hit pipeline; earlier36 acceptance withdrawn. Visible, normal-audio Frost fight with same-image OFF/ON resets is ready for the owner; [handoff and limits](COOP_PLAYTEST37_INVESTIGATION.md#owner-playtest-handoff). No owner result yet. |
 |25 | Validated correction | Native before/after leading-P2 and death/fade race checks reach part2 in local Unified and real Split LAN; see [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
 |2 | Reopened | Intro P2 boss approach walks left, loses P1 and corrupts graphics; upstream missing platforms may be related. |
 |107 | Still open | Web part1 spiked enemy also missing when both traverse. |
