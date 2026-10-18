@@ -166,6 +166,79 @@ class Scenarios:
             cases.append(dict(p1_dying=dying,before=before,after=after))
         return dict(native_exit_races=cases)
 
+    def storm_midboss_exit(self):
+        """Defeat the original Core, then let P2 follow P1 out of its room.
+
+        Setup uses the existing synchronized enemy-health fixture. A native
+        attack supplies the final hit; the original death animation, camera
+        release and map edits must complete without further state writes.
+        This scenario works with Runtime and NetplayRuntime.
+        """
+        cases = []
+        for owner in (0, 1):
+            self.load(7, 1)
+            self.r.fixture(5, 3)
+            self.r.fixture(7, self.campaign ^ 1, 0, 1)
+            self.r.teleport_both(2150, 939)
+            self.r.teleport(1, 2170, 938)
+            try:
+                self.r.input(0xffdf, 0)
+                self.r.input(0xffdf, 1)
+                self.wait('owl-core-approach', lambda v:
+                    all(p['x'] >= 2490 and p['state'] == 1 and not p['door']
+                        for p in v['players']) and not v['blocked'] and
+                    any(e['type'] == 70 and e['hp'] > 0 and e['state'][0] == 1
+                        for e in self.enemies()), 30)
+                self.r.release()
+                # The finishing player stays nearest during the death update.
+                # P2 therefore also exercises the projected actor context.
+                self.r.input(0xff7f, owner ^ 1)
+                self.wait('owl-core-attacker-nearest', lambda v:
+                    v['players'][owner]['x'] - v['players'][owner ^ 1]['x'] >= 24, 8)
+                self.r.release()
+                core = next(e for e in self.enemies() if e['type'] == 70 and e['hp'] > 0)
+                self.sample('owl-core-live-' + str(owner), True)
+                self.r.fixture(6, core['slot'], 1)
+                deadline = time.monotonic() + 30
+                while time.monotonic() < deadline:
+                    if not any(e['type'] == 70 and e['hp'] > 0 and e['state'][0] == 1
+                               for e in self.enemies()):
+                        break
+                    self.r.input(0xbfff, owner)
+                    time.sleep(.10)
+                    self.r.input(0x7fff, owner)
+                    time.sleep(.10)
+                    self.r.input(0xffff, owner)
+                    time.sleep(.20)
+                else:
+                    raise TimeoutError('No native final hit on Generaid Core')
+                self.r.release()
+                self.wait('owl-core-retired', lambda v:
+                    not any(e['type'] == 70 for e in self.enemies()), 20)
+                self.sample('owl-core-retired-' + str(owner), True)
+                self.r.input(0xffdf, 0)
+                self.wait('owl-p1-clears-core-room', lambda v:
+                    v['players'][0]['x'] > 2600, 12)
+                self.r.release()
+                self.sample('owl-p1-ahead-core-' + str(owner), True)
+                # Unified constrains separation. Keep the leader walking
+                # while P2 follows, rather than demand an impossible gap.
+                self.r.input(0xffdf, 0)
+                self.r.input(0xffdf, 1)
+                self.wait('owl-p2-clears-core-room', lambda v:
+                    v['players'][1]['x'] > 2780, 12)
+                self.r.release()
+                after = self.wait('owl-core-both-idle', lambda v:
+                    not v['blocked'] and not v['freeze'] and all(
+                        p['active'] and p['visible'] and p['hp'] and
+                        p['state'] == 1 and p['action'] == 2 and
+                        not p['door'] and not p['script'] for p in v['players']), 12)
+                self.sample('owl-core-followed-' + str(owner), True)
+                cases.append(dict(final_hit_owner=owner, after=after))
+            finally:
+                self.r.release()
+        return dict(native_midboss_exits=cases)
+
     def x_armor(self):
         """Render each shared armor upgrade on X in either roster.
 
@@ -1979,7 +2052,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_course_leader','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_course_leader','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

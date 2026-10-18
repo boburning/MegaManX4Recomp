@@ -207,6 +207,29 @@ static uint32_t signed_half(uint32_t value) {
     /* Retail sra retains the sign bit, including negative odd fixed units. */
     return (value>>1)|(value&0x80000000u);
 }
+static void owl_midboss_camera_unlock(CPUState *cpu,uint32_t address) {
+    (void)address;
+    uint32_t actor=cpu->gpr[16];
+    if(!available() || !psx_mod_read_word(state) ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=7 || psx_mod_read_byte(MMX4_PLAY+13)!=1 ||
+       actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
+       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=70 || psx_mod_read_byte(actor+4)!=2 ||
+       psx_mod_read_byte(actor+0x5C) || cpu->gpr[2]!=2560u)return;
+    /* Retail891FC/89204 releases Generaid Core's2240 enclosure by writing
+     * both current and target maxX=2560. Its one shared death update only
+     * changes CAMERA; a saved partner view otherwise retains the old wall.
+     * Publish exactly those two writes to views still in that enclosure.
+     * Origins, other limits, actors and native death/tile edits stay intact. */
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t shadow=state+16u+seat*CAMERA_BYTES;
+        if(psx_mod_read_half(shadow+0x24)!=2240 ||
+           psx_mod_read_half(shadow+0x26)!=2240)continue;
+        psx_mod_write_half(shadow+0x1C,(uint16_t)cpu->gpr[2]);
+        psx_mod_write_half(shadow+0x24,(uint16_t)cpu->gpr[2]);
+        psx_mod_counter_add("mmx4.coop.split-midboss-camera-unlocks",1);
+    }
+}
 static int destructible_camera_unlock(CPUState *cpu,uint32_t address) {
     if(destructible_camera_call || !available() ||
        psx_mod_read_byte(MMX4_PLAY+12) || psx_mod_read_byte(MMX4_PLAY+13))return 0;
@@ -883,6 +906,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x80028E24u,scan_players);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800293E8u,placement_allocate);
     psx_mod_register_instruction_plugin(COOP_ID,0x80029284u,0xA2620000u,placement_spawned);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80089204u,0xA42219D4u,owl_midboss_camera_unlock);
     psx_mod_register_function_filter_plugin(COOP_ID,0x8002B1E8u,actor_bounds);
     psx_mod_register_function_filter_plugin(COOP_ID,0x8002B160u,actor_bounds);
     psx_mod_register_function_filter_plugin(COOP_ID,0x8002B318u,actor_bounds);

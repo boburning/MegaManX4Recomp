@@ -118,7 +118,7 @@ reach the trigger. These are investigation leads, not a validated new fix.
 |2 | Reopened | Intro P2 boss approach walks left, loses P1 and corrupts graphics; upstream missing platforms may be related. |
 |107 | Still open | Web part1 spiked enemy also missing when both traverse. |
 |165 | Validated correction | Preserve the original assessment completion producer through P2 portal admission. Native grade/checkpoint/movement checks pass local Unified and real Split with both rosters; see [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
-|166 | Reported | Owl part2 P2 stuck after miniboss. |
+|166 | Validated correction | Native Generaid Core death now releases both affected Split camera limits; both rosters/final-hit owners, local Unified control and regression checks pass. See [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
 |167 | Reported | Owl Buster Upgrade followed by X's death strands Zero above; additional secondhand report, not automatically attributed to this archive. |
 |168 | Reported | Intro falling platforms do not trigger for leading P2. |
 |169 | Reported | Frost rising-ice shaft camera stays behind after P1 dies. |

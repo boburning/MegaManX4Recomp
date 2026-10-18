@@ -36,7 +36,7 @@ static unsigned room_entries,room_owner;
 void mmx4_coop_lifecycle_room_entry(unsigned owner) {++room_entries;room_owner=owner;}
 typedef struct {uint32_t address;PSXModFunctionFilterCallback callback;} Filter;
 static Filter filters[24];static unsigned filter_count;
-static PSXModFunctionEntryCallback spawned;
+static PSXModFunctionEntryCallback spawned,owl_room_unlocked;
 uint8_t psx_mod_read_byte(uint32_t address) {return ram[address&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t address,uint8_t value) {ram[address&0x1FFFFFu]=value;}
 uint16_t psx_mod_read_half(uint32_t address) {
@@ -63,8 +63,10 @@ int psx_mod_register_function_entry_plugin(const char *id,uint32_t address,PSXMo
     (void)id;(void)address;(void)callback;return 1;
 }
 int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t word,PSXModFunctionEntryCallback callback) {
-    CHECK(!strcmp(id,"mmx4.coop") && address==0x80029284u && word==0xA2620000u);
-    spawned=callback;return 1;
+    CHECK(!strcmp(id,"mmx4.coop"));
+    if(address==0x80029284u) {CHECK(word==0xA2620000u);spawned=callback;}
+    else {CHECK(address==0x80089204u && word==0xA42219D4u);owl_room_unlocked=callback;}
+    return 1;
 }
 void psx_mod_counter_add(const char *name,uint32_t amount) {(void)name;(void)amount;}
 int32_t psx_mod_widescreen_x_margin(void) {return 0;}
@@ -679,6 +681,64 @@ static void destructible_camera_unlocks(CPUState *cpu) {
     CHECK(invoke(cpu,0x800C0D98u)==0xABCD1234u);
     CHECK(destructible_calls==calls+3 && psx_mod_read_half(saved_camera(1,0)+0x24)==1024);
     CHECK(mmx4_coop_split_snapshot_ready());
+}
+/* Native Generaid Core death writes current/target maximum X=2560. A
+ * canonical-only store strands the second view at2240, clamping Zero2552.
+ * Model those native stores even when the new hook is absent: the old code
+ * must fail the actual saved-bound assertion, not merely lack a registration. */
+static void owl_midboss_unlocks(CPUState *cpu) {
+    const uint32_t actor=0x8013BED0u+5u*0x9Cu;
+    for(unsigned test=0;test<15;++test) {
+        script_owner=-1;split=ready=1;local_scope=projected=actor_context=0;
+        psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+1,0);
+        psx_mod_write_byte(MMX4_PLAY+12,7);psx_mod_write_byte(MMX4_PLAY+13,1);
+        psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+        second[0]=second[4]=1;
+        mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,70);
+        psx_mod_write_byte(actor+4,2);psx_mod_write_byte(actor+0x5C,0);
+        cpu->gpr[16]=actor;cpu->gpr[2]=2560;
+        uint8_t before[2][0xFC];
+        for(unsigned seat=0;seat<2;++seat) {
+            uint32_t c=saved_camera(seat,0);
+            for(unsigned i=0;i<0xFC;++i)psx_mod_write_byte(c+i,(uint8_t)(i+seat*7));
+            psx_mod_write_half(c+0x1C,2240);psx_mod_write_half(c+0x24,2240);
+            psx_mod_write_half(c+0x1E,2240);psx_mod_write_half(c+0x26,2240);
+        }
+        if(test==1)projected=actor_context=1; /* A P2-targeted native actor update. */
+        if(test==2)split=0;
+        if(test==3)ready=0;
+        if(test==4)local_scope=1;
+        if(test==5)psx_mod_write_byte(MMX4_PLAY+12,1);
+        if(test==6)psx_mod_write_byte(MMX4_PLAY+13,0);
+        if(test==7)psx_mod_write_byte(actor+1,60);
+        if(test==8)psx_mod_write_byte(actor+4,1);
+        if(test==9)psx_mod_write_byte(actor+0x5C,1);
+        if(test==10)cpu->gpr[2]=2544;
+        if(test==11)cpu->gpr[16]=actor+1;
+        if(test==12)projected=1; /* Outside the shared actor dispatcher. */
+        if(test==13)psx_mod_write_half(saved_camera(1,0)+0x24,1936);
+        if(test==14)psx_mod_write_half(saved_camera(1,0)+0x26,0);
+        for(unsigned seat=0;seat<2;++seat)for(unsigned i=0;i<0xFC;++i)before[seat][i]=psx_mod_read_byte(saved_camera(seat,0)+i);
+        psx_mod_write_half(CAMERA+0x1C,2560); /* Native891FC already executed. */
+        psx_mod_write_half(CAMERA+0x24,2240);
+        if(owl_room_unlocked)owl_room_unlocked(cpu,0x80089204u);
+        CHECK(psx_mod_read_half(CAMERA+0x24)==2240); /* Original SH remains responsible. */
+        psx_mod_write_half(CAMERA+0x24,(uint16_t)cpu->gpr[2]);
+        for(unsigned seat=0;seat<2;++seat) {
+            unsigned released=test<2 || (test>=13 && seat==0);
+            for(unsigned i=0;i<0xFC;++i) {
+                unsigned expected=before[seat][i];
+                if(released && (i==0x1C || i==0x24))expected=0;
+                if(released && (i==0x1D || i==0x25))expected=10;
+                CHECK(psx_mod_read_byte(saved_camera(seat,0)+i)==expected);
+            }
+        }
+        CHECK(cpu->gpr[16]==(test==11?actor+1:actor));
+        CHECK(cpu->gpr[2]==(test==10?2544:2560));
+        CHECK(mmx4_coop_split_snapshot_ready());
+    }
+    projected=actor_context=local_scope=0;split=ready=1;
 }
 static void four_aligned_placements(CPUState *cpu) {
     uint32_t table=native_table=0x800F848Cu;
@@ -1446,6 +1506,7 @@ int main(void) {
     CHECK(psx_mod_read_half(saved_camera(1,0)+0x28)==512);
     CHECK(mmx4_coop_split_snapshot_ready());
     destructible_camera_unlocks(&cpu);
+    owl_midboss_unlocks(&cpu);
     four_aligned_placements(&cpu);
     stationary_second_door(&cpu);
     stationary_refight_portal(&cpu);

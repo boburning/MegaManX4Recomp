@@ -280,3 +280,56 @@ TechnicallyComputers. Its base retains the existing X4 framework line; unrelated
 framework master changes have not been pulled into this investigation.
 Native source/capture/input receipts are retained in the verified private
 `qualification37/p2-route-controls.zip` with a separate size/SHA256 receipt.
+
+
+## Storm Owl post-midboss camera release (166)
+
+The supplied36 paired Owl recording1792318160615607 reaches part2 and ends
+with living P1 around2814/971 and P2 around2552/970. The stalled P2's cause
+cannot be determined from those input/position rows alone. Fresh native
+Split/Both fixtures reproduce it after defeating the original Generaid Core,
+kind70. The fully retired boss leaves canonical/P1 maximum X=2560, but P2's
+saved current/target maximum remains2240. Holding Right clamps Zero/P2 at
+2552.5 with32HP and no C0/C4 lock, while P1 proceeds to2833. Both peers still
+agree. Captures show P2 pinned to the old view's right edge.
+
+Native death handler800891C8 writes2560 to current maxX at891FC and target
+maxX at89204, before continuing the original tile/death finalization. Mirror
+exactly those two writes into saved views whose target interval is still the
+2240 enclosure. The hook checks the actual kind70 death, zero HP, native2560
+value, stage7/section1, live simulation scope and actor-pool alignment. It also
+works during a legitimate P2-targeted actor update. Other camera fields,
+origins and unrelated room intervals remain unchanged; native AI, death and
+map edits still run once. No new persistent snapshot fields are introduced.
+Both configs declare the checked A42219D4 instruction; main generated shard39
+was regenerated. This fixes166, not the separate capsule/death report167.
+
+| Check | Evidence |
+|---|---|
+| Counterexample | A unit models the two ordinary native stores even without the new hook. Original code fails the saved-view-byte assertion; candidate passes15 cases, including projected actor context, out-of-scope rejects and whole-view byte preservation. |
+| Portable check | The same Split fixture passes MinGW and Linux GCC. Its two pre-existing misleading-indentation warnings remain; no cross-OS gameplay compatibility is inferred. |
+| Real Split, X/P1 Zero/P2 | Both final-hit owners complete the original death and following movement. Both saved maximums become2560, both heroes stay visible32HP/unlocked, and matching peer state is retained through8197. |
+| Real Split, Zero/P1 X/P2 | Both final-hit owners also pass, including a P2-nearest projected death update. Native release counter records both views for each death; matching peer state through7972. |
+| Local Unified | The source-owned storm_midboss_exit case passes both finishing owners. Both heroes proceed past2780, reach native checkpoint2, and settle healthy/visible/idle with no personal locks. |
+| Windows title suite | All35 tests pass in one14.76s run; build/test logs are owl-midboss37-all-build.log and owl-midboss37-all-tests.log under build-pr23. |
+
+Only setup uses invulnerability, observed safe positions and the existing
+synchronized enemy-HP fixture6. Native attacks supply the final hit, and the
+original death animation fully retires before the tested exit. The scenario
+is available as tools/test_mmx4_coop_regressions.py --cases storm_midboss_exit
+for local or an attached NetplayRuntime; private two-peer captures also retain
+the distinct saved views and CRC checkpoints.
+
+Excluded attempts remain separate: an initial probe expected the wrong
+actor73; a headless present-shot request failed; a network damage-multiplier
+setup did not finish combat. Those failures do not count as reproductions or
+acceptance. The later baseline explicitly waits for complete corpse retirement
+and records both saved camera intervals. The local pre-fix control already
+allowed P2 to follow; this was a Split camera release fault.
+
+Private native inputs, observations, screenshots, source-script snapshots,
+executable digests and an archive manifest are retained in
+build-pr23/followup36/qualification37/owl-midboss-controls.zip with a separate
+size/SHA256 receipt. The main checklist now has139 checked/34 unchecked of173.
+Item157 and the remaining progression/feature scope remain open; no release
+is qualified by this correction alone.
