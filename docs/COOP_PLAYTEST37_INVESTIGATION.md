@@ -377,3 +377,46 @@ size/SHA256 receipt. The silent6.87s comparison video is
 build-pr23/slash-comparison37.mp4: it explicitly labels fresh fights with
 different boss movement, not a deterministic matched-world comparison.
 Item157 remains unresolved; checklist139/34 is unchanged. No release is cut.
+
+## Cyber course analysis graphic for P2 (172)
+
+The supplied magenta brackets and cyan readouts belong to the course's native
+particle34, not Cyber's missile attack. Native800CE894 also advances assessment
+timers, grading and the completion signal to its parent kind38. A pre-change
+original-disc control shows only P1's graphic and fails the new indicator case.
+Its native assessment runs once per observed frame; simply running it twice
+would alter gameplay.
+
+The new read-only helper copies the96-byte particle for presentation, retaining
+its native scan offset, previous position and animation. It translates current
+and previous coordinates by the player-position difference, selects P2's world
+layer, and uses the same native80024334 draw path. A separate temporary draw
+address gives the copy its own interpolation identity. All temporary bytes are
+restored before leaving the draw scope. The original assessment, parent link,
+timers, grade producer and native actor pool remain single instances.
+
+Only Cyber part1's live course graphic in opening/free-course phases qualifies.
+Story ownership, a hidden/dead partner, projected actor updates, unrelated
+particles, screen-relative layers and completion/flyaway phases retain the
+existing behavior. The new scratch region is beyond the existing diagnostic
+shot dump; no diagnostic bytes are borrowed. The source is included in the
+strict co-op compatibility identity.
+
+| Check | Evidence |
+|---|---|
+| Local Unified | Both character assignments show both indicators in inspected native captures, then complete the original P2-led course portal with both heroes healthy, visible and able to move. Opening and free-course drawing both occur. |
+| Actual Split, X/P1 Zero/P2 | Both nearby indicators render; P2's own presented view retains its indicator384px ahead of P1. Only one native particle34 exists. Both heroes complete the course and move normally; matching core/mod state through9057. |
+| Actual Split, Zero/P1 X/P2 | The reversed assignment also retains P2's graphic384px ahead, completes the course and preserves both heroes; matching core/mod state through8611. |
+| No extra gameplay update | Free-course traces show exactly one800CE894 update in each of44/104 local and39/33 Split observed frames. Temporary draw bytes restore exactly, and neither Split trial reports a local-view state leak. |
+| Portable/source checks |22 helper cases cover translation, all-byte state preservation and scope exclusions. MinGW and Linux GCC pass; Linux builds with Wall/Wextra/Werror. All36 Windows title checks pass in6.85s. |
+
+The source-owned cyber_indicator regression uses synchronized setup fixtures,
+native assessment entry and read-only function observation. It does not mutate
+grading or completion state. Grade/checkpoint results may differ between fresh
+setups; no claim of identical course timing is made. Private captures, input
+receipts, script/source snapshots and executable digests are retained in the
+verified qualification37/cyber-indicator-controls.zip and its SHA256 receipt.
+No original game assets or executable bytes are included in that archive.
+
+Item172 is qualified. The numbered checklist is140 checked/33 unchecked of173.
+This feature does not resolve157 or qualify a release by itself.

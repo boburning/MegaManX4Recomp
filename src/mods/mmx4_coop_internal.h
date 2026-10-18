@@ -124,6 +124,8 @@ int mmx4_coop_lifecycle_nova_active(void);
 int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor);
 /* Preserve the native course completion producer through owner-camera handoff. */
 int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address);
+/* Read-only course graphic copy; no extra native assessment update. */
+int mmx4_coop_assessment_copy(uint32_t actor,uint8_t copy[0x60]);
 /* Shared Mushroom lift admission; returns a handled native result in v0. */
 int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address);
 void mmx4_coop_lifecycle_room_entry(unsigned owner);

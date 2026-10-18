@@ -3,7 +3,8 @@
 The owner reports that scaled Zero slashes remain wrong in36. Item157 is
 reopened. The Playtest36 implementation and its tests do **not** establish
 that the reported scaling-off versus scaling-on difference is resolved.
-There is no new gameplay fix or release qualification in this document.
+The corrections below have bounded native qualification recorded separately;
+they do not qualify the entire release while157 remains unresolved.
 
 ## Intended scaling behavior
 
@@ -124,7 +125,7 @@ reach the trigger. These are investigation leads, not a validated new fix.
 |169 | Reported | Frost rising-ice shaft camera stays behind after P1 dies. |
 |170 | Reported | Frost P2 camera graphics corrupt after the first death. |
 |171 | Reported | Frost part2 slowdown after the ice bird freezes the stage; separate from the36 camera-selection fix162. |
-|172 | Requested feature | Extend the native course character-analysis graphic to P2; identify the actual draw path, separate from boss missile warnings. |
+|172 | Validated feature | Draw a second instance of the native course character-analysis graphic for P2 without a second assessment update. Both local rosters, real Split near/distant views, original portal completion and matching peers pass. See [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
 |173 | Requested feature | Optional local8:3 composition, two side-by-side4:3 views; Unified stays default. |
 
 Correctness intake is `beads-eio.9.188`, scaling remains `.177`, Cyber reticle

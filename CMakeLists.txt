@@ -91,7 +91,7 @@ set(MMX4_COOP_CONTRACT_FILES
     src/mods/mmx4_cheats.c src/mods/mmx4_cheats.h
     src/mods/mmx4_coop_views.c src/mods/mmx4_coop_views.h
     src/mods/mmx4_coop_split.c src/mods/mmx4_coop_web.c src/mods/mmx4_coop_bosses.c
-    src/mods/mmx4_coop_balance.c
+    src/mods/mmx4_coop_balance.c src/mods/mmx4_coop_assessment.c
     src/mods/mmx4_coop_debug_protocol.c src/mods/mmx4_coop_debug_protocol.h
     src/mods/mmx4_diagnostics.cpp src/mods/mmx4_diagnostics.h src/mods/mmx4_diagnostic_paths.h
     src/mods/mmx4_diagnostic_writer.h
@@ -216,6 +216,10 @@ if(BUILD_TESTING)
     add_executable(mmx4_coop_balance_test tests/test_mmx4_coop_balance.c src/mods/mmx4_coop_balance.c)
     target_include_directories(mmx4_coop_balance_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_coop_balance_test COMMAND mmx4_coop_balance_test)
+    add_executable(mmx4_coop_assessment_test tests/test_mmx4_coop_assessment.c
+        src/mods/mmx4_coop_assessment.c src/mods/mmx4_coop_memory.c)
+    target_include_directories(mmx4_coop_assessment_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
+    add_test(NAME mmx4_coop_assessment_test COMMAND mmx4_coop_assessment_test)
     add_executable(mmx4_coop_background_test tests/test_mmx4_coop_background.c src/mods/mmx4_coop_views.c)
     target_include_directories(mmx4_coop_background_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
     add_test(NAME mmx4_coop_background_test COMMAND mmx4_coop_background_test)

@@ -1680,6 +1680,63 @@ class Scenarios:
         assert all(p['x']>start_x[seat] and p['hp'] for seat,p in enumerate(moved['players'])),moved
         return dict(before=before,after=after,movement=moved)
 
+    def cyber_indicator(self):
+        """Observe the one native course controller and both drawn indicators."""
+        self.load(6,0);self.r.fixture(5,3)
+        def marker():
+            pool=self.r.read(0x80173ca0,64*0x60)
+            for i in range(64):
+                b=pool[i*0x60:(i+1)*0x60]
+                if b[0] and b[1]==34 and b[4:6]==bytes((1,2)):
+                    return 0x80173ca0+i*0x60,b
+            return None
+        route=((131,162),(193,133),(259,166),(321,142),(387,147),(452,154))
+        opening=[]
+        for x,y in route:
+            self.r.teleport_both(x,y+(self.campaign==0))
+            self.r.teleport(1,x,y+(self.campaign==1))
+            start=struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]
+            deadline=time.monotonic()+5
+            while struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]-start<10:
+                if time.monotonic()>=deadline:raise TimeoutError('Cyber setup clock stopped')
+                time.sleep(.01)
+            if x>=400:
+                self.r.teleport(1,515,162+(self.campaign==1))
+                pool=self.r.read(0x80173ca0,64*0x60)
+                opening=[dict(address=hex(0x80173ca0+i*0x60),body=b.hex())
+                    for i in range(64) if (b:=pool[i*0x60:(i+1)*0x60])[0] and b[1]==34]
+                self.sample('cyber-indicator-opening',True)
+        self.wait('cyber-indicator-free-course',lambda v:marker() is not None and
+            not v['freeze'] and not v['blocked'],15)
+        self.r.teleport(1,515,162+(self.campaign==1))
+        address,body=marker()
+        before=self.sample('cyber-indicator-before',True)
+        ghost=self.r.diagnostic()+0x800
+        ghost_before=self.r.read(ghost,0x60)
+        # Observers only: these rings must never advance grading or completion.
+        peer=self.r.peers[0] if hasattr(self.r,'peers') else self.r
+        peer.request('fntrace_clear')
+        for target in(0x800ce894,0x80024334):peer.request('fntrace_arm',target=hex(target))
+        time.sleep(.6)
+        after=self.sample('cyber-indicator-after',True)
+        counters={c['name']:c['count']for c in self.r.request('mod_counters')['counters']}
+        evidence=dict(before=before,after=after,opening=opening,marker=hex(address),
+            marker_before=body.hex(),marker_after=self.r.read(address,0x60).hex(),
+            ghost_before=ghost_before.hex(),ghost_after=self.r.read(ghost,0x60).hex(),
+            counters=counters,functions=peer.request('fntrace_dump',count=8192))
+        (self.output/'cyber-indicator-evidence.json').write_text(json.dumps(evidence,indent=2))
+        assert all(p['hp'] and p['visible'] for p in after['players']),after
+        assert counters.get('mmx4.coop.p2-analysis-draws',0)>0,'P2 course indicator was never drawn'
+        assert evidence['ghost_before']==evidence['ghost_after'],'Draw actor leaked into saved guest state'
+        assert not counters.get('mmx4.coop.local-view-state-leak',0),counters
+        updates={}
+        for entry in evidence['functions']['entries']:
+            if entry['target']=='0x800CE894':updates[entry['frame']]=updates.get(entry['frame'],0)+1
+        assert len(updates)>=5 and max(updates.values())==1,updates
+        return dict(marker=hex(address),players=after['players'],
+                    analysis_draws=counters['mmx4.coop.p2-analysis-draws'],
+                    native_update_frames=len(updates),max_updates_per_frame=max(updates.values()))
+
     def cyber_course(self):
         cases=[]
         # The native spawn list800F41D0 has six assessment checkpoints.
@@ -2052,7 +2109,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_course_leader','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

@@ -1172,6 +1172,27 @@ static int render(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int render_owned_effect(CPUState *cpu,uint32_t address) {
+    uint8_t assessment[0x60];
+    if(!rendering && diagnostic && cpu->gpr[4]>=0x80173CA0u &&
+       cpu->gpr[4]<0x801754A0u && psx_mod_read_byte(cpu->gpr[4]+1)==34 && world_draw_visible() &&
+       mmx4_coop_assessment_copy(cpu->gpr[4],assessment)) {
+        /* Keep a distinct draw address for interpolation identity. This
+         * region is outside all diagnostics and native actor pools. Restore
+         * it before leaving the presentation scope, including private views. */
+        uint32_t actor=cpu->gpr[4],ghost=diagnostic+0x800u;
+        uint8_t saved[0x60];capture(ghost,saved,sizeof saved);
+        project(ghost,assessment,sizeof assessment);
+        rendering=1;
+        uint32_t result=mmx4_coop_split_sprite_outside(actor)?0:
+            guest(cpu,address,actor,cpu->gpr[5]);
+        if(!mmx4_coop_split_sprite_outside(ghost)) {
+            guest(cpu,address,ghost,cpu->gpr[5]);
+            psx_mod_counter_add("mmx4.coop.p2-analysis-draws",1);
+            if(assessment[5]<2)psx_mod_counter_add("mmx4.coop.p2-analysis-opening-draws",1);
+        }
+        project(ghost,saved,sizeof saved);rendering=0;
+        return mmx4_coop_finish(cpu,result);
+    }
     if(mmx4_coop_split_sprite_outside(cpu->gpr[4])) {
         psx_mod_counter_add("mmx4.coop.split-distant-sprite-culled",1);
         return mmx4_coop_finish(cpu,0);
@@ -1521,7 +1542,7 @@ static void activate(void) {
         assets[i].menu_gfx=space+0x50000;
         if(!space)failed=1;
     }
-    diagnostic=psx_mod_alloc_guest_memory(0x800,16);
+    diagnostic=psx_mod_alloc_guest_memory(0x860,16); /* +0x800: scoped draw actor */
     arena=psx_mod_alloc_texture_packet_memory(2*FRAME_ARENA,16);
     hud_arena=psx_mod_alloc_texture_packet_memory(0x10000,16);
     if(!diagnostic || !arena || !hud_arena)failed=1;
