@@ -499,3 +499,42 @@ is not restored with a game snapshot. Starting a queued route at the actual
 load boundary would remove that remaining timing ambiguity. The existing
 source-function route tests and native P2 route support remain separate from
 authoritative network input replay. Checklist141/32 is unchanged; no release.
+
+## Load-boundary inputs now qualify in both seats
+
+Framework c647d27c adds optional input_route_start after_load=1. The queue
+stays dormant until the actual successful native load callback, independently
+of fingerprint collection. It then starts at that restored guest boundary.
+Stop/clear cancel the waiting route; another port's clear does not. A positive
+at_frame cannot combine with after_load, and existing default routing remains.
+Source-function checks pass Windows MinGW and Linux GCC, including cancellation,
+port isolation, fingerprint independence and ordinary deferred starts.
+[PR686](https://github.com/RetroPortingToolKit/psxrecomp/pull/686) remains open,
+assigned to TechnicallyComputers, on the existing X4 framework line.
+
+The source-owned balance_saved_slashes case now records OFF/ON controls from
+one real original-Frost saved fight. Both use348 identical scheduled native
+inputs:60 neutral setup frames, six jump/slash cycles, then a neutral tail.
+Zero is separately qualified in both seats. Each pair's first60 recorder rows
+also match the restored guest clock, both heroes' observations and the full
+diagnostic PLAY/player-state hash. The idle partner is neutral throughout.
+Mode fixtures complete inside the neutral prefix; loading still requires
+returning to the snapshot's configured ON mode. Only setup moves players or
+selects skills. Combat changes come from native controller input.
+
+This removes the earlier fresh-fight/start-time ambiguity, but does not close157.
+Both pairs first differ in their full diagnostic player-state hash at row77,
+around the first connected spinning attack. Later native motion differs.
+The P2 pair records one original damage store OFF and two Separate stores ON;
+the P1 pair records one each. Inspected captures show native spinning slashes
+and ordinary combat. These controls still do not demonstrate the reported
+ON-worse follow-up suppression, and store counts are not gameplay acceptance.
+Asynchronous sample.frame/write-trace timestamps are host observations; use
+the recorded N rows for the matched guest clock/input basis.
+
+All36 Windows title checks pass in3.54s. Private inputs, captures, native
+function/health-write observations, exact executable digests and source/check
+snapshots are retained in verified qualification37/saved-slash-controls.zip,
+with a separate SHA256 receipt. Saved images and original game assets are
+excluded. The comparison returns slash_acceptance=false deliberately.
+Checklist141/32 is unchanged; no release is qualified.

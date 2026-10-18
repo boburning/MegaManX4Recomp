@@ -57,3 +57,86 @@ def balance_saved_control(s):
     (s.output/'saved-balance-control.json').write_text(json.dumps(results,indent=2))
     return dict(native_save_load=True,development_mode_fixture=True,
                 slash_acceptance=False,boss_health=current['hp'])
+
+
+def qualify_saved_inputs(result):
+    """Qualify the recorded control, independently of damage or hit totals."""
+    wanted=[buttons for frames,buttons in result['steps'] for _ in range(frames)]
+    zero=result['zero_seat'];first,second=result['trials']
+    for trial in (first,second):
+        rows=trial['inputs'];assert len(rows)>=len(wanted),len(rows)
+        assert [row[2+zero] for row in rows[:len(wanted)]]==wanted
+        assert all(row[2+(zero^1)]==0xffff for row in rows[:len(wanted)])
+    # Includes restored guest clock, controls, both heroes' observations and
+    # the recorder's full PLAY/player-state hash throughout neutral setup.
+    assert len(wanted)>=60 and all(x[1:]==y[1:] for x,y in
+        zip(first['inputs'][:60],second['inputs'][:60]))
+    return dict(native_input_frames=len(wanted),matched_setup_rows=60,
+                saved_native_trials=2,slash_acceptance=False)
+
+
+def balance_saved_slashes(s):
+    """Record two native trials from one saved fight; never infer a PASS from HP."""
+    balance_saved_control(s)
+    r=s.r;zero=s.campaign^1;xseat=s.campaign
+    boss=next(e for e in s.enemies() if e['type']==57 and e['hp']==48)
+    r.fixture(7,zero,0,1)
+    r.teleport(xseat,int(boss['x'])-100,443)
+    r.teleport(zero,int(boss['x'])-36,442)
+    r.input(0xffdf,zero);time.sleep(.035);r.release()
+    def operation(op):
+        previous=r.request('savestate_status')['generation']
+        ack=r.request('savestate',op=op,slot=0);deadline=time.monotonic()+30
+        while time.monotonic()<deadline:
+            status=r.request('savestate_status')
+            if status['generation']!=previous and not status['pending']:
+                assert status['last_ok'] and status['last_op']==op,status
+                return dict(ack=ack,completed=status)
+            time.sleep(.02)
+        raise TimeoutError('Saved slash operation: '+op)
+    actor=0x8013bed0+boss['slot']*0x9c
+    result=dict(save=operation('save'),zero_seat=zero,trials=[])
+    steps=[(60,0xffff)]+[(4,0xbfff),(3,0xffff),(4,0x7fff),(27,0xffff)]*6+[(60,0xffff)]
+    result['steps']=steps
+    sessions=s.output/'saves/diagnostics'
+    for mode in (0,1):
+        r.fixture(6,253,1)
+        r.input(0xffff,xseat)
+        r.request('input_route_clear')
+        for frames,buttons in steps:r.request('input_route_append',frames=frames,buttons=buttons)
+        armed=r.request('input_route_start',port=zero+1,after_load=1)
+        assert armed['waiting_for_load'],armed
+        r.request('fntrace_clear');r.request('wtrace_clear')
+        r.request('wtrace_range',lo=hex(actor+0x58),hi=hex(actor+0x9c))
+        for target in(0x8002de30,0x80097eec):r.request('fntrace_arm',target=hex(target))
+        previous=set(sessions.glob('session-*'))
+        trial=dict(mode=mode,armed=armed,load=operation('load'),rows=[])
+        result['trials'].append(trial)
+        status=r.request('input_route_status');trial['after_load_route']=status
+        assert not status['waiting_for_load'] and status['index']==0 and status['remaining']>15,status
+        r.fixture(6,253,mode)
+        trial['mode_applied_route']=r.request('input_route_status')
+        assert trial['mode_applied_route']['index']==0,trial['mode_applied_route']
+        deadline=time.monotonic()+45;last_capture=-1000;image_index=0
+        while time.monotonic()<deadline:
+            row=s.sample('saved-slash-'+str(mode));row['boss']=r.read(actor,0x9c).hex()
+            trial['rows'].append(row)
+            if row['frame']-last_capture>=16:
+                r.screenshot(s.output/f'saved-slash-{mode}-{image_index:03d}.png')
+                image_index+=1;last_capture=row['frame']
+            status=r.request('input_route_status')
+            if not status['active']:break
+            assert all(p['hp'] and p['state']==1 for p in row['players']),row
+            time.sleep(.01)
+        else:raise TimeoutError('Saved slash route did not finish')
+        r.release();time.sleep(.2)
+        new=set(sessions.glob('session-*'))-previous;assert len(new)==1,new
+        folder=new.pop();trial['session']=folder.name
+        trial['inputs']=[[int(v)for v in line[2:].split(',')]
+            for line in(folder/'inputs.csv').read_text().splitlines()if line.startswith('N ')]
+        trial['functions']=r.request('fntrace_dump',count=8192)
+        trial['health_writes']=r.request('wtrace_dump',count=4096,addr_lo=hex(actor+0x5c),addr_hi=hex(actor+0x5d))
+        (s.output/'saved-slash-comparison.json').write_text(json.dumps(result,indent=2))
+    result['control_qualification']=qualify_saved_inputs(result)
+    (s.output/'saved-slash-comparison.json').write_text(json.dumps(result,indent=2))
+    return result['control_qualification']
