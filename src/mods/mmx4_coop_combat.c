@@ -237,7 +237,7 @@ static int private_boss_hit(CPUState *cpu,uint32_t address) {
      * overlap, before it stores a token, consumes a shot or applies damage.
      * Its native duplicate result 7E preserves a still-held contact. */
     if(combat_call && mmx4_coop_ready() && !psx_mod_local_view_scope() &&
-       !mmx4_coop_balance_hit_allowed(cpu->gpr[4],mmx4_coop_projected()?1u:0u))
+       !mmx4_coop_balance_contact_allowed(cpu->gpr[4],cpu->gpr[5],mmx4_coop_projected()?1u:0u))
         return mmx4_coop_finish(cpu,0x7Eu);
     return 0;
 }

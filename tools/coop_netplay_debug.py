@@ -2,6 +2,9 @@
 
 Requires MMX4_COOP_NETPLAY_DEBUG=ON on both peers. It never launches a process
 or writes guest RAM. Keep this helper separate from ordinary playtest evidence.
+The frost-field setup starts an original field controller in Frost part2;
+its fade, tile edits and retirement then run natively. Values0..3 select the
+authored field region. It is not a replay of approaching the ice bird.
 """
 import argparse
 import struct
@@ -71,12 +74,16 @@ class NetplayDevelopment:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ports', type=int, nargs=2, required=True, metavar=('HOST', 'GUEST'))
-    parser.add_argument('command', choices=('stage', 'checkpoint', 'health', 'invulnerable', 'teleport', 'enemy-health','weapon'))
+    parser.add_argument('command', choices=('stage', 'checkpoint', 'health', 'invulnerable', 'teleport', 'enemy-health','weapon','frost-field'))
     parser.add_argument('values', type=int, nargs='+')
     args = parser.parse_args()
     runtime = NetplayDevelopment(*args.ports)
     if args.command == 'teleport':
         runtime.teleport(*args.values)
+    elif args.command == 'frost-field':
+        if len(args.values)!=1 or not 0<=args.values[0]<4:
+            parser.error('frost-field requires one authored region0..3')
+        runtime.fixture(6,254,args.values[0])
     else:
         runtime.fixture({'stage': 1, 'health': 2, 'checkpoint': 3,
                          'invulnerable': 5, 'enemy-health': 6,'weapon':7}[args.command], *args.values)

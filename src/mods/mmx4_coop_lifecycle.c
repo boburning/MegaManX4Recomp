@@ -21,6 +21,7 @@
 static int door_pool_actor(uint32_t actor) {
     return actor>=0x80165A30u && actor<0x80166BB0u && (actor-0x80165A30u)%0x8Cu==0;
 }
+static unsigned frost_path_contact_call;
 
 typedef struct {
     uint8_t character, hp, ammo[16], weapon;
@@ -82,7 +83,7 @@ int mmx4_coop_lifecycle_snapshot_ready(void) {
     return !(inventory_projected || menu_projecting || normal_guard || menu_guard || world_guard ||
         pickup_guard || collect_guard || save_guard || reward_guard || death_guard || death_check_guard ||
         capsule_guard || scene_guard || script_pool_guard || command_guard || control_guard || text_guard ||
-        text_init_guard || flip_guard || warp_guard || door_wait || door_terrain_guard || surface_call);
+        text_init_guard || flip_guard || warp_guard || door_wait || door_terrain_guard || surface_call || frost_path_contact_call);
 }
 static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
     MMX4_SNAPSHOT_BOOL(s,inventory->character);MMX4_SNAPSHOT_U8(s,inventory->hp);
@@ -244,7 +245,7 @@ void mmx4_coop_lifecycle_activate(void) {
     fresh_game(NULL,0);
     last_stage=last_section=last_lives=0;
     departure_active=departure_visible=0;
-    normal_guard=menu_guard=world_guard=pickup_guard=0;
+    normal_guard=menu_guard=world_guard=pickup_guard=frost_path_contact_call=0;
     collect_guard=save_guard=reward_guard=death_guard=death_check_guard=capsule_guard=0;
     scene_guard=script_pool_guard=command_guard=control_guard=text_guard=text_init_guard=0;
     door_wait=0;
@@ -1552,6 +1553,28 @@ static void frost_path_activation(CPUState *cpu,uint32_t address) {
     if((!mmx4_coop_alive(0) || first<3168) && second>=3168)
         cpu->gpr[2]=(uint32_t)(int32_t)second;
 }
+static int frost_path_contact(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    /* C41C8's invisible type17 trigger starts the native subtype4 collapse
+     * sequence when a player touches the ice. Extending its initial spawn
+     * predicate alone leaves the path permanent when only P2 crosses it.
+     * This pure overlap query has no player or world side effects. */
+    if(frost_path_contact_call || cpu->gpr[31]!=0x800C4204u || cpu->gpr[5]!=PLAYER ||
+       !mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12)!=2 ||
+       psx_mod_read_byte(PLAY+13) || !door_pool_actor(actor) ||
+       !psx_mod_read_byte(actor) || psx_mod_read_byte(actor+1)!=17 ||
+       psx_mod_read_byte(actor+4)!=1 || !mmx4_coop_alive(1))return 0;
+    frost_path_contact_call=1;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,PLAYER);
+    if(!result) {
+        mmx4_coop_enter_second();
+        result=mmx4_coop_call(cpu,address,actor,PLAYER);
+        mmx4_coop_leave_second();
+        if(result)psx_mod_counter_add("mmx4.coop.p2-ice-path-collapse",1);
+    }
+    frost_path_contact_call=0;return mmx4_coop_finish(cpu,result);
+}
 static void intro_survivor_crusher(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[16];
@@ -2235,6 +2258,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800B60BCu,floor_controller);
     psx_mod_register_instruction_plugin(ID,0x800B9F74u,0x2442FD5Fu,frost_ice_activation);
     psx_mod_register_instruction_plugin(ID,0x800BA39Cu,0x28420C60u,frost_path_activation);
+    psx_mod_register_function_filter_plugin(ID,0x8002C160u,frost_path_contact);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
     psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);

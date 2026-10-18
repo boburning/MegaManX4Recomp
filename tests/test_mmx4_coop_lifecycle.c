@@ -52,6 +52,7 @@ static unsigned initial_arrival_model,initial_control_calls[2],incoming_calls[2]
 static unsigned natural_arrivals,direct_arrivals,terrain_calls[2];
 static unsigned direct_initializer_calls[2];
 static unsigned surface_calls[2];
+static unsigned ice_contact_model,ice_contact_calls[2];
 static uint8_t terrain_contact;
 static int narrow_return_x;
 static unsigned flip_queries[2],flip_hits[2],flip_world_calls,flip_second_calls,flip_camera_calls;
@@ -171,6 +172,11 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     cpu->gpr[4]=a0;cpu->gpr[5]=a1;
     for(unsigned i=0;i<filter_count;++i)if(filters[i].address==address && filters[i].filter(cpu,address)) {
         result=cpu->gpr[2];goto done;
+    }
+    if(ice_contact_model && address==0x8002C160u) {
+        ++ice_contact_calls[projected];
+        result=psx_mod_read_half(MMX4_PLAYER+10)==psx_mod_read_half(a0+10);
+        goto done;
     }
     switch(address) {
     case 0x800C36E8:
@@ -1438,6 +1444,41 @@ int main(void) {
             CHECK(cpu.gpr[2]==wanted);
         }
     reset();
+    /* The collapse starts on contact, rather than a guessed expiry timer.
+     * Check each native roster/camera mode and restrict the pure geometry
+     * extension to the exact type17 caller; no other collision is widened. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+        for(unsigned test=0;test<13;++test) {
+            reset();ice_contact_model=1;memset(ice_contact_calls,0,sizeof ice_contact_calls);
+            split_views=mode;psx_mod_write_byte(PLAY+12,2);
+            psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+            const uint32_t trigger=0x80165A30u;
+            psx_mod_write_byte(trigger,1);psx_mod_write_byte(trigger+1,17);psx_mod_write_byte(trigger+4,1);
+            psx_mod_write_half(trigger+10,3456);psx_mod_write_half(PLAYER+10,144);
+            p2[10]=0x80;p2[11]=0x0D;
+            cpu.gpr[4]=trigger;cpu.gpr[5]=PLAYER;cpu.gpr[31]=0x800C4204u;
+            if(test==1)psx_mod_write_half(PLAYER+10,3456);
+            if(test==2)p2[0x5C]=0;
+            if(test==3)projected=1;
+            if(test==4)local_view=1;
+            if(test==5)ready=0;
+            if(test==6)psx_mod_write_byte(PLAY+12,1);
+            if(test==7)psx_mod_write_byte(PLAY+13,1);
+            if(test==8)psx_mod_write_byte(trigger+1,18);
+            if(test==9)cpu.gpr[31]=0x800C4208u;
+            if(test==10)psx_mod_write_byte(trigger+4,2);
+            if(test==11)cpu.gpr[4]=trigger+1;
+            if(test==12)p2[10]=0;
+            uint8_t body[0xE4];memcpy(body,ram+(PLAYER&0x1FFFFFu),sizeof body);
+            unsigned was_projected=projected;
+            int handled=frost_path_contact(&cpu,0x8002C160u);
+            CHECK(handled==(test<2 || test==12));
+            if(handled)CHECK(cpu.gpr[2]==(test<2));
+            CHECK(projected==was_projected && !frost_path_contact_call);
+            CHECK(!memcmp(body,ram+(PLAYER&0x1FFFFFu),sizeof body));
+            CHECK(ice_contact_calls[1]==(test==0 || test==12));
+            ice_contact_model=0;
+        }
     /* The recorded P1 corpse stays at Y394 while P2 reaches the crusher
      * floor at Y955. Only that survivor may satisfy the native Y predicate. */
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned ineligible=0;ineligible<9;++ineligible) {
