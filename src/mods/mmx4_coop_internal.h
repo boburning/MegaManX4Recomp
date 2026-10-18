@@ -31,6 +31,8 @@ int mmx4_coop_ready(void);
 void mmx4_coop_development_mask_pad(void);
 int mmx4_coop_projected(void);
 int mmx4_coop_split_views(void);
+/* Presentation-only palette correction inside the local-render transaction. */
+void mmx4_coop_split_local_explosion_palette(CPUState *cpu,const uint8_t camera[0xFC]);
 int mmx4_coop_both_door_players(void);
 void mmx4_coop_bosses_activate(void);
 void mmx4_coop_bosses_new_stage(void);

@@ -1,4 +1,4 @@
-# Playtest34 follow-up: saber contacts and Frost ice path
+# Playtest34 follow-up: saber contacts, local flashes and Frost ice path
 
 These are source fixes for the next build, not a published Playtest35.
 Tracking: `beads-eio.9.177`, `beads-eio.9.179`, `beads-eio.9.180`.
@@ -53,11 +53,31 @@ of that script failed to land an accepted partner-cooldown overlap. A fresh
 both-alive mixed trial also failed its overlap assertion. Both failed receipts
 are retained (`lan-ice-hit35/` and `lan-overlap35/`); neither full script is
 reported as passing. The ice and earlier combat phases remain separately
-qualified. This batch does not claim renewed LAN partner-overlap qualification.
+qualified at that point.
 A separate fresh local mixed trial does accept both native buster and saber
 hits, including three hits during the partner's cooldown: nine accepted hits,
 18 pre-scaling damage units, 48->39 HP in 240 frames. Its native HP-store trace
 includes X and Zero hits two frames apart. Receipt: `mixed-native35/`.
+
+A corrected actual Split LAN control now qualifies the missing overlap. The
+earlier probe interleaved full diagnostic reads and screenshots with short
+input pulses: its supposed aerial slash arrived after Zero had landed. Keep
+those observations outside the short input sequence. Native HP stores now
+accept X's class0 buster at5845 and Zero's class34 aerial at5857, during the
+partner cooldown, taking48->46 HP. Both rendered views were inspected. Nine
+core/mod CRC samples match through5906. This changes the private test's input
+schedule, not gameplay to accommodate a test. Receipt:
+`build-pr23/feedback35-continued/corrected-controls/`.
+
+A further basic green aerial trial requests low hops every24 observed frames
+for320 frames. Baseline accepts six class27 hits; the correction accepts seven.
+These asynchronous fights again differ in native motion and input timing,
+so the extra hit is not a causal before/after proof. The native contact-write
+trace does demonstrate the cleanup change: the baseline first runs its
+post-hit empty-overlap cleanup37 frames after the hit; the correction begins
+that cleanup nine frames after the hit, while private immunity still runs.
+Ground recovery, ordinary green blades, landing and hurt flashes were reviewed.
+Receipts: `feedback35-continued/basic24-before/` and `basic24-after/`.
 
 These asynchronous fresh fights do not have identical initial AI timing or
 positions. Their difference is supporting evidence, not a deterministic replay
@@ -96,12 +116,36 @@ Private receipts: `build-pr23/feedback35-intake/ice-path-before/`,
 `ice-path-after/` and `lan-ice-hit35/ice-rows.json`.
 The reusable native harness case is `frost_late_path`.
 
-## Minor flash report and checks
+## Distant intro red flashes
 
-The intro explosion's red overlay appearing on the distant Split partner's
-screen is tracked separately as low-priority report158. It is not fixed or
-claimed reproduced in this batch.
+The owner promoted report158 to active work. The native type28 explosion
+controller (`800BBC14`) centers explosions around the canonical camera in
+`800BBDF4`, but applies red31 to the shared palette in `800BBEA4`. Intro part2
+also has a type2/subtype0 palette program (`800B5960`) that cycles red1..3.
+The latter reproduces a shared red pulse with P1 ahead and P2 still at the
+authored starting position. The stronger type28 branch was identified from
+native code and covered by unit controls, rather than claimed separately
+reproduced by that capture.
 
-All35 Windows title checks pass. Linux GCC combat and lifecycle executables
-also pass. Automated launches are hidden/headless and use a dummy audio output.
+During a private camera draw, remove these red contributions when their
+source viewport is distant. Rebuild and upload the unlit native working
+palette inside the existing render transaction. Near or overlapping views
+retain the flash. The transaction restores the shared palette, RGB values,
+upload flags and VRAM afterward. Unified play and simulation stay native.
+Other palette programs, non-red effects, white flashes and scene fades retain
+their existing behavior.
+
+An actual two-peer Split LAN run leaves P2 at168/443 and advances P1 from4100
+past5000 in intro part2. The distant peer performs210 scoped corrections;
+the near peer performs none. Both images were inspected: the near view keeps
+its red pulse and the far view keeps normal colors. Fifteen matching core/mod
+CRC samples continue through5179. Each peer commits907 private views, with
+zero VRAM leaks, device-read faults, watchdogs, verification mismatches or
+local-view state leaks. The observed pulse is qualified; no claim is made
+that every scripted intro explosion has been traversed. Receipts:
+`feedback35-continued/corrected-controls/intro-blast-*` (before the pulse
+correction) and `feedback35-continued/red-after/`.
+
+All35 Windows title checks pass after the palette change. Linux GCC split,
+combat and lifecycle executables also pass. Automated launches are hidden/headless and use a dummy audio output.
 The production Playtest34 executable and published release remain unchanged.

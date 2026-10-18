@@ -17,6 +17,7 @@ static unsigned native_directional_scans,scan_direction;
 static uint32_t native_table=TABLE;
 static int script_owner=-1;
 static unsigned paired_door;
+static unsigned palette_rebuilds,palette_uploads;
 int mmx4_coop_lifecycle_paired_door(void) {return (int)paired_door;}
 static unsigned nova_active;
 static unsigned rider_armor_calls;
@@ -114,6 +115,15 @@ static uint32_t invoke(CPUState *cpu,uint32_t address) {
     for(unsigned index=0;index<filter_count;++index)
         if(filters[index].address==address && filters[index].callback(cpu,address))return cpu->gpr[2];
     uint32_t actor=cpu->gpr[4];
+    if(address==0x8002A484u) {
+        CHECK(local_scope && !psx_mod_read_half(0x80175EA0u));
+        CHECK(psx_mod_read_byte(0x80166BB0u)&4u);
+        psx_mod_write_byte(0x80166BB0u,2);++palette_rebuilds;return 0;
+    }
+    if(address==0x80016004u) {
+        CHECK(local_scope && psx_mod_read_byte(0x80166BB0u)==2);
+        psx_mod_write_byte(0x80166BB0u,0);++palette_uploads;return 0;
+    }
     if(address==0x800B75C8u) {
         ++snow_calls;
         if(!psx_mod_read_byte(actor+4)) {
@@ -1056,6 +1066,66 @@ static void frost_ice_ranges(CPUState *cpu) {
     CHECK(!memcmp(cameras,ram+(CAMERA&0x1FFFFFu),sizeof cameras) && !projected);
     CHECK(mmx4_coop_split_snapshot_ready());
 }
+static void local_explosion_flash(CPUState *cpu) {
+    uint8_t camera[0xFC]={0};
+    const uint32_t actor=0x80142F98u;
+    for(unsigned test=0;test<17;++test) {
+        memset(ram+(actor&0x1FFFFFu),0,32*0x30);
+        split=ready=local_scope=1;projected=0;
+        psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+1,0);
+        psx_mod_write_byte(MMX4_PLAY+12,0);psx_mod_write_byte(MMX4_PLAY+13,(uint8_t)(test==1));
+        psx_mod_write_byte(MMX4_PLAY+0x0F,0);psx_mod_write_byte(MMX4_PLAY+0x10,0);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,28);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_half(actor+10,4000);psx_mod_write_half(actor+14,128);
+        psx_mod_write_half(0x80175EA0u,31);psx_mod_write_byte(0x80175E9Cu,0);
+        psx_mod_write_half(0x80141BE6u,0);psx_mod_write_half(0x8013E1BEu,0);
+        if(test==2)psx_mod_write_half(actor+10,160); /* Same viewport. */
+        if(test==3)local_scope=0;
+        if(test==4)split=0;
+        if(test==5)ready=0;
+        if(test==6)psx_mod_write_byte(MMX4_PLAY+12,1);
+        if(test==7)psx_mod_write_byte(actor,0);
+        if(test==8)psx_mod_write_byte(actor+1,36);
+        if(test==9)psx_mod_write_byte(actor+4,2);
+        if(test==10)psx_mod_write_half(0x80141BE6u,0x3E0); /* White flash. */
+        if(test==11)psx_mod_write_byte(MMX4_PLAY+0x0F,1);
+        if(test==12)psx_mod_write_byte(MMX4_PLAY+0x10,1);
+        if(test==13)psx_mod_write_byte(0x80175E9Cu,1); /* Subtractive fade. */
+        if(test==14)projected=1;
+        if(test==15)psx_mod_write_byte(MMX4_PLAY+1,1);
+        if(test==16) { /* A second nearby explosion must retain the flash. */
+            psx_mod_write_byte(actor+0x30,1);psx_mod_write_byte(actor+0x31,28);
+            psx_mod_write_byte(actor+0x34,1);psx_mod_write_half(actor+0x3A,160);
+            psx_mod_write_half(actor+0x3E,128);
+        }
+        CPUState before=*cpu;palette_rebuilds=palette_uploads=0;
+        mmx4_coop_split_local_explosion_palette(cpu,camera);
+        CHECK(palette_rebuilds==(test<2) && palette_uploads==(test<2));
+        CHECK(psx_mod_read_half(0x80175EA0u)==(test<2?0:31));
+        CHECK(!memcmp(cpu,&before,sizeof before));
+    }
+    /* The small looping red pulse uses the native camera rather than the
+     * palette controller's stale allocation coordinates. Preserve other
+     * colors, palette programs, larger red effects and overlapping views. */
+    for(unsigned test=0;test<6;++test) {
+        memset(ram+(actor&0x1FFFFFu),0,32*0x30);
+        split=ready=local_scope=1;projected=0;
+        psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+1,0);
+        psx_mod_write_byte(MMX4_PLAY+12,0);psx_mod_write_byte(MMX4_PLAY+13,1);
+        psx_mod_write_byte(MMX4_PLAY+0x0F,0);psx_mod_write_byte(MMX4_PLAY+0x10,0);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,2);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_byte(actor+2,(uint8_t)(test==2));
+        psx_mod_write_half(0x80175EA0u,(uint16_t)(test==3?4:3));
+        psx_mod_write_byte(0x80175E9Cu,0);psx_mod_write_half(0x80141BE6u,0);
+        psx_mod_write_half(0x8013E1BEu,(uint16_t)(test==4?1024:0));
+        psx_mod_write_half(CAMERA+10,(uint16_t)(test==1?0:3840));psx_mod_write_half(CAMERA+14,0);
+        if(test==5)psx_mod_write_byte(MMX4_PLAY+13,0);
+        palette_rebuilds=palette_uploads=0;
+        mmx4_coop_split_local_explosion_palette(cpu,camera);
+        CHECK(palette_rebuilds==(test==0) && palette_uploads==(test==0));
+    }
+    split=ready=1;projected=local_scope=0;
+}
 int main(void) {
     CPUState cpu={0};cpu.gpr[29]=0x801FF000u;
     psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAYER,1);
@@ -1369,5 +1439,6 @@ int main(void) {
     stationary_refight_portal(&cpu);
     jungle_backgrounds(&cpu);
     frost_ice_ranges(&cpu);
+    local_explosion_flash(&cpu);
     puts("mmx4_coop_split_test: PASS");return 0;
 }
