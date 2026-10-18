@@ -4,7 +4,7 @@ Current status, October17: **157 numbered items; 133 checked and 24 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
-Items126/155/156 are qualified for the next build. Saber report157 is partly
+Items126/155/156 are qualified for [Playtest34](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.34). Saber report157 is partly
 addressed by restored recovery flashing; exact missed damage is unconfirmed.
 Unchecked reports include
 older bounded investigations, the parked online-startup cases and an elective
@@ -17,7 +17,7 @@ arrivals in `3b471b9`; the Playtest32 integration also fixes overlapping transpo
 
 | Status | Items | Current work |
 |---|---|---|
-| Fixed and qualified for the next build | 126, 155, 156 | Charged X fire follows its own projected parent shot; hub returns validate the landing; Owl's native release clears both captured bodies. Native reproductions and post-fix control checks pass; [scope and evidence](COOP_PLAYTEST34_INVESTIGATION.md). |
+| Fixed and qualified for Playtest34 | 126, 155, 156 | Charged X fire follows its own projected parent shot; hub returns validate the landing; Owl's native release clears both captured bodies. Native reproductions and post-fix control checks pass; [release scope and limits](COOP_PLAYTEST34_DISPOSITIONS.md). |
 | Partly addressed; exact missed damage remains unconfirmed | 157 | Supplied clips, native ground/aerial/source-cadence fights, normal hurt and a no-co-op control reviewed. Recovery flashing is fixed and qualified locally and in actual Split LAN; complete damaging chains and partner overlap pass. [Evidence and limits](COOP_HITREG_FEEDBACK_20261017.md). |
 | Fixed and validated for Playtest32 | 145, 146, 147, 148, 149 | Mushroom hatch/lift admission, interrupted Cyber portal arrivals, grounded occupied Armor return anchors, and owner-bound X hover jets. |
 | Fixed and validated for Playtest33 | 152, 153, 154 | Scaling now halves boss hit cooldowns in either method, including Zero's aerial/finisher in separate mode. X's armor capsules use Dr Light's conversation in Zero's campaign. Native before/after checks and regression suites pass; [qualification limits](COOP_PLAYTEST33_DISPOSITIONS.md) remain explicit. |

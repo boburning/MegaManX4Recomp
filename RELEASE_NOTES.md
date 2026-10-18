@@ -1,4 +1,33 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.33
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.34
+
+**Safer boss fights and clearer co-op hit feedback.**
+
+- Fixed a reset to character selection when charged X fire overlaps Zero's fire
+  attack. The delayed flame effect now follows the correct player's shot.
+- Storm Owl releases both heroes after catching them together, instead of
+  leaving one permanently grabbed.
+- Boss-refight returns check the partner's landing before the warp-in, avoiding
+  the wall crush beside Slash Beast's return pad.
+- With separate player cooldowns, bosses keep flashing during the remaining
+  recovery window. Damage and cooldown lengths are unchanged from Playtest33.
+
+The broader report of missed Zero follow-up hits remains open. Fresh native
+fights reproduced complete damaging combos, aerial hits and simultaneous
+attacks; the flashing correction is not presented as a fix for every miss.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults;
+Split cameras are experimental. Boss scaling and Fight Double and Iris remain
+optional and default off. Campaign memory-card saves carry forward.
+
+[Known issues and numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+Keep **Input Display and Recording** enabled and look for **REC**. After a bug,
+quit normally and send the complete `saves/diagnostics` folder beside the
+executable or AppImage, the release version, and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.33
 
 **Dr. Light's capsule conversations and faster co-op boss combat.**
 
