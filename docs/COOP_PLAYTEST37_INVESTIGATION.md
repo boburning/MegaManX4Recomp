@@ -80,3 +80,49 @@ and LAN receipts currently live under
 `C:/Users/Matthew/AppData/Local/Temp/mmx4-feedback37/` and must also be archived
 before the release qualification is finalized. Failed/insufficient setups
 remain distinguishable from passing evidence.
+
+## Storm Owl leading-player exit and interrupted death
+
+A real two-peer Split36 baseline uses native dash-jump input from the observed
+safe final ledge6240/426. It does not teleport past the native6352 exit test.
+With P1 alive at the start, P2 crosses6376 without a forward fade even after
+five world updates. With P1 killed immediately before the crossing, P2 reaches
+6352 and finishes its healthy outgoing beam, but section0 remains stalled for
+240+ netplay ticks. P1 is HP0/state1/action17: the real shared fade suspends the
+unfinished death animation. Both baseline peers remain synchronized.
+
+Two separate native predicates need correction. Owl's background may inspect
+the farther living P2 X coordinate while retaining its original threshold and
+one shared update. At stage_normal's original80020018 branch, a positive
+forward-transition flag and a healthy completed P2 beam can complete the exit
+when P1 is dead. This changes only the loaded predicate register, neither
+body nor campaign data. Negative retry flags, temporary hidden passengers,
+voluntary withdrawal, other modes and live P1 retain their original behavior.
+The instruction site is emitted from both development and release configs.
+
+Qualification currently includes:
+
+- Local Unified, X/P1 and Zero/P2: leading-P2 and newly dying-P1 cases reach
+  section1; both heroes return active, visible, healthy and controllable with
+  the same lives. The new `storm_exit_race` scenario avoids the older test's
+  wait for P1 to finish dying, which concealed this boundary.
+- Real two-peer Split with both X/P1-Zero/P2 and Zero/P1-X/P2 rosters: both cases
+  reach section1 and restore32HP, visible controllable bodies and unchanged
+  lives. Matching actual core/mod checks through6400 and6113 respectively.
+  Captures from both seats were inspected.
+- Lifecycle regressions cover both campaigns, the incomplete P1 death, genuine
+  forward completion and rejection of no fade, retry, live P1, dead P2,
+  unfinished P2, withdrawn/hidden P2, render scope, other modes and inactive
+  co-op. Existing passenger/catch-up and native-owner departure cases pass.
+- Combat, balance and lifecycle CTests pass; regeneration emits the guarded
+  native branch callback. A complete release suite remains pending.
+
+Receipts are under the private `mmx4-feedback37` root in
+`owl-exit-confirm-before`, `owl-exit-after-valid-disc`,
+`owl-exit-after-zero-p1` and `owl-local-after`. The initial walk-only setup
+fell normally into a gap before reaching the trigger and is excluded.
+An initial candidate launch misspelled the private disc filename and exited
+before boot; it is a setup failure, not gameplay evidence.
+
+This qualifies checklist25. It does not establish that Owl's separate
+post-miniboss and Buster-upgrade/death reports166/167 share the same cause.

@@ -114,7 +114,7 @@ reach the trigger. These are investigation leads, not a validated new fix.
 | Item | Status | Scope |
 |---|---|---|
 |157 | Reopened | Entire scaled independent-hit pipeline; earlier36 acceptance withdrawn. |
-|25 | Reopened | P2 Owl part1 exit, including living distant P1 and reachable trigger geometry. |
+|25 | Validated correction | Native before/after leading-P2 and death/fade race checks reach part2 in local Unified and real Split LAN; see [qualification](COOP_PLAYTEST37_INVESTIGATION.md). |
 |2 | Reopened | Intro P2 boss approach walks left, loses P1 and corrupts graphics; upstream missing platforms may be related. |
 |107 | Still open | Web part1 spiked enemy also missing when both traverse. |
 |165 | Reported | Cyber P2 course portal stalls progression; distinct native wait must be identified. |
@@ -124,7 +124,7 @@ reach the trigger. These are investigation leads, not a validated new fix.
 |169 | Reported | Frost rising-ice shaft camera stays behind after P1 dies. |
 |170 | Reported | Frost P2 camera graphics corrupt after the first death. |
 |171 | Reported | Frost part2 slowdown after the ice bird freezes the stage; separate from the36 camera-selection fix162. |
-|172 | Requested feature | Cyber targeting warning also follows P2 when targeted. |
+|172 | Requested feature | Extend the native course character-analysis graphic to P2; identify the actual draw path, separate from boss missile warnings. |
 |173 | Requested feature | Optional local8:3 composition, two side-by-side4:3 views; Unified stays default. |
 
 Correctness intake is `beads-eio.9.188`, scaling remains `.177`, Cyber reticle
@@ -141,3 +141,7 @@ two view targets and a window compositor, viewport/aspect/resize handling,
 per-view HUDs and appropriate shared-scene behavior. Simulate the world once;
 two views must not run AI, damage, stage events or timers twice. Verify state
 restoration and performance before offering it as an optional local mode.
+
+Local8:3 is deferred for this correctness release: the presentation/compositor
+work above would delay the active progression and hit-registration fixes.
+The feature remains tracked in `.190`; no local split implementation is claimed.

@@ -134,6 +134,38 @@ class Scenarios:
         self.sample('owl-team-exit-after',True)
         return dict(before=before,after=after)
 
+    def storm_exit_race(self):
+        """P2 crosses the real final gap, including during P1's death.
+
+        The older survivor case waits for state3 before entering and cannot
+        expose a death dispatcher suspended by the native forward fade.
+        """
+        cases=[]
+        for dying in (False,True):
+            self.load(7,0);self.r.fixture(5,3)
+            # Observed safe final ledge, before the6352 native exit test.
+            # Both fit Unified's separation bound; movement crosses the gap.
+            self.r.teleport_both(6240,426)
+            before=self.sample('owl-race-before-'+str(dying),True)
+            if dying:self.r.fixture(2,0,0)
+            tick=lambda:struct.unpack('<I',self.r.read(self.r.diagnostic()+4,4))[0]
+            first=tick();deadline=time.monotonic()+5
+            self.r.input(0x9fdf,1)
+            try:
+                while tick()-first<4:
+                    if time.monotonic()>=deadline:raise TimeoutError('Owl jump world clock stopped')
+                    time.sleep(.005)
+                self.r.input(0xdfdf,1)
+                self.wait('owl-race-native-section',lambda v:v['section']==1,15)
+            finally:self.r.release()
+            after=self.wait('owl-race-both-return',lambda v:v['stage']==7 and v['section']==1 and
+                v['mode'][:2]==[6,0] and not v['freeze'] and all(p['active'] and p['visible'] and
+                p['hp'] and p['state']==1 and p['action']==2 for p in v['players']),40)
+            assert after['lives']==before['lives'],(before,after)
+            self.sample('owl-race-after-'+str(dying),True)
+            cases.append(dict(p1_dying=dying,before=before,after=after))
+        return dict(native_exit_races=cases)
+
     def x_armor(self):
         """Render each shared armor upgrade on X in either roster.
 
@@ -1891,7 +1923,7 @@ def main():
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
-                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit'), default=['jet', 'cyber', 'intro'])
+                        'cyber_orb','cyber_course','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):
         setattr(args, name, getattr(args, name).resolve())

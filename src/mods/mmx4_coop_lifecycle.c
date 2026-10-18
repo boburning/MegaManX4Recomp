@@ -1515,15 +1515,37 @@ static int stage_scripts(CPUState *cpu,uint32_t address) {
     uint32_t result=call_story_as_second(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     script_pool_guard=0;return mmx4_coop_finish(cpu,result);
 }
+static void completed_survivor_exit(CPUState *cpu,uint32_t address) {
+    (void)address;
+    const uint8_t *body=mmx4_coop_second_body();
+    /* Native stage_normal tests only PLAYER.state3. A shared forward fade
+     * can suspend P1's death dispatcher before it reaches that state, while
+     * the surviving P2 has already finished the real outgoing beam. Admit
+     * that completed owner at this predicate only; keep both bodies and the
+     * native stage/world calls intact. A temporary or voluntary passenger
+     * departure is not completion, nor is a retry (negative PLAY+0F). */
+    if(mmx4_coop_ready() && !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+       psx_mod_read_byte(PLAY)==6 && !psx_mod_read_byte(PLAY+1) &&
+       (int8_t)psx_mod_read_byte(PLAY+0x0F)>0 &&
+       !(psx_mod_read_byte(PLAYER+0x5C)&127u) && !departed &&
+       !mmx4_coop_lifecycle_hidden(1) && (body[0x5C]&127u) && body[4]==3 &&
+       cpu->gpr[3]!=3) {
+        cpu->gpr[3]=3;
+        psx_mod_counter_add("mmx4.coop.survivor-completed-exits",1);
+    }
+}
 static void storm_survivor_exit(CPUState *cpu,uint32_t address) {
     (void)address;
     /* Storm Owl's background controller checks PLAYER.x at 800DA440,
      * outside the small stage-script pool. Keep its one world update and
-     * native X>=6352 warp predicate, but read the surviving seat's X. */
+     * native X>=6352 warp predicate, but allow either living hero to reach
+     * it. A distant living P1 must not suppress the leading P2's exit. */
     if(mmx4_coop_ready() && !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
        psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+12)==7 &&
-       !psx_mod_read_byte(PLAY+13) && !mmx4_coop_alive(0) && mmx4_coop_alive(1))
-        cpu->gpr[2]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+       !psx_mod_read_byte(PLAY+13) && mmx4_coop_alive(1)) {
+        int32_t second=(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
+        if(!mmx4_coop_alive(0) || second>(int32_t)cpu->gpr[2])cpu->gpr[2]=(uint32_t)second;
+    }
 }
 static void frost_ice_activation(CPUState *cpu,uint32_t address) {
     (void)address;
@@ -2260,6 +2282,7 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_instruction_plugin(ID,0x800BA39Cu,0x28420C60u,frost_path_activation);
     psx_mod_register_function_filter_plugin(ID,0x8002C160u,frost_path_contact);
     psx_mod_register_instruction_plugin(ID,0x800DA44Cu,0x284218D0u,storm_survivor_exit);
+    psx_mod_register_instruction_plugin(ID,0x80020018u,0x14620007u,completed_survivor_exit);
     psx_mod_register_instruction_plugin(ID,0x800C0574u,0x00041100u,intro_survivor_crusher);
     psx_mod_register_function_filter_plugin(ID,0x800C36E8u,fan_latch);
     psx_mod_register_function_filter_plugin(ID,0x8002AD7Cu,shared_ride_ready);

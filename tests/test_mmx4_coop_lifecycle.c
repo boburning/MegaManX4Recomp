@@ -61,15 +61,18 @@ static unsigned portal_hits[2],portal_admissions,portal_continuations[2];
 static uint16_t inputs[2];
 typedef struct { uint32_t address;PSXModFunctionFilterCallback filter; } Filter;
 static Filter filters[64];static unsigned filter_count;
+static PSXModFunctionEntryCallback stage_completed_predicate;
 int psx_mod_register_instruction_plugin(const char *id,uint32_t address,uint32_t expected,
     PSXModFunctionEntryCallback callback) {
-    (void)id;(void)callback;
+    (void)id;
+    if(address==0x80020018u)stage_completed_predicate=callback;
     assert((address==0x800DA44Cu && expected==0x284218D0u) ||
            (address==0x800B9F74u && expected==0x2442FD5Fu) ||
            (address==0x800BA39Cu && expected==0x28420C60u) ||
            (address==0x800C0574u && expected==0x00041100u) ||
            (address==0x800D0580u && expected==0x14620006u) ||
-           (address==0x80081250u && expected==0x14620005u));return 1;
+           (address==0x80081250u && expected==0x14620005u) ||
+           (address==0x80020018u && expected==0x14620007u));return 1;
 }
 uint8_t psx_mod_read_byte(uint32_t a) {return ram[a&0x1FFFFFu];}
 void psx_mod_write_byte(uint32_t a,uint8_t v) {ram[a&0x1FFFFFu]=v;}
@@ -254,8 +257,10 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         psx_mod_write_byte(MMX4_PLAYER+6,0);psx_mod_write_byte(MMX4_PLAYER+0x46,0);
         break;
     case 0x8001FF8C:
+        cpu->gpr[3]=psx_mod_read_byte(MMX4_PLAYER+4);
+        assert(stage_completed_predicate);stage_completed_predicate(cpu,0x80020018u);
         if(psx_mod_read_half(0x80166C0Cu)&0x800u)psx_mod_write_byte(MMX4_PLAY+1,2);
-        else if(psx_mod_read_byte(MMX4_PLAYER+4)==3)psx_mod_write_byte(MMX4_PLAY+1,1);
+        else if(cpu->gpr[3]==3)psx_mod_write_byte(MMX4_PLAY+1,1);
         else ++world_calls;
         break;
     case 0x80021158:
@@ -1357,12 +1362,42 @@ int main(void) {
     psx_mod_write_byte(PLAY+0x0F,1);
     mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
     CHECK(psx_mod_read_byte(PLAY+1)==1);
+    /* A genuine forward exit may finish while P1's death is still in
+     * state1/2. Only the healthy completed P2 beam satisfies this gate;
+     * never project a body or advance on a catch-up/retry/withdrawal. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned gate=0;gate<12;++gate) {
+        reset();psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(PLAYER+0x5C,0);psx_mod_write_byte(PLAYER+4,1);
+        psx_mod_write_byte(PLAYER+5,17);psx_mod_write_byte(PLAY+0x0F,1);p2[4]=3;
+        switch(gate) {
+        case 1:psx_mod_write_byte(PLAYER+4,2);break;
+        case 2:psx_mod_write_byte(PLAY+0x0F,0);break;
+        case 3:psx_mod_write_byte(PLAY+0x0F,255);break;
+        case 4:psx_mod_write_byte(PLAYER+0x5C,16);break;
+        case 5:p2[0x5C]=0;break;
+        case 6:p2[4]=1;break;
+        case 7:departed=1;break;
+        case 8:warp_owner=0;warp_phase=1;break;
+        case 9:local_view=1;break;
+        case 10:psx_mod_write_byte(PLAY,7);break;
+        case 11:ready=0;break;
+        }
+        uint8_t original[0xE4];read_bytes(PLAYER,original,sizeof original);
+        mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+        CHECK((psx_mod_read_byte(PLAY+1)==1)==(gate<2));
+        CHECK(!memcmp(ram+(PLAYER&0x1FFFFFu),original,sizeof original) && !projected);
+    }
     reset();psx_mod_write_byte(PLAY+12,7);psx_mod_write_byte(PLAYER+4,3);
     psx_mod_write_byte(PLAYER+0x5C,0);p2[10]=0xD1;p2[11]=0x18;
     cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);
     CHECK(cpu.gpr[2]==6353);
     psx_mod_write_byte(PLAYER+4,1);psx_mod_write_byte(PLAYER+0x5C,12);
-    cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
+    cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==6353);
+    cpu.gpr[2]=6400;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==6400);
+    local_view=1;cpu.gpr[2]=438;storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
+    local_view=0;p2[0x5C]=0;
+    storm_survivor_exit(&cpu,0x800DA44Cu);CHECK(cpu.gpr[2]==438);
     /* Owl's adjacent entry/release areas can observe different heroes: the
      * rear hero at2680 releases the minimum after the leader crossed2648.
      * The real boss introduction must own its authored enclosure, including
