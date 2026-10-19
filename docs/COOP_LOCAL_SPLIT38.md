@@ -1,7 +1,7 @@
 # Local side-by-side prototype
 
-Local co-op now has a separate Local cameras choice: Unified (default) or
-Side by side8:3 (Experimental). Each pane uses a native4:3 camera and the
+Local co-op now has a separate Local co-op display dropdown: Unified (default) or
+Side by side 8:3 (Experimental). Each pane uses a native4:3 camera and the
 corresponding character's HUD. The shared world still updates once. Online
 camera selection remains the separate Netplay cameras option.
 

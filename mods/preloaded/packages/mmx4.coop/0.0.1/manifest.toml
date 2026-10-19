@@ -22,7 +22,7 @@ default_enabled = false
 feature = "coop"
 id = "cameras"
 label = "Netplay cameras"
-description = "Unified (default) shares a camera. Experimental Split gives each online player an independent view of the shared world. The host chooses for both peers. Local play uses the separate Local cameras setting."
+description = "Unified (default) shares a camera. Experimental Split gives each online player an independent view of the shared world. The host chooses for both peers. Local play uses the separate Local co-op display setting."
 type = "choice"
 default = "unified"
 [[option.choice]]
@@ -35,7 +35,7 @@ label = "Split (Experimental)"
 [[option]]
 feature = "coop"
 id = "local_cameras"
-label = "Local cameras"
+label = "Local co-op display"
 description = "Unified shares one screen. Experimental side-by-side gives each local player a 4:3 camera and HUD, together in an 8:3 view. Menus and shared story scenes use one view. Requires a fresh boot; this setting does not change online cameras."
 type = "choice"
 default = "unified"
