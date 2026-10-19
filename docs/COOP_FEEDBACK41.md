@@ -145,7 +145,7 @@ stun as207. Input positions alone cannot establish a camera's bounds or a boss r
 
 For206, native checkpoint2 admission, a reload after Mushroom's checkpoint4,
 and the actual General27 portal at2096/888 all retain the proper Dragoon
-arena. Both saved cameras remain432/1531 during the sampled fight/jump windows,
+arena. Both saved cameras remain432/1531 during the sampled room/jump windows,
 with both heroes healthy. Composed images show Dragoon in his lava arena.
 This does not reproduce the reported lock or qualify a complete refight run;
 keep206 open. Private evidence: `workshop-fixed2/dragoon-refight-retry/` and
@@ -164,9 +164,17 @@ hits take its ordinary-hit branch and leave that animation running. The first
 weakness reaction, unscaled play, other bosses, hit tables and independent
 damage cooldowns retain their existing behavior. The regression fails before
 the fix and passes afterward for both seats/scaling methods and excluded
-contexts. **Native fixed-build qualification remains a release gate:** matched
-in-fight saved-state comparisons must show accepted damage, suppressed restart
-events and an actual recovery from the stun, using X in either seat.
+contexts. Native fixed-build qualification passes on Linux with X in either seat, using
+matched in-fight saved-state comparisons. Both scaled runs retain52 raw/26
+applied damage, suppress four restarts, and enter native phase6 after69/74
+observed frames. That phase moves Slash264px across the room; the boss can act
+again while continued attacks still damage him. Both unscaled controls retain
+original reactions. Character bytes and paired renders confirm the two rosters.
+Shared-policy/excluded-context coverage is by boundary tests, not a new
+two-peer gameplay run. BIOS-copy and unfinished partner-arrival setup attempts
+are excluded. Private receipts: `linux-native-proof/qualification.json`,
+`movement-and-damage.json` and the copied native observations beneath
+`build-pr23/feedback41/`.
 
 ## Additional bounded controls
 
@@ -188,3 +196,6 @@ events and an actual recovery from the stun, using X in either seat.
   and the capsule-scene timing are excluded. Private evidence:
   `workshop-fixed2/waterfall-profile-no-compiler/`. The tester's saved1080p
   configuration is not matched by this native-resolution control.
+
+
+Published: [v0.1.1-coop-playtest.41](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.41). Windows and Linux production/package gates passed before publication.

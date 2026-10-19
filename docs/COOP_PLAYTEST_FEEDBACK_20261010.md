@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Current status, October19: **207 numbered items; 162 checked and 45 unchecked.**
+Current status, October19: **207 numbered items; 163 checked and 44 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
@@ -242,9 +242,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 202 | [x] | P2 does not trigger intro part2 closing walls | Extend the native loaded-Y predicate to the leading living partner. P2 drops into the shaft, panels enter their original closing states and both retainHP32 while living P1 waits behind. Camera-settling setup required for debug teleports. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-eio.9.197` |
 | 203 | [x] | Split Mushroom's rainbow copies turn black after P1 dies | Reproduced when P1 dies before boss initialization; later deaths miss it. Preserve canonical stage palette bindings and the native upload request during projected Mushroom initialization. Matched native local8:3 retest shows colored trails and all128 palette bytes matching the original source. Windows/Linux boundary checks cover both rosters and both stage/fortress offsets. [Evidence and limits](COOP_FEEDBACK41.md). `beads-eio.9.199` |
 | 204 | [ ] | Web Spider waterfall/log platforms slow down with both players present | Local8:3 report, video vtSGsKW2dhk around9:00-10:10. Bounded native movement from432 reaches726: both together59.98fps, P1 away60.18fps, all healthy. No slowdown reproduced in that stretch; this does not clear the full moving-log section. [Current limits](COOP_FEEDBACK41.md). `beads-eio.9.200` |
-| 205 | [x] | Diagnostics must identify the effective play/camera mode and release without asking testers | Native session records the actual release and local8:3 despite saved netplay preference Unified. Session metadata includes committed co-op options; asynchronous mode-changes.csv retains initialization and runtime transitions. Windows/Linux recorder and writer checks pass, covering all five mode labels without changing input-v2. [Evidence](COOP_FEEDBACK41.md). Not yet released. `beads-eio.9.201` |
+| 205 | [x] | Diagnostics must identify the effective play/camera mode and release without asking testers | Native session records the actual release and local8:3 despite saved netplay preference Unified. Session metadata includes committed co-op options; asynchronous mode-changes.csv retains initialization and runtime transitions. Windows/Linux recorder and writer checks pass, covering all five mode labels without changing input-v2. [Evidence](COOP_FEEDBACK41.md). Published in Playtest41. `beads-eio.9.201` |
 | 206 | [ ] | Both cameras lock in Magma Dragoon's refight, resembling Mushroom's arena | Native checkpoint controls and the actual refight portal retain the proper lava arena and both cameras432/1531 with both heroes healthy. The reported lock remains unreproduced; no full-refight clearance is claimed. ZIP recordings are usable Playtest40 local8:3 diagnostics. [Evidence](COOP_FEEDBACK41.md). `beads-eio.9.203` |
-| 207 | [ ] | Slash Beast can be repeatedly stunned by his weakness | Reproduced phase10 restarts during accepted Ground Hunters with scaling on; an unscaled control recovers into phase6. Preserve damage/cooldowns but suppress restarting a running weakness reaction. Old/new Windows regression fails/passes. Native fixed-build qualification with X in either seat is required before publication. [Release gate](COOP_FEEDBACK41.md). `beads-eio.9.204` |
+| 207 | [x] | Slash Beast can be repeatedly stunned by his weakness | Fixed in c2b74fa and Playtest41. Native matched saved-state tests with X/P1 and X/P2 retain accepted damage (52 raw/26 applied), suppress four repeated stun restarts each, and recover into phase6 with264px of actual boss movement. Windows/Linux boundary checks cover both scaling methods and excluded contexts; native coverage is local8:3. [Evidence](COOP_FEEDBACK41.md). `beads-eio.9.204` |
 
 ### October18 Playtest36 recurrence and new requests
 
@@ -2311,3 +2311,17 @@ Windows-to-Linux gameplay qualification.
 
 Private receipt: `build-pr23/release30-qa/release-receipt-final.json`.
 Release tracking: `beads-eio.9.162`. Other unresolved reports remain on the numbered checklist.
+
+
+### Playtest 41 package qualification (2026-10-19)
+
+[Windows ZIP and Linux AppImage](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.41) publish compiled source `c2b74fa7e5bbc945b962022608f2110b28599c1a` through merge `113c0ede98625d5b2150a16e72b2064274513565`. Windows 36/36 and Linux 30/30 production checks pass. Both packages pass launcher/controller, native option-offer, default recording, startup-log and layout checks. Actual GitHub asset sizes/digests match the tested artifacts. Development controls and both loading-speed packages are absent.
+
+Qualified fixes199/203/205/207 ship, plus the bounded scrolling-handoff correction within189. Dragoon206 remains unreproduced after checkpoint and real-portal controls; broader performance/elevator/background reports stay open. Single-slash157 remains unconfirmed. No fresh cross-OS netplay gameplay qualification is claimed.
+
+| Asset | SHA256 |
+| --- | --- |
+| MegaManX4Recomp-v0.1.1-coop-playtest.41-linux-x86_64.AppImage | `34b12a2eef239e43166c1025d5e2b655bc6071fb10ede2a5588b008f0db8c1c7` |
+| MegaManX4Recomp-v0.1.1-coop-playtest.41-windows-x64.zip | `360744d4922e0e7060718a68d68425a20a6cb7fb433a83955ee8c97715f019c7` |
+
+Private receipt: `build-pr23/release41-qa/release-receipt-final.json`; native proof: `build-pr23/feedback41/linux-native-proof/`. Release tracking: `beads-eio.9.202`.
