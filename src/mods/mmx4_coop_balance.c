@@ -4,6 +4,11 @@
  * point, rather than rounding every small hit down or granting immunity. */
 #include "mmx4_coop_internal.h"
 #include <string.h>
+#if MMX4_COOP_NETPLAY_DEBUG
+#include "psx_cycles.h"
+#include <stdio.h>
+#include <stdlib.h>
+#endif
 
 #define ID "mmx4.coop"
 #define POOL 0x8013BED0u
@@ -20,8 +25,9 @@ static uint32_t vulnerable_table[SLOTS][3],saved_vulnerable_table[3];
 static uint8_t cooldown_offset[SLOTS][3],cooldown_half[SLOTS][3];
 static unsigned contact_call;
 /* A sword's pose/contact byte is reusable, and changes within Kuuenzan.
- * Count native projectile initializations instead: one hit per actual blade
- * lifetime, independently for each boss health bank and player. */
+ * Track native initialization so a NEW blade may reuse the preceding key.
+ * An existing blade retains the native duplicate/pose checks; it must not
+ * be rejected for its entire lifetime after the private timer expires. */
 static uint32_t melee_generation[2][16],next_melee[2];
 static uint32_t melee_hits[SLOTS][3][2],saved_melee_hits[3][2];
 static uint16_t melee_used[SLOTS][3][2],saved_melee_used[3][2];
@@ -74,6 +80,35 @@ static int boss(uint32_t actor) {
 static unsigned bank(uint32_t actor) {
     if(psx_mod_read_byte(actor+1)!=74)return 0;
     return psx_mod_read_byte(actor+0x91)==1?1u:2u;
+}
+static void trace_contact(const char *reason,uint32_t actor,uint32_t shot,unsigned seat,unsigned amount) {
+#if MMX4_COOP_NETPLAY_DEBUG
+    static int tracing=-1;
+    if(tracing<0) {
+        const char *value=getenv("MMX4_COOP_HIT_TRACE");tracing=value && value[0]=='1';
+    }
+    if(!tracing || psx_mod_local_view_scope() || seat>1 || !boss(actor))return;
+    unsigned i=(unsigned)slot(actor),b=bank(actor);
+    int blade=melee_slot(shot);
+    fprintf(stderr,"mmx4.hit cycle=%llu reason=%s scaling=%u separate=%u seat=%u "
+        "boss=%08X kind=%u state=%u/%u/%u hp=%u table=%08X private=%u/%u native_offset=%u native_timer=%u "
+        "shot=%08X type=%u state=%u/%u key=%u/%u lifetime=%u used=%u raw=%u "
+        "boss_xy=%d/%d shot_xy=%d/%d\n",
+        (unsigned long long)psx_cycle_count,reason,enabled,per_player,seat,
+        actor,psx_mod_read_byte(actor+1),psx_mod_read_byte(actor+4),
+        psx_mod_read_byte(actor+5),psx_mod_read_byte(actor+6),psx_mod_read_byte(actor+0x5C),
+        psx_mod_read_word(actor+0x58),immunity[i][b][0],immunity[i][b][1],cooldown_offset[i][b],
+        !cooldown_offset[i][b]?0u:cooldown_half[i][b]?
+            psx_mod_read_half(actor+cooldown_offset[i][b]):psx_mod_read_byte(actor+cooldown_offset[i][b]),
+        shot,shot?psx_mod_read_byte(shot+1):255u,shot?psx_mod_read_byte(shot+4):0u,
+        shot?psx_mod_read_byte(shot+5):0u,psx_mod_read_byte(actor+0x65),
+        shot?psx_mod_read_byte(shot+0x64):0u,blade<0?0u:melee_generation[seat][blade],
+        blade<0?0u:(unsigned)((melee_used[i][b][seat]>>blade)&1u),amount,
+        (int16_t)psx_mod_read_half(actor+10),(int16_t)psx_mod_read_half(actor+14),
+        shot?(int16_t)psx_mod_read_half(shot+10):0,shot?(int16_t)psx_mod_read_half(shot+14):0);
+#else
+    (void)reason;(void)actor;(void)shot;(void)seat;(void)amount;
+#endif
 }
 void mmx4_coop_balance_reset(void) {
     memset(fraction,0,sizeof fraction);memset(saved_fraction,0,sizeof saved_fraction);
@@ -129,22 +164,30 @@ int mmx4_coop_balance_hit_allowed(uint32_t actor,unsigned seat) {
     return 0;
 }
 int mmx4_coop_balance_contact_allowed(uint32_t actor,uint32_t shot,unsigned seat) {
-    if(!mmx4_coop_balance_hit_allowed(actor,seat))return 0;
-    if(!enabled || !per_player || seat>1 || psx_mod_local_view_scope() || !boss(actor))return 1;
-    int i=melee_slot(shot);if(i<0)return 1;
+    if(!mmx4_coop_balance_hit_allowed(actor,seat)) {
+        trace_contact("private-timer",actor,shot,seat,0);return 0;
+    }
+    if(!enabled || !per_player || seat>1 || psx_mod_local_view_scope() || !boss(actor)) {
+        trace_contact("native-policy",actor,shot,seat,0);return 1;
+    }
+    int i=melee_slot(shot);if(i<0) {trace_contact("admit-projectile",actor,shot,seat,0);return 1;}
     uint32_t generation=melee_generation[seat][i];
     uint32_t previous=melee_hits[slot(actor)][bank(actor)][seat];
-    if(!generation)return 1; /* Uninstrumented/non-native projectiles stay conservative. */
+    if(!generation) {trace_contact("untracked-blade",actor,shot,seat,0);return 1;}
     if(melee_used[slot(actor)][bank(actor)][seat]&(1u<<(unsigned)i)) {
-        psx_mod_counter_add("mmx4.coop.boss-held-melee-blocked",1);return 0;
+        /* No duplicate-key reset for an already accepted blade. Retail
+         * DE30 rejects the same contact key, but admits a new native pose
+         * after recovery. A lifetime-wide veto incorrectly cancels these
+         * later Kuuenzan contacts despite private/native timers being zero. */
+        trace_contact("native-blade-contact",actor,shot,seat,0);return 1;
     }
     /* A fresh sword may reuse the old contact key without an empty overlap
      * frame (cancelled ground slashes). Only a new native blade lifetime may
-     * clear that duplicate key; an old blade remains blocked above. */
+     * clear that duplicate key; an old blade keeps its native token above. */
     if(previous && psx_mod_read_byte(shot+0x64) &&
        psx_mod_read_byte(actor+0x65)==psx_mod_read_byte(shot+0x64))
         psx_mod_write_byte(actor+0x65,0);
-    return 1;
+    trace_contact("admit",actor,shot,seat,0);return 1;
 }
 int mmx4_coop_balance_project_contact(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
@@ -281,6 +324,10 @@ static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
 static void damage(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[4];
+#if MMX4_COOP_NETPLAY_DEBUG
+    if(mmx4_coop_ready())trace_contact("native-damage",actor,cpu->gpr[5],
+        (unsigned)(mmx4_coop_projected()!=0),cpu->gpr[2]);
+#endif
     if(!enabled || !mmx4_coop_ready() || psx_mod_local_view_scope() || !boss(actor))return;
     unsigned hp=psx_mod_read_byte(actor+0x5C),amount=cpu->gpr[2];
     if(!hp || hp>=127 || !amount || amount>255)return;
@@ -294,8 +341,8 @@ static void damage(CPUState *cpu,uint32_t address) {
        !(table&1u) && table!=0x801060F0u)
         vulnerable_table[slot(actor)][bank(actor)]=table;
     /* Ground chains, finishers and aerials use one short recovery when a
-     * native lifetime is known. Lifetime admission prevents the same blade
-     * from hitting again when that recovery expires. */
+     * native lifetime is known. Keep native pose/contact admission after
+     * that recovery; initialization tracking only fixes reused fresh keys. */
     uint32_t shot=cpu->gpr[5];
     if(current_actor==actor) {
         int i=melee_slot(shot);
@@ -375,6 +422,7 @@ static void cooldown(CPUState *cpu,uint32_t address) {
              * timer's 1->0 transition. Zero would skip that cleanup forever.
              * Retain one native expiry tick even when the partner is ready. */
             cpu->gpr[2]=next?next:1u;
+            trace_contact("timer-installed",actor,0,damage_owner-1u,ticks);
             psx_mod_counter_add("mmx4.coop.per-player-boss-cooldown",1);
         }else {
             cpu->gpr[2]=(ticks+1)/2;

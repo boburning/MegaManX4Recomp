@@ -1,4 +1,4 @@
-format_version = 5
+format_version = 7
 id = "mmx4.coop"
 version = "0.0.1"
 name = "X + Zero Co-op (Playtest)"
@@ -77,6 +77,14 @@ label = "Both players"
 [[plugin]]
 feature = "coop"
 id = "mmx4.coop"
+
+# A private camera cannot use the one shared retail scrolling tile ring.
+# Derive the authored-map renderer even when its standalone switch is off.
+[[requirement]]
+feature = "coop"
+package = "mmx4.enhancement.widescreen"
+requires_feature = "widescreen"
+when = { local_cameras = "split" }
 
 [[option]]
 feature = "coop"

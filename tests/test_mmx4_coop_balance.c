@@ -1,4 +1,5 @@
 #include "mmx4_coop_internal.h"
+uint64_t psx_cycle_count;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -245,7 +246,7 @@ int main(void){
     for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
     CHECK(!mmx4_coop_balance_hit_allowed(BOSS,0));shot_type=255;hero=0;
     /* Native short aerial/finisher recovery must admit the next actual
-     * sword, while a held Kuuenzan with changing pose keys stays one hit.
+     * sword and changed native pose, while preserving duplicate contacts.
      * A missed blade is not consumed, each owner/bank remains independent,
      * and recycled targets and restored snapshots retain correct lifetimes. */
     for(unsigned seat=0;seat<2;++seat)for(unsigned type=26;type<=34;type+=type==28?6:1) {
@@ -261,10 +262,31 @@ int main(void){
         projected=(int)seat;
         CHECK(mmx4_coop_balance_hit_allowed(BOSS,seat));
         psx_mod_write_byte(shot+0x64,3);psx_mod_write_byte(BOSS+0x65,2);
-        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,shot,seat)); /* Same blade, new pose. */
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat)); /* Same blade, new pose. */
+        CHECK(psx_mod_read_byte(BOSS+0x65)==2); /* Native check decides. */
+        /* A held identical key is still rejected by retail DE30; repeated
+         * admission queries must never erase it after private recovery. */
+        psx_mod_write_byte(BOSS+0x65,3);
+        for(unsigned repeat=0;repeat<3;++repeat) {
+            CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+            CHECK(psx_mod_read_byte(BOSS+0x65)==3);
+            CHECK(mmx4_coop_call(&cpu,0x8002DE30u,BOSS,shot)==0x7Eu);
+        }
+        psx_mod_write_word(BOSS+0x58,0x80107000u);
+        psx_mod_write_byte(0x80107000u+type*2u+1u,2);
+        psx_mod_write_byte(shot+0x64,4);
+        cpu.gpr[4]=BOSS;cpu.gpr[5]=shot;
+        mmx4_coop_balance_begin(BOSS);
+        unsigned before_hp=psx_mod_read_byte(BOSS+0x5C);
+        CHECK(contact(&cpu,seat)==type+1u);
+        CHECK(psx_mod_read_byte(BOSS+0x5C)==before_hp-1u);
+        CHECK(psx_mod_read_byte(BOSS+0x65)==4);
+        mmx4_coop_balance_end();
+        psx_mod_write_byte(shot+0x64,3);psx_mod_write_byte(BOSS+0x65,3);
         /* A non-initializing update must not turn it into a fresh blade. */
-        psx_mod_write_byte(shot+4,1);hook(&cpu,0x80097EECu);
-        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        cpu.gpr[4]=shot;psx_mod_write_byte(shot+4,1);hook(&cpu,0x80097EECu);
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        CHECK(psx_mod_read_byte(BOSS+0x65)==3);
         io=(Mmx4SnapshotIO){saved,NULL,sizeof saved,0,MMX4_SNAPSHOT_WRITE,1};
         CHECK(mmx4_coop_balance_snapshot(&io));digest=mmx4_coop_balance_digest(1);
         /* Fresh native initialization, even with the same slot/contact key. */
@@ -275,7 +297,9 @@ int main(void){
         CHECK(digest!=mmx4_coop_balance_digest(1));
         io=(Mmx4SnapshotIO){NULL,saved,sizeof saved,0,MMX4_SNAPSHOT_READ,1};
         CHECK(mmx4_coop_balance_snapshot(&io));
-        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        psx_mod_write_byte(BOSS+0x65,3);
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
+        CHECK(psx_mod_read_byte(BOSS+0x65)==3);
         mmx4_coop_balance_forget(BOSS);
         CHECK(mmx4_coop_balance_contact_allowed(BOSS,shot,seat));
         projected=0;
@@ -293,8 +317,13 @@ int main(void){
         CHECK(timed_hit(1,2,64)==1);
         for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
     }
-    for(unsigned index=0;index<2;++index)
-        CHECK(!mmx4_coop_balance_contact_allowed(BOSS,0x801406F8u+index*0x9Cu,1));
+    for(unsigned index=0;index<2;++index) {
+        uint32_t old=0x801406F8u+index*0x9Cu;
+        psx_mod_write_byte(old+0x64,7);psx_mod_write_byte(BOSS+0x65,7);
+        CHECK(mmx4_coop_balance_contact_allowed(BOSS,old,1));
+        CHECK(psx_mod_read_byte(BOSS+0x65)==7);
+        CHECK(mmx4_coop_call(&cpu,0x8002DE30u,BOSS,old)==0x7Eu);
+    }
     shot_address=0x801406F8u;shot_type=255;hero=0;
     /* Odd native durations round up, for either owner. The last blocked
      * tick remains blocked; the partner is available throughout. */
