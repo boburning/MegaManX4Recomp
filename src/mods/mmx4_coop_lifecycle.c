@@ -1458,7 +1458,9 @@ static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t act
      * Kind3 B5DCC caches palette destinations during initialization; late
      * controllers must bind the native stage palette, not P2's character
      * palette. Character/controller and other story projections stay private. */
-    if(address==0x8002166Cu)psx_mod_write_word(0x1F800028u,stage_palette);
+    unsigned shared_stage=address==0x8002166Cu ||
+        address==0x800D8648u || address==0x800D9218u;
+    if(shared_stage)psx_mod_write_word(0x1F800028u,stage_palette);
     for(unsigned i=0;i<3;++i)psx_mod_write_half(PAD+i*2,story_pad[i]);
     uint32_t result=mmx4_coop_call(cpu,address,actor,arg);
     /* Native stage flash BD5CC clears the shared RGB additions and requests
@@ -1468,7 +1470,7 @@ static uint32_t call_story_as_second(CPUState *cpu,uint32_t address,uint32_t act
      * leaves the waterfall on its last uploaded frame after P1 dies, despite
      * advancing the animation clock and shared source colors. Retain these
      * shared stage requests; ordinary character projections stay private. */
-    uint8_t shared_palette_refresh=address==0x8002166Cu?
+    uint8_t shared_palette_refresh=shared_stage?
         (uint8_t)(psx_mod_read_byte(0x80166BB0u)&5u):0;
     /* Projected inventory reads on leave must see the counterpart identity,
      * even though shared story selection remained canonical throughout. */
@@ -1679,16 +1681,17 @@ static void intro_survivor_crusher(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[16];
     /* C0558 compares PLAYER.y against each authored closing threshold.
-     * With P1 dead above the shaft, no panel closes and the escape route never
-     * develops. Substitute only the predicate's loaded Y; keep the native
+     * A dead or trailing P1 above the shaft must not suppress the leading
+     * partner. Substitute only the predicate's loaded Y; keep the native
      * movement, tile edits and two-player solid-contact pass canonical. */
     if(!mmx4_coop_ready() || mmx4_coop_projected() || psx_mod_local_view_scope() ||
        psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12) ||
-       psx_mod_read_byte(PLAY+13)!=1 || mmx4_coop_alive(0) || !mmx4_coop_alive(1) ||
+       psx_mod_read_byte(PLAY+13)!=1 || !mmx4_coop_alive(1) ||
        actor<0x80165A30u || actor>=0x80165A30u+32u*0x8Cu ||
        (actor-0x80165A30u)%0x8Cu || !psx_mod_read_byte(actor) ||
        psx_mod_read_byte(actor+1)!=3 || psx_mod_read_byte(actor+4)!=1)return;
-    cpu->gpr[3]=(uint32_t)(int32_t)(int16_t)(body_word(mmx4_coop_second_body(),12)>>16);
+    int32_t second=(int16_t)(body_word(mmx4_coop_second_body(),12)>>16);
+    if(!mmx4_coop_alive(0) || second>(int32_t)cpu->gpr[3])cpu->gpr[3]=(uint32_t)second;
 }
 static int fan_latch(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
@@ -1727,7 +1730,14 @@ static int fan_latch(CPUState *cpu,uint32_t address) {
      * actor pass, so the advancing player may cross its top edge this tick.
      * A dead, withdrawn, warping or distant partner must not hold it open. */
     int x=players[1].world_x-camera_x,y=players[1].world_y-camera_y;
-    if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
+    if(mmx4_coop_split_views()) {
+        /* Each living hero has a separate viewport. P1's view must not
+         * decide whether the partner still below this hatch exists. Keep
+         * the latch open for a partner in this climbing shaft; someone in
+         * another horizontal room must not hold an unrelated latch. */
+        int shaft_x=players[1].world_x-(int16_t)psx_mod_read_half(actor+10);
+        if(shaft_x < -320 || shaft_x > 320)return 0;
+    }else if(x < -view.left-16 || x >= 320+view.right+16 || y < -32 || y >= 272)return 0;
     uint32_t player_box=body_word(body,0x68),platform_box=psx_mod_read_word(actor+0x68);
     if(!platform_box)return 0;
     /* X's native movement transition briefly clears its collision box.
@@ -1916,18 +1926,23 @@ static void dismount_at_door(CPUState *cpu,unsigned seat,uint32_t actor) {
 static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     if(scene_guard || !mmx4_coop_ready() || !gameplay_scene() || mmx4_coop_projected())return 0;
     uint32_t actor=cpu->gpr[4];unsigned owner=0;
+    unsigned train=address==0x800D8648u || address==0x800D9218u;
     unsigned refight_portal=address==0x800C7164u;
     if(refight_portal && (psx_mod_local_view_scope() ||
        psx_mod_read_byte(PLAY+12)!=12 || psx_mod_read_byte(PLAY+13) ||
        !door_pool_actor(actor) || psx_mod_read_byte(actor+1)!=27))return 0;
     SceneOwner *record=scene_record(actor,0);
-    if(psx_mod_read_byte(actor+4)==0 && record) {
+    if((psx_mod_read_byte(actor+4)==0 || (train && !script_active)) && record) {
         memset(record,0,sizeof *record);record=NULL;
     }
     if(record)owner=record->owner;
     else if((address==0x800D0374u || address==0x800D1248u || address==0x800D1284u) && script_active)
         owner=script_owner;
     else if(!mmx4_coop_alive(0) && mmx4_coop_alive(1))owner=1;
+    else if(train && script_active)owner=script_owner;
+    else if(train && mmx4_coop_alive(1) &&
+            (int16_t)psx_mod_read_half(PLAYER+10)<
+            (int16_t)(body_word(mmx4_coop_second_body(),8)>>16))owner=1;
     else if(refight_portal && psx_mod_read_byte(actor+4)==1 &&
             !psx_mod_read_byte(actor+5)) {
         /* C7970 only reads the original body/portal collision boxes. Keep
@@ -2065,6 +2080,9 @@ int mmx4_coop_lifecycle_defer_portal_solid(uint32_t actor) {
 }
 static int scene_actor(CPUState *cpu,uint32_t address) {
     return mmx4_coop_combat_canonical_call(cpu,address,scene_actor_canonical);
+}
+int mmx4_coop_lifecycle_train(CPUState *cpu,uint32_t address) {
+    return scene_actor(cpu,address);
 }
 int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];

@@ -654,6 +654,7 @@ static int solid_player_contact_canonical(CPUState *cpu, uint32_t address) {
      * small effect actors. The caller supplies a native full solid actor. */
     if ((actor&3u) || actor<0x80010000u || actor>0x801FFF80u) return 0;
     solid_call=1;
+    uint8_t native_carried=psx_mod_read_byte(actor+0x76);
     uint32_t result=mmx4_coop_call(cpu,address,actor,arg);
     const uint8_t *second=mmx4_coop_second_body();
     /* Incoming beams remain excluded from combat, but need world-solid
@@ -675,7 +676,14 @@ static int solid_player_contact_canonical(CPUState *cpu, uint32_t address) {
             uint8_t double_active=psx_mod_read_byte(DOUBLE_BODY);
             psx_mod_write_byte(DOUBLE_BODY,0);
             psx_mod_write_byte(actor+0x72,record->sides);
-            psx_mod_write_byte(actor+0x76,record->carried);
+            /* BED90 writes -1 before every update of the intro's dropping
+             * slab. E184 skips its carry pass for a nonpositive signed
+             * value; restoring P2's previous contact instead attaches them
+             * to that slab while P1 falls normally. Preserve an authored
+             * negative override from before P1's collision pass, which
+             * C36C may already have replaced with its new contact result. */
+            psx_mod_write_byte(actor+0x76,(int8_t)native_carried<0?
+                native_carried:record->carried);
             psx_mod_write_byte(actor+0x74,record->vehicle_sides);
             psx_mod_write_byte(actor+0x78,record->vehicle_carried);
             mmx4_coop_call(cpu,address,actor,arg);
@@ -788,6 +796,11 @@ static void update_actor(CPUState *cpu,uint32_t address) {
     }
     actor_owner=target;
     actor_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+    uint8_t scene_camera[0xFC];
+    int own_scene_camera=target && actor_pool==0x80021234u &&
+        psx_mod_read_byte(MMX4_PLAY+12)==3 && !psx_mod_read_byte(MMX4_PLAY+13) &&
+        psx_mod_read_byte(actor+1)==33 && !psx_mod_read_byte(actor+4) &&
+        mmx4_coop_split_scene_camera_begin(target,scene_camera);
     uint32_t result=0;
     if(actors[target].active || vehicle_owner || captured) {
         if(target) {
@@ -809,6 +822,12 @@ static void update_actor(CPUState *cpu,uint32_t address) {
             mmx4_coop_leave_second();
         }
     }
+    /* The Mushroom midboss issues its intro directly on allocation. Start
+     * that one scene from its entering hero's actual view; otherwise the
+     * native pan begins at a distant P1 camera and initially hides P2.
+     * Normal fight targeting and other enemy camera state stay unchanged. */
+    if(own_scene_camera)mmx4_coop_split_scene_camera_end(target,scene_camera,
+        mmx4_coop_lifecycle_script_owner()==(int)target);
     pool_first_freeze=psx_mod_read_byte(MMX4_PLAYER+0xBC);
     psx_mod_write_byte(MMX4_PLAYER+0xBC,0);
     actor_campaign=0;actor_call=actor_owner=0;
