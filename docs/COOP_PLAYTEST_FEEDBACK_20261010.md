@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Current status, October18: **178 numbered items; 148 checked and 30 unchecked.**
+Current status, October19: **181 numbered items; 151 checked and 30 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
@@ -216,6 +216,9 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 176 | [x] | GitHub41: first intro gate explosions reportedly continue forever | Reproduced Zero/P2-first rescue handoff; corrected in merged PR45, commit23b72d8. Native original-disc traversal completes the rescue and reaches part2 with both players present. Included in39. `beads-nvej` |
 | 177 | [x] | Selected offline8:3 canvas falls back to one4:3 image |39 candidate duplicates shared/native presents into both4:3 panes for the session. Native gameplay, pair refusal, pause/resume and resize checks pass. [Evidence](COOP_LOCAL_SPLIT39.md). `beads-68fs` |
 | 178 | [x] | Distant offline split view shows fragmented terrain | Reproduced with the retail shared tile ring. Local split now requires the authored-map renderer; stationary partner terrain remains intact as the other advances.624 protected-view checks pass. [Evidence](COOP_LOCAL_SPLIT39.md). `beads-68fs` |
+| 179 | [x] | Each hero opens their character's own pause menu in either campaign | Native projection already exists; both menus visually checked in both campaigns. Controller QA covers ownership, guest Quit blocking, weapon selection and resume in local8:3 and Split/Unified LAN. [Evidence](COOP_PERSONAL_MENUS40.md). `beads-or94` |
+| 180 | [x] | Optional separate E-tank contents under co-op | Default-off option implemented. Shared acquisition/W-tanks and P1 saves preserved; private energy survives native reloads and snapshot/view transactions. Native local and real LAN healing/default-shared controls pass with matching peer state. [Evidence](COOP_PERSONAL_MENUS40.md). `beads-or94` |
+| 181 | [x] | Reduce Zero's boss damage by20% with co-op scaling | Exact carry for either seat/cooldown method; X/unscaled damage and native hit admission preserved. Matched native Frost controller trials measure36 raw Zero damage to14 HP with fractional carry; unit and Linux checks pass. [Evidence](COOP_PERSONAL_MENUS40.md). `beads-or94` |
 
 ### October18 Playtest36 recurrence and new requests
 

@@ -1,7 +1,7 @@
 /* Optional double effective boss HP. Keep native HP units so fill loops,
  * phase tables, split health pools and the HUD retain their original ranges.
- * Carry half a point between accepted hits: two 1-damage hits cost one native
- * point, rather than rounding every small hit down or granting immunity. */
+ * Carry fractional points between accepted hits, including Zero's additional
+ * 20% reduction, rather than rounding small hits down or granting immunity. */
 #include "mmx4_coop_internal.h"
 #include <string.h>
 #if MMX4_COOP_NETPLAY_DEBUG
@@ -263,7 +263,7 @@ int mmx4_coop_balance_snapshot_ready(void) {return !current_actor && !contact_ca
 int mmx4_coop_balance_snapshot(Mmx4SnapshotIO *s) {
     mmx4_snapshot_fixed(s,enabled);
     mmx4_snapshot_fixed(s,per_player);
-    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)MMX4_SNAPSHOT_BOOL(s,fraction[i][b]);
+    for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)MMX4_SNAPSHOT_FIELD(s,fraction[i][b],1,9);
     for(unsigned i=0;i<SLOTS;++i)for(unsigned b=0;b<3;++b)for(unsigned seat=0;seat<2;++seat)
         MMX4_SNAPSHOT_U8(s,immunity[i][b][seat]);
     for(unsigned seat=0;seat<2;++seat) {
@@ -305,11 +305,16 @@ uint32_t mmx4_coop_balance_digest(uint32_t seed) {
     }
     return seed;
 }
-static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
+static uint32_t scaled_damage(uint32_t actor,unsigned amount,unsigned zero_attack) {
     unsigned hp=psx_mod_read_byte(actor+0x5C);
-    unsigned b=bank(actor);uint8_t *half=&fraction[slot(actor)][b];
-    unsigned total=amount+*half;
-    *half=(uint8_t)(total&1u);
+    unsigned b=bank(actor);uint8_t *remainder=&fraction[slot(actor)][b];
+    /* Tenths of native HP: X retains the existing 1/2 health scale. Zero
+     * deals 80% of that damage (4/10), independently of seat/campaign/view.
+     * Keep the native attack strength for weakness and reaction decisions.
+     * A common carry prevents rounding loss when the two heroes alternate. */
+    unsigned weight=zero_attack?4u:5u;
+    unsigned total=amount*weight+*remainder;
+    *remainder=(uint8_t)(total%10u);
     if(current_actor==actor) {
         accepted_damage+=amount;
         damage_owner=(unsigned)(mmx4_coop_projected()!=0)+1u;
@@ -318,8 +323,9 @@ static uint32_t scaled_damage(uint32_t actor,unsigned amount) {
     }
     psx_mod_counter_add("mmx4.coop.scaled-boss-hit",1);
     psx_mod_counter_add("mmx4.coop.boss-damage-before-scaling",amount);
-    psx_mod_counter_add("mmx4.coop.boss-damage-after-scaling",total/2);
-    return hp-total/2;
+    if(zero_attack)psx_mod_counter_add("mmx4.coop.zero-boss-damage-before-scaling",amount);
+    psx_mod_counter_add("mmx4.coop.boss-damage-after-scaling",total/10);
+    return hp-total/10;
 }
 static void damage(CPUState *cpu,uint32_t address) {
     (void)address;
@@ -332,7 +338,7 @@ static void damage(CPUState *cpu,uint32_t address) {
     unsigned hp=psx_mod_read_byte(actor+0x5C),amount=cpu->gpr[2];
     if(!hp || hp>=127 || !amount || amount>255)return;
     /* This site follows SUBU, after the separate damage-multiplier hook. */
-    cpu->gpr[3]=scaled_damage(actor,amount);
+    cpu->gpr[3]=scaled_damage(actor,amount,psx_mod_read_byte(MMX4_PLAYER+2)==1);
     /* DE30's A3 is the actual accepted damage table, before the boss caller
      * replaces it with its temporary rejection table. Never cache that
      * rejection table itself, or an uninitialized/synthetic pointer. */
@@ -362,7 +368,10 @@ static void cut_web(CPUState *cpu,uint32_t address) {
     if(enabled && mmx4_coop_ready() && !psx_mod_local_view_scope() &&
        boss(actor) && psx_mod_read_byte(actor+1)==43 &&
        psx_mod_read_byte(actor+0x5C)>0 && psx_mod_read_byte(actor+0x5C)<127)
-        cpu->gpr[2]=scaled_damage(actor,4);
+        /* This is a delayed web-severing event, not a hit by the current
+         * AI target. Keep its environmental penalty independent of which
+         * hero happens to be projected when Spider consumes that signal. */
+        cpu->gpr[2]=scaled_damage(actor,4,0);
 }
 static void rejected_hit(CPUState *cpu,uint32_t address) {
     (void)address;

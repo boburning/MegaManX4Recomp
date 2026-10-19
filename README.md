@@ -27,9 +27,10 @@ as the other hero. Arrive together, tackle bosses together, and share team retri
 | Play together | Local co-op with two controllers or separate keyboard bindings; two-player netplay from the launcher. |
 | Pick your view | **Unified** camera by default. **Split (Experimental)** gives each netplay player an independent screen. Local co-op also offers **side by side 8:3 (Experimental)**, with two 4:3 views in one window. |
 | Arrange your HUD | Stacked lifebars by default, or side by side. Independent screens show their own player's meter. |
+| Manage your supplies | Each hero opens their own character's pause menu. E-tank energy is shared by default; optionally give each player a separate supply. |
 | Set the door rule | Either player opens boss doors by default. Optionally wait for both living, present players. |
 | Fight both story bosses | Opt into Double **and** Iris in sequence; return to the inner door for the second fight. |
-| Turn up the challenge | Optional double effective boss health and shorter hit cooldowns, with separate timers for each player or one shared timer. |
+| Turn up the challenge | Optional double effective boss health and shorter hit cooldowns, with separate timers for each player or one shared timer. Scaling also reduces Zero's boss damage by 20%. |
 | Enable the secret codes | Ultimate Armor X's code and Black Zero can be enabled together. X still needs a capsule for the armor. |
 
 The extra boss encounters, scaling and character codes are **off by default**.

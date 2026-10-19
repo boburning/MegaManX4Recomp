@@ -111,6 +111,25 @@ int main(void){
     for(unsigned n=1;n<=96;++n)CHECK(hit(1,0)==48-n/2);
     CHECK(!psx_mod_read_byte(BOSS+0x5C));
     actor(73,48);CHECK(hit(3,0)==47);CHECK(hit(5,0)==44);CHECK(hit(127,0)==0);
+    /* Character, not controller seat, determines the additional 20%.
+     * Carry small hits exactly in both cooldown modes, including rejected
+     * contacts and mixed X/Zero attacks. No new contact veto is introduced. */
+    for(unsigned mode=0;mode<2;++mode)for(unsigned seat=0;seat<2;++seat) {
+        per_player=(int)mode;mmx4_coop_balance_activate();actor(57,48);
+        projected=(int)seat;psx_mod_write_byte(MMX4_PLAYER+2,1);
+        for(unsigned n=1;n<=20;++n)CHECK(hit(1,0)==48-(n*4)/10);
+        CHECK(psx_mod_read_byte(BOSS+0x5C)==40); /* Formerly 38. */
+        actor(57,48);psx_mod_write_byte(MMX4_PLAYER+2,1);
+        CHECK(hit(2,0)==48);CHECK(hit(2,1)==48);CHECK(hit(3,0)==46);
+        actor(57,48);unsigned units=0;
+        for(unsigned n=0;n<20;++n) {
+            unsigned character=n%2;psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)character);
+            units+=character?4:5;CHECK(hit(1,0)==48-units/10);
+        }
+        actor(57,48);psx_mod_write_byte(MMX4_PLAYER+2,1);enabled=0;
+        mmx4_coop_balance_activate();CHECK(hit(2,0)==46);enabled=1;
+    }
+    projected=0;per_player=0;mmx4_coop_balance_activate();
     actor(64,48);CHECK(hit(1,0)==48);CHECK(hit(1,1)==48);CHECK(hit(1,0)==47);
     /* Ordinary enemies and Iris's armor never acquire extra durability. */
     actor(58,48);CHECK(hit(4,0)==44);
@@ -226,7 +245,7 @@ int main(void){
         shot_type=26;CHECK(timed_hit(seat,4,64)==1);
         for(unsigned tick=0;tick<4;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}
         CHECK(!mmx4_coop_balance_hit_allowed(BOSS,seat));
-        CHECK(psx_mod_read_byte(BOSS+0x5C)==44);
+        CHECK(psx_mod_read_byte(BOSS+0x5C)==45); /* Eight raw Zero damage * .4. */
         /* Finisher and upgraded aerial saber use32 of the native64 ticks,
          * with no extra tick and no immunity imposed on the other hero. */
         for(unsigned tick=4;tick<31;++tick){mmx4_coop_balance_begin(BOSS);mmx4_coop_balance_end();}

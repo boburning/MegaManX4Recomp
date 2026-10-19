@@ -53,6 +53,8 @@ def main():
     parser.add_argument('--campaign', type=int, choices=(0, 1), default=0)
     parser.add_argument('--doors', action='store_true', help='Also traverse the P2-led Cyber door')
     parser.add_argument('--jet-only',action='store_true',help='Check both native Jet rider entrance animations and composed frames')
+    parser.add_argument('--personal-menus-only',action='store_true',help='Check character menus, tank healing and native weapon selection')
+    parser.add_argument('--separate-etanks',action='store_true',help='Enable private E-tank contents in both test peers')
     parser.add_argument('--boss-return-only',action='store_true',help='Check partner arrival during boss-fight movement, jump and Nova')
     parser.add_argument('--train-only',action='store_true',help='Qualify both Slash Split background panes and CRCs')
     parser.add_argument('--latch-only',action='store_true',help='Qualify the native Mushroom latch and matching peer state')
@@ -103,6 +105,23 @@ def main():
         exercise = Exercise(args, peers, report)
         exercise.boot(args.campaign)
         debug = NetplayDevelopment(ports[2], ports[3])
+        if args.personal_menus_only:
+            from mmx4_netplay_runtime import NetplayRuntime
+            from test_mmx4_coop_regressions import Scenarios
+            from coop_personal_menu_scenario import personal_menus
+            scenario=Scenarios(NetplayRuntime(debug),args.output,args.campaign)
+            scenario.separate_etanks=args.separate_etanks
+            def capture(label):
+                for seat,peer in enumerate(peers):
+                    peer.request('present_shot',path=str(args.output/('%s-p%d.png'%(label,seat+1))))
+            try:
+                report['personal_menus']=personal_menus(scenario,capture)
+                tick=min(peer.status()['tick'] for peer in peers)
+                exercise.checkpoint('Character menus and E-tank ownership',tick,min_digests=2)
+                report['status']='passed'
+            finally:
+                (args.output/'scenario-events.json').write_text(json.dumps(scenario.events,indent=2))
+            return
         if args.boss_return_only:
             from mmx4_netplay_runtime import NetplayRuntime
             from test_mmx4_coop_regressions import Scenarios

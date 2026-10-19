@@ -81,7 +81,11 @@ int main(int argc, char** argv) {
     if(manager.feature_enabled("mmx4.cheat.ultimate-armor","ultimate-armor") ||
        manager.feature_enabled("mmx4.cheat.black-zero","black-zero"))
         return fail("elective character cheats must default off");
-    if(manager.feature_option_value("mmx4.coop","coop","ultimate_armor_x")!="false" ||
+      if(manager.feature_option_value("mmx4.coop","coop","separate_etanks")!="false")
+          return fail("separate E-tanks must default off");
+      if(!manager.set_feature_option("mmx4.coop","coop","separate_etanks","true",&error))return fail(error);
+      if(!manager.set_feature_option("mmx4.coop","coop","separate_etanks","false",&error))return fail(error);
+      if(manager.feature_option_value("mmx4.coop","coop","ultimate_armor_x")!="false" ||
        manager.feature_option_value("mmx4.coop","coop","black_zero")!="false")
         return fail("netplay character options must default off");
     if(manager.feature_option_value("mmx4.coop","coop","boss_doors")!="either")

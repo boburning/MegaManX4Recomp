@@ -14,8 +14,11 @@ Player 1 owns the campaign. Player 2 uses the other character; boss clears and
 permanent upgrades follow P1's campaign. Lives represent team retries. A dead
 partner waits for the team's retry, and P2 cannot quit the campaign.
 
-Unified cameras are always used locally. HUD layout can be Stacked or Side by side.
-Both players use their own Start/Options binding to pause and resume their menu.
+Unified cameras are the local default; Local co-op display also offers experimental
+side by side 8:3. HUD layout can be Stacked or Side by side.
+Each player's Start/Options binding opens their character's native pause menu:
+X's weapons or Zero's techniques, regardless of P1's campaign. The opener controls
+and resumes that menu; gameplay pauses for both players. Only P1 can quit the campaign.
 
 ## Netplay
 
@@ -42,10 +45,16 @@ only **Netplay cameras** is online-only. Changes apply on the next fresh boot.
   fortress refight pad; dead or withdrawn partners are exempt.
 - **Fight Double and Iris:** off by default. Fight the campaign's usual boss,
   return through the inner door for the other encounter, then continue P1's story.
-- **Co-op boss scaling:** off by default. Double effective health. Its default
-  **Separate per-player cooldowns** lets each hero damage independently and lets
-  Zero chain his opening ground slashes. The finisher keeps its full cooldown.
-  **Reduced shared cooldowns** retains the earlier shared-timer method.
+- **Separate E-tank contents:** off by default. Both heroes use the tanks acquired
+  by P1's campaign, with their own energy when enabled. Pickups refill the
+  collector's supply and each hero uses their own energy in their pause menu.
+  W-tank energy remains shared. P2's contents persist for the session and in save
+  states; P2 does not gain a separate campaign save. Requires a fresh boot.
+- **Co-op boss scaling:** off by default. Double effective health and 20% less
+  boss damage from Zero. Its default **Separate per-player cooldowns** lets each
+  hero damage independently, with short recovery for Zero's ground and aerial
+  slashes. **Reduced shared cooldowns** uses one shared timer. Both methods shorten
+  native hit cooldowns; the damage reduction applies with either method.
 - **Ultimate Armor X Code / Black Zero:** off by default and compatible with
   each other. X's code makes a capsule grant Ultimate Armor; it does not grant
   the armor immediately. Both codes are available under **X + Zero Co-op** for
