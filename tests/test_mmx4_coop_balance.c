@@ -103,6 +103,41 @@ static unsigned timed_hit(unsigned seat,unsigned amount,unsigned ticks) {
     psx_mod_write_byte(BOSS+0x8B,(uint8_t)cpu.gpr[2]);
     mmx4_coop_balance_end();projected=0;return cpu.gpr[2];
 }
+static void slash_reaction_restarts(void) {
+    for(unsigned scaling=0;scaling<2;++scaling)for(unsigned policy=0;policy<2;++policy)
+    for(unsigned seat=0;seat<2;++seat)for(unsigned variant=0;variant<7;++variant) {
+        enabled=(int)scaling;per_player=(int)policy;projected=(int)seat;
+        local=0;ready=1;mmx4_coop_balance_activate();
+        actor(variant==3?65:54,48);
+        psx_mod_write_byte(BOSS+5,variant==2?4:10);
+        psx_mod_write_byte(BOSS+6,2);
+        if(variant==4)local=1;
+        if(variant==5)ready=0;
+        CPUState c={0};c.gpr[4]=c.gpr[16]=BOSS;
+        c.gpr[5]=shot_address;c.gpr[2]=4;c.gpr[3]=44;
+        psx_mod_write_byte(MMX4_PLAYER+2,0); /* X in either seat. */
+        mmx4_coop_balance_begin(BOSS);
+        if(variant!=6)hook(&c,0x8002DF08u);
+        psx_mod_write_byte(BOSS+0x5C,(uint8_t)c.gpr[3]);
+        unsigned hp=psx_mod_read_byte(BOSS+0x5C);
+        unsigned reaction=variant==1?15u:variant==6?1u:6u;
+        c.gpr[4]=reaction;c.gpr[2]=64;
+        hook(&c,0x8006BE60u);
+        unsigned suppress=scaling && variant<2;
+        CHECK(c.gpr[4]==(suppress?1u:reaction));
+        CHECK(psx_mod_read_byte(BOSS+0x5C)==hp);
+        CHECK(psx_mod_read_byte(BOSS+6)==2);
+        /* Retail BE64..BEA8 restarts phase10/sub0 for weakness results6/15.
+         * A hit accepted during phase10 must retain its running animation;
+         * a first reaction and unscaled/native behavior remain unchanged. */
+        if(c.gpr[4]==6 || c.gpr[4]==15) {
+            psx_mod_write_byte(BOSS+5,10);psx_mod_write_byte(BOSS+6,0);
+        }
+        CHECK(psx_mod_read_byte(BOSS+6)==(suppress||variant==6?2:0));
+        mmx4_coop_balance_end();
+    }
+    local=0;ready=1;projected=0;
+}
 int main(void){
     CPUState cpu={0};uint8_t saved[SAVE_BYTES];
     mmx4_coop_balance_activate();actor(73,48);CHECK(hit(1,0)==47);
@@ -445,5 +480,6 @@ int main(void){
     CHECK(!mmx4_coop_balance_development_mode(0));
     CHECK(memory_digest()==before_memory);CHECK(hit(2,0)==47);
 #endif
+    slash_reaction_restarts();
     puts("Boss scaling preserves weak hits, separate pools, rejected hits and snapshots.");return 0;
 }

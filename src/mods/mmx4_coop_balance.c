@@ -398,6 +398,19 @@ static void cooldown(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[address==0x80080C98u?17:16];
     int index=slot(actor);
     if(!enabled || index<0 || !mmx4_coop_ready() || psx_mod_local_view_scope() || !boss(actor))return;
+    /* Retail BE64..BEA8 restarts Slash's weakness animation for results6/15.
+     * Halved recovery admits another hit before phase10 finishes, allowing
+     * an endless restart. HP, attack identity and the native damage table
+     * have already been applied. For this reaction branch only, use its
+     * ordinary-hit result so the running stun can finish. A fresh weakness
+     * still starts normally, with either seat and either scaling policy. */
+    if(address==0x8006BE60u && current_actor==actor && accepted_damage &&
+       damage_owner && psx_mod_read_byte(actor+1)==54 &&
+       psx_mod_read_byte(actor+4)==1 && psx_mod_read_byte(actor+5)==10 &&
+       (cpu->gpr[4]==6 || cpu->gpr[4]==15)) {
+        cpu->gpr[4]=1;
+        psx_mod_counter_add("mmx4.coop.slash-stun-restarts-suppressed",1);
+    }
     unsigned ticks=cpu->gpr[2];
     if(ticks>1 && ticks<255) {
         if(per_player) {

@@ -141,5 +141,50 @@ The video recording failure does not mean these inputs are missing. Its
 archive SHA256 isbac76e69799077d46c55579fa5cf31cb50716e1d1f6090b49b152071b5b17a08.
 
 Track Dragoon's refight camera lock as206 and Slash Beast's repeated weakness
-stun as207. Native room controls and scaling-on/off comparisons are pending;
-input positions alone cannot establish a camera's bounds or a boss reaction.
+stun as207. Input positions alone cannot establish a camera's bounds or a boss reaction.
+
+For206, native checkpoint2 admission, a reload after Mushroom's checkpoint4,
+and the actual General27 portal at2096/888 all retain the proper Dragoon
+arena. Both saved cameras remain432/1531 during the sampled fight/jump windows,
+with both heroes healthy. Composed images show Dragoon in his lava arena.
+This does not reproduce the reported lock or qualify a complete refight run;
+keep206 open. Private evidence: `workshop-fixed2/dragoon-refight-retry/` and
+`workshop-fixed2/dragoon-original-portal/`.
+
+For207, an actual Slash54 fight in authored fortress checkpoint8 reproduces
+repeated phase10 restarts during accepted Ground Hunter hits with scaling on.
+The native unscaled control includes recovery phase6. Initial wrong-room and
+non-overlapping-shot setup attempts are excluded, as are timing comparisons
+that assume these are matched saved-state runs.
+
+The fix uses the existing8006BE60 post-hit hook: damage and weapon consumption
+have already happened, and BE64..BEA8 next choose the weakness reaction from
+the local return code. While phase10 is running, further accepted weakness
+hits take its ordinary-hit branch and leave that animation running. The first
+weakness reaction, unscaled play, other bosses, hit tables and independent
+damage cooldowns retain their existing behavior. The regression fails before
+the fix and passes afterward for both seats/scaling methods and excluded
+contexts. **Native fixed-build qualification remains a release gate:** matched
+in-fight saved-state comparisons must show accepted damage, suppressed restart
+events and an actual recovery from the stun, using X in either seat.
+
+## Additional bounded controls
+
+- **Midboss187:** a native final saber hit and controller-driven leftward
+  jumps leave Mushroom's midboss room and trigger the original part2 loader.
+  Both heroes finish healthy at32HP; P2 is at184/667 with normal controls in
+  section1. No exit/success flag or collision tile is set. This verifies the
+  current leading-P2 exit; no additional collision patch is added. Private
+  evidence: `workshop-fixed2/midboss-forward-confirmed/`.
+- **Lasers182:** captured four P2-leading Owl locations with original enemy
+  kinds38/51/52/63/67 and laser attachments20. Inspected separated views do
+  not show the reported cross-view beam. This bounded result leaves182 open.
+- **Waterfall204:** the original checkpoint3 reaches the actual log section.
+  A no-compiler profile measures57.13 VBlank/world ticks per second with both
+  heroes alive, and58.91/59.07 with P1 dead. GPU scene time averages14.57/14.81ms;
+  render submission remains active in both windows. This shows limited
+  headroom, not the severe reported slowdown or a performance fix. Earlier
+  cross-room teleports were clamped into another camera region; those timings
+  and the capsule-scene timing are excluded. Private evidence:
+  `workshop-fixed2/waterfall-profile-no-compiler/`. The tester's saved1080p
+  configuration is not matched by this native-resolution control.

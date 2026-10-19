@@ -5,6 +5,7 @@
 - Fixed Split Mushroom's black rainbow trails when P1 dies before P2 enters the boss room.
 - Fixed the lower piece of the intro's first falling object ignoring a leading P2.
 - Fixed a camera handoff that could erase Slash Beast's scrolling scenery.
+- With boss scaling enabled, further Ground Hunter hits damage Slash Beast without endlessly restarting his current weakness stun. A new stun can still begin after he recovers.
 - Diagnostic sessions now record the release, effective local/netplay camera mode and co-op options. Mode changes are recorded automatically.
 
 **Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
@@ -12,8 +13,7 @@ Unified remains the default; local8:3 split remains experimental. Campaign saves
 carry forward; emulator save states from older builds may be incompatible.
 Public packages disable development cheats and omit loading-speed mods.
 
-Dragoon's reported refight camera lock and Slash Beast's weakness stun are
-under investigation. Remaining elevator, stage-effect, background and performance
+Dragoon's reported refight camera lock remains unconfirmed. Remaining elevator, stage-effect, background and performance
 reports stay on the numbered checklist. Single-slash timing157 remains
 **unconfirmed**; this release does not claim to fix it or every split-screen issue.
 
