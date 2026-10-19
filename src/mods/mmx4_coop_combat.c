@@ -803,6 +803,9 @@ static void update_actor(CPUState *cpu,uint32_t address) {
      * effects retain their existing resource bindings. */
     unsigned mushroom_palette=actor_pool==0x80021234u &&
         psx_mod_read_byte(actor+1)==61 && !psx_mod_read_byte(actor+4);
+    unsigned dragoon_intro=actor_pool==0x80021234u &&
+        psx_mod_read_byte(actor+1)==65 && psx_mod_read_byte(actor+4)==1 &&
+        psx_mod_read_byte(actor+5)==2;
     uint32_t stage_colors=mushroom_palette?psx_mod_read_word(0x1F800024u):0;
     uint32_t stage_palette=mushroom_palette?psx_mod_read_word(0x1F800028u):0;
     uint8_t scene_camera[0xFC];
@@ -826,6 +829,13 @@ static void update_actor(CPUState *cpu,uint32_t address) {
             mmx4_coop_balance_begin(actor);
             result=mmx4_coop_call(cpu,function,actor,cpu->gpr[5]);
             mmx4_coop_balance_end();
+            /* 7E3D0 releases the script before 7E400..7E430 install the
+             * refight camera targets. Publish those completed native writes
+             * while the actor still owns its projection, before its camera
+             * can be replaced by the next saved-view handoff. */
+            if(dragoon_intro && psx_mod_read_byte(actor+4)==1 &&
+               psx_mod_read_byte(actor+5)==3)
+                mmx4_coop_split_dragoon_camera_release(actor);
             if(web && !captured && psx_mod_read_word(actor+0x8C)==3)
                 secondary_owner[(actor-SECONDARY_POOL)/SECONDARY_STRIDE]=(uint8_t)(target+1);
             psx_mod_counter_add(target?"mmx4.coop.p2-native-ai":"mmx4.coop.p1-native-ai",1);

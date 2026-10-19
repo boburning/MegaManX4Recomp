@@ -78,6 +78,11 @@ static const uint32_t owl_release_sites[]={0x80075694u,0x800763D0u,0x800764D4u,
     0x800767E4u,0x8007687Cu,0x800778C8u};
 static unsigned owl_release_model;
 static unsigned pool_updates,actor_updates[2],bounds_updates,ai_contact,ai_solid;
+static unsigned dragoon_release_model,dragoon_release_calls,dragoon_release_projected;
+void mmx4_coop_split_dragoon_camera_release(uint32_t actor) {
+    CHECK(actor==0x8013BED0u && psx_mod_read_byte(actor+5)==3);
+    ++dragoon_release_calls;dragoon_release_projected=projected;
+}
 static unsigned ai_direct_write,ai_canonical;
 static uint8_t saved_campaign;
 static uint32_t ai_target_x[2];
@@ -485,6 +490,9 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         CHECK(mmx4_coop_combat_actor_context());
         ++actor_updates[seat];
         ai_target_x[seat]=psx_mod_read_word(MMX4_PLAYER+8);
+        if(dragoon_release_model) {
+            psx_mod_write_byte(a0+5,3);return 0;
+        }
         if(palette_model) {
             if(psx_mod_read_byte(a0+1)==61 && !psx_mod_read_byte(a0+4)) {
                 /* Original788B8 ->7B7B4:64 source colors, one shared
@@ -986,6 +994,22 @@ static void split_native_targets(void) {
     setup();CPUState cpu={0};cpu.gpr[2]=NATIVE_AI;cpu.gpr[4]=0x8013BED0u;
     redirects[0](&cpu,0x80021300u);CHECK(cpu.gpr[2]==NATIVE_AI);
 }
+static void dragoon_camera_release(void) {
+    const uint32_t actor=0x8013BED0u;
+    for(unsigned seat=0;seat<2;++seat)for(unsigned gate=0;gate<4;++gate) {
+        setup_split_actors(0);script_owner=(int)seat;
+        psx_mod_write_byte(actor+0x9C,0);
+        psx_mod_write_byte(actor+1,gate==1?61:65);
+        psx_mod_write_byte(actor+4,gate==2?0:1);
+        psx_mod_write_byte(actor+5,gate==3?3:2);
+        dragoon_release_model=1;dragoon_release_calls=0;
+        invoke(0x80021234u);
+        CHECK(dragoon_release_calls==(gate==0));
+        if(!gate)CHECK(dragoon_release_projected==seat);
+        CHECK(!projected && mmx4_coop_combat_snapshot_ready());
+        dragoon_release_model=0;
+    }
+}
 static void owl_grab_release(void) {
     const uint32_t actor=0x8013BED0u;
     const uint8_t commands[]={0,1,0xFE,0xFF};
@@ -1384,6 +1408,7 @@ int main(void) {
     double_counterpart_damage();
     iris_counterpart_damage();
     slash_intro_leader();
+    dragoon_camera_release();
     owl_grab_release();
     vehicle_secondary_ownership();
     spider_capture_ownership();

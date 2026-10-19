@@ -383,7 +383,11 @@ void mmx4_coop_lifecycle_reset(void) {
     memset(&both_door,0,sizeof both_door);
     warp_pending=warp_phase=warp_unlocked_ticks=0;
     initial_arrival=direct_initial_spawn=0;
-    menu_active=0;menu_owner=0;
+    /* A native Quit/Continue retires the old menu continuation. Its callback
+     * guard must not survive into the newly initialized stage: a retained
+     * guard bypasses P2's menu projection and leaves menu_active latched when
+     * the unwrapped native menu resumes gameplay. */
+    menu_active=0;menu_owner=0;menu_guard=menu_projecting=0;
 }
 
 static int native_initial_arrival(void) {
@@ -1145,6 +1149,11 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
  * through the core's call service. Only the outer filter completes the entry. */
 static int stage_normal(CPUState *cpu,uint32_t address) {
     if(normal_guard || !mmx4_coop_ready() || mmx4_coop_projected())return 0;
+    /* The native dispatcher has returned to ordinary gameplay. A retired
+     * menu must not suppress the partner's controller on subsequent frames.
+     * The menu's nested world draw/update still owns its live projection. */
+    if(!psx_mod_read_byte(PLAY+1) && !menu_projecting && !world_guard)
+        menu_active=menu_guard=0;
     warp_begin(cpu);
     if(warp_phase && !mmx4_coop_alive(warp_owner))warp_tick(cpu);
     uint16_t input[2]={mmx4_coop_input(0),mmx4_coop_input(1)};

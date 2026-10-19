@@ -1337,6 +1337,22 @@ int main(void) {
     CHECK(!menu_active && !projected && world_calls==1 && observed_campaign==0);
     CHECK(world_draws==2 && psx_mod_read_byte(0x80166BB0u)==3);
 
+    /* Shipped41 can retain the pause callback guard across Quit/Continue.
+     * A fresh stage must admit P2's real menu again; a completed native menu
+     * must not keep suppressing the partner's controller in gameplay. */
+    reset();menu_active=menu_guard=1;menu_owner=1;
+    mmx4_coop_lifecycle_reset();
+    CHECK(!menu_active && !menu_guard && !menu_projecting);
+    inputs[1]=START;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+    CHECK(menu_active && menu_owner==1);
+    inputs[1]=0;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(observed_campaign==1);
+    pause_exit=1;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(!menu_active && mmx4_coop_lifecycle_can_tick());
+    reset();menu_active=menu_guard=1;menu_owner=1;
+    mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+    CHECK(!menu_active && !menu_guard && mmx4_coop_lifecycle_can_tick());
+
     /* A P2 collection heals P2 on later native actor ticks. */
     reset();uint32_t actor=0x8013D000u;
     psx_mod_write_byte(actor+4,1);psx_mod_write_word(actor+8,100);
