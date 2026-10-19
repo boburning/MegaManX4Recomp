@@ -486,6 +486,49 @@ static int frost_snow_background(CPUState *cpu,uint32_t address) {
     psx_mod_counter_add("mmx4.coop.split-snow-background-ticks",1);
     return mmx4_coop_finish(cpu,result);
 }
+/* These small native controllers run after the player-camera snapshots.
+ * Mode5's ordinary camera helper does not reproduce their animation writes. */
+static int fortress_background(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    unsigned scroll=address==0x800DA878u,kind=scroll?7u:6u;
+    if(background_call || !available() || mmx4_coop_projected() ||
+       actor<TRAIN_POOL || actor>=TRAIN_POOL+TRAIN_SLOTS*TRAIN_ACTOR_BYTES ||
+       (actor-TRAIN_POOL)%TRAIN_ACTOR_BYTES || psx_mod_read_byte(actor+1)!=kind)return 0;
+    initialize_cameras();
+    uint32_t layer=CAMERA+0x54u;
+    uint8_t before[0x54],after[0x54];
+    read_bytes(layer,before,sizeof before);
+    unsigned running=psx_mod_read_byte(actor+4)<=1;
+    background_call=4;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    read_bytes(layer,after,sizeof after);
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t foreground=state+16u+seat*CAMERA_BYTES;
+        uint32_t shadow=foreground+0x54u;
+        for(unsigned offset=0;offset<sizeof before;++offset) {
+            if((offset>=8u && offset<16u) || (offset>=20u && offset<28u))continue;
+            if(before[offset]!=after[offset])psx_mod_write_byte(shadow+offset,after[offset]);
+        }
+        if(scroll && running) {
+            /* DA90C adds +14 speed plus half this view's foreground
+             * displacement (signed division toward zero), and follows its
+             * own Y. Never transplant the other player's parallax origin. */
+            uint32_t dx=psx_mod_read_word(foreground+8)-psx_mod_read_word(foreground+20);
+            uint32_t half=signed_half(dx+(dx>>31));
+            psx_mod_write_word(shadow+8,psx_mod_read_word(shadow+8)+
+                psx_mod_read_word(actor+0x14)+half);
+            psx_mod_write_word(shadow+12,psx_mod_read_word(foreground+12));
+        }else if(!scroll && (before[10]!=after[10] || before[11]!=after[11])) {
+            /* DA818 advances a shared four-cell atlas every eight ticks.
+             * It writes only the integer X halfword and the dirty flag. */
+            psx_mod_write_half(shadow+10,(uint16_t)(after[10]|(uint16_t)after[11]<<8));
+        }
+    }
+    background_call=0;
+    psx_mod_counter_add(scroll?"mmx4.coop.split-spaceport-background-ticks":
+                               "mmx4.coop.split-fortress-background-ticks",1);
+    return mmx4_coop_finish(cpu,result);
+}
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
     if(!available() || owner>1 || mmx4_coop_lifecycle_script_owner()>=0 ||
        psx_mod_read_byte(MMX4_PLAY+0x10) || psx_mod_read_byte(MMX4_PLAY+0x1C))return 0;
@@ -900,6 +943,8 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
     psx_mod_register_function_filter_plugin(COOP_ID,0x800C3880u,mushroom_lift_camera);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800D8ED4u,jungle_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B75C8u,frost_snow_background);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800DA7C0u,fortress_background);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800DA878u,fortress_background);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B56F4u,spatial_stage_actor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B6A0Cu,spatial_stage_actor);
     psx_mod_register_function_entry_plugin(COOP_ID,0x80028DB4u,reset_placements);

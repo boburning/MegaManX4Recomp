@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Current status, October18: **173 numbered items; 142 checked and 31 unchecked.**
+Current status, October18: **176 numbered items; 144 checked and 32 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
@@ -9,7 +9,7 @@ and the later Frost path159 are qualified for [Playtest35](https://github.com/ms
 [Playtest34 follow-up evidence](COOP_FEEDBACK34_FOLLOWUP.md).
 Unchecked reports include
 older bounded investigations, the parked online-startup cases and an elective
-story-scene enhancement. They are not 31 confirmed current defects.
+story-scene enhancement. They are not 32 confirmed current defects.
 [Release dispositions](COOP_PLAYTEST32_DISPOSITIONS.md)
 record the checks and limits without relabeling unreproduced reports as fixes.
 The full numbered table remains the source for evidence and validation limits.
@@ -210,7 +210,10 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 170 | [ ] | Frost P2 camera graphics corrupt after the first death | New current36 report; distinguish saved camera limits/origin, local presentation and map/VRAM faults. No claimed fix yet. [Review](COOP_FEEDBACK36_REVIEW.md). `beads-eio.9.188` |
 | 171 | [ ] | Frost part2 slows down after ice-bird freezing effect | New performance report, separate from the fixed camera-selection gate162. Measure actual native effect and rendering work rather than infer the cause from a retained camera. [Review](COOP_FEEDBACK36_REVIEW.md). `beads-eio.9.188` |
 | 172 | [x] | Cyber course character-analysis targeting graphic also follows P2 | Draw a translated copy through the native emitter while retaining one assessment/grade/completion update. Both local Unified rosters and actual two-peer Split near/distant views pass, including original course completion, healthy movement, restored scratch bytes and matching peers through9057/8611. All36 Windows checks and Linux helper cases pass. [Evidence](COOP_PLAYTEST37_INVESTIGATION.md). Separate from boss missile targeting. `beads-eio.9.189` |
-| 173 | [ ] | Optional local side-by-side4:3 views in an8:3 window | Implemented as a development prototype with independent cameras, own HUDs, atomic composition and flat menu/story fallback. Native controller-driven separation, pause/resume and resize pass with848 verified draws and no rollback faults. Unified remains default. Human two-controller/shared-scene qualification and a Jungle top-band observation remain; not merged/released. [Evidence](COOP_LOCAL_SPLIT38.md). `beads-eio.9.190` |
+| 173 | [ ] | Optional local side-by-side4:3 views in an8:3 window | Local-only co-op mod dropdown, Unified by default. Implemented as a development prototype with independent cameras, own HUDs, atomic composition and flat menu/story fallback. Native controller-driven separation, pause/resume and resize pass with848 verified draws and no rollback faults. Unified remains default. Human two-controller/shared-scene qualification and a Jungle top-band observation remain; not merged/released. [Evidence](COOP_LOCAL_SPLIT38.md). `beads-eio.9.190` |
+| 174 | [x] | GitHub39: X/P2 Aiming Laser beam animation missing in Zero campaign | Bind its deferred type9 beam update to the actual X owner. Healthy target-lock baseline fails; native X/P1 control and corrected two-peer Split X/P2 beam pass, with matching peer state. Locally qualified, not released. [Evidence](COOP_GITHUB_REVIEW38.md). `beads-eio.9.192` |
+| 175 | [x] | GitHub39: Space Port and Final Weapon backgrounds frozen for P2 | Publish native-once controller7 scroll and controller6 atlas animation to both saved views, retaining each view's parallax motion. Baseline reproduces both; native two-peer Split and Windows/Linux helper checks pass. Locally qualified, not released. [Evidence](COOP_GITHUB_REVIEW38.md). `beads-eio.9.192` |
+| 176 | [ ] | GitHub41: first intro gate explosions reportedly continue forever | Not reproduced in bounded current X/Unified and Zero/local Split gate traversals: native gate opens, checkpoint2 reached, both healthy and controls released. Old startup log does not identify the failure; keep open pending a failing full session. [Evidence](COOP_GITHUB_REVIEW38.md). `beads-nvej` |
 
 ### October18 Playtest36 recurrence and new requests
 
