@@ -1,4 +1,5 @@
 #include "mod_capcom_bg2d.h"
+#include "execution_profile.h"
 #include "cpu_state.h"
 #include "mod_memory.h"
 #include "mod_visible_placements.h"
@@ -76,6 +77,25 @@ static void background_tile_policy(unsigned layer,int *x,int *y,
 static void mmx4_bg_begin(CPUState *cpu, uint32_t address) {
     (void)address;
     gpu_ws_bg2d_begin_view_layer(cpu->gpr[4],psx_mod_read_word(0x1f800108u),6u);
+#if PSX_EXECUTION_ENHANCED
+    /* Offline own-view draws replace these retail tile-ring packets in
+     * mmx4_bg_end. Building the discarded 21x16 list for each of three layers
+     * and both views needlessly repeats the guest's packet-emission loop.
+     * Leave the canonical draw and all simulation/online paths untouched.
+     * Invalid authored-map setup retains the original producer as fallback. */
+    if(psx_mod_local_view_scope() && !psx_mod_netplay_is_active() &&
+       mmx4_coop_split_views() && arena && cpu->gpr[4]<3u) {
+        unsigned width=psx_mod_read_byte(0x80172224u);
+        unsigned stride=psx_mod_read_half(0x8013bd48u);
+        if(width && stride>=width &&
+           psx_capcom_ram_range(psx_mod_read_word(0x1f800004u),1u) &&
+           psx_capcom_ram_range(psx_mod_read_word(0x1f800008u),512u) &&
+           psx_capcom_ram_range(psx_mod_read_word(0x1f80000cu),4u)) {
+            if(psx_mod_finish_function(cpu))
+                psx_mod_counter_add("mmx4.renderer.local-retail-list-skipped",1);
+        }
+    }
+#endif
 }
 static void mmx4_bg_end(CPUState *cpu, uint32_t address) {
     (void)address;
