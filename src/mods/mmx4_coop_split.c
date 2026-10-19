@@ -20,11 +20,12 @@ static unsigned mushroom_camera_call;
 static unsigned destructible_camera_call;
 static unsigned lift_camera_call;
 static unsigned jungle_background_call;
+static unsigned frost_camera_call;
 static uint32_t background_actor,background_dx;
 static unsigned background_parallax;
 
 int mmx4_coop_split_snapshot_ready(void) {
-    return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || destructible_camera_call || lift_camera_call || jungle_background_call || background_call ||
+    return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || destructible_camera_call || lift_camera_call || jungle_background_call || frost_camera_call || background_call ||
         background_actor || background_dx || background_parallax);
 }
 int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
@@ -153,7 +154,7 @@ void mmx4_coop_split_reset(void) {
     if(!state || mmx4_coop_projected() || psx_mod_local_view_scope())return;
     for(unsigned offset=0;offset<STATE_BYTES;offset+=4)psx_mod_write_word(state+offset,0);
     scanning=bounds_call=supplemental=spatial_call=mushroom_camera_call=destructible_camera_call=lift_camera_call=jungle_background_call=background_call=0;
-    background_actor=background_dx=background_parallax=0;
+    background_actor=background_dx=background_parallax=frost_camera_call=0;
 }
 int mmx4_coop_split_activate(void) {
     state=mmx4_coop_split_views()?psx_mod_memory_alloc(STATE_BYTES,4):0;
@@ -907,6 +908,75 @@ static int actor_bounds(CPUState *cpu,uint32_t address) {
     write_bytes(CAMERA,canonical,CAMERA_BYTES);bounds_call=0;
     return mmx4_coop_finish(cpu,result);
 }
+static unsigned frost_camera_phase(int x,int y) {
+    /* 800B8E74's signed position test against the original stage table.
+     * The upper route uses phases0/1; the lower shaft uses phases2..5. */
+    unsigned phase=y<1280?0u:2u,limit=y<1280?2u:5u;
+    while(phase<limit && x>=(int16_t)psx_mod_read_half(0x8010B6C4u+phase*2u))++phase;
+    return y<1280 && phase==2u?1u:phase;
+}
+static int frost_stage_camera(CPUState *cpu,uint32_t address) {
+    if(frost_camera_call || !mmx4_coop_ready() || mmx4_coop_projected() ||
+       psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6 ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=2 || psx_mod_read_byte(MMX4_PLAY+13) ||
+       mmx4_coop_lifecycle_script_owner()>=0 || !mmx4_coop_alive(1))return 0;
+    uint32_t actor=cpu->gpr[4];
+    if(actor<0x80142F98u || actor>=0x80143598u || (actor-0x80142F98u)%0x30u ||
+       psx_mod_read_byte(actor+1)!=15)return 0;
+    Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+    /* B8E74 chooses the shared stage-camera phase from PLAYER's position.
+     * Run this controller once for the living leader, including a surviving
+     * P2. Its original state machine retains the world/layer progression. */
+    uint32_t x=psx_mod_read_word(MMX4_PLAYER+8),y=psx_mod_read_word(MMX4_PLAYER+12);
+    unsigned leader=!actors[0].active || actors[1].world_x>actors[0].world_x;
+    if(leader) {
+        const uint8_t *body=mmx4_coop_second_body();
+        psx_mod_write_word(MMX4_PLAYER+8,byte_word(body,8));
+        psx_mod_write_word(MMX4_PLAYER+12,byte_word(body,12));
+    }
+    frost_camera_call=1;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    frost_camera_call=0;
+    psx_mod_write_word(MMX4_PLAYER+8,x);psx_mod_write_word(MMX4_PLAYER+12,y);
+    if(leader)psx_mod_counter_add("mmx4.coop.p2-frost-stage-camera",1);
+    if(available() && psx_mod_read_word(state)) {
+        /* B8C00/B8C70/B8CE0/B8D50/B8DCC install the bottom follow
+         * threshold only on phase entry. Each view must use its own phase:
+         * a partner still outside the shaft keeps its normal dead zone.
+         * Never replay the controller (phase5 changes shared world state),
+         * and retain each camera's XY, limits and other follow settings. */
+        static const uint16_t bottom[]={192,128,192,112,192};
+        for(unsigned seat=0;seat<2;++seat)if(actors[seat].active) {
+            unsigned phase=frost_camera_phase(actors[seat].world_x,actors[seat].world_y);
+            if(phase<5u) {
+                psx_mod_write_half(state+16u+seat*CAMERA_BYTES+0x2Eu,bottom[phase]);
+                if(psx_mod_read_word(state+8u)==seat+1u)
+                    psx_mod_write_half(CAMERA+0x2Eu,bottom[phase]);
+            }
+        }
+    }
+    return mmx4_coop_finish(cpu,result);
+}
+static void frost_shaft_camera_expand(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!available() || !psx_mod_read_word(state) || psx_mod_local_view_scope() ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=2 || psx_mod_read_byte(MMX4_PLAY+13) ||
+       cpu->gpr[2]!=5728u)return;
+    uint32_t old=psx_mod_read_half(CAMERA+0x24u);
+    if(old!=5312u)return;
+    /* Native B8D64 opens the later shaft's right-hand landing. A saved
+     * partner view otherwise stays at5312 and clamps their body to5624,
+     * above the pit. Release the matching current/target maximum together;
+     * each view keeps its origin, vertical limits and native follow. */
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t shadow=state+16u+seat*CAMERA_BYTES;
+        if(psx_mod_read_half(shadow+0x1Cu)==old && psx_mod_read_half(shadow+0x24u)==old) {
+            psx_mod_write_half(shadow+0x1Cu,(uint16_t)cpu->gpr[2]);
+            psx_mod_write_half(shadow+0x24u,(uint16_t)cpu->gpr[2]);
+            psx_mod_counter_add("mmx4.coop.frost-shaft-camera-unlocks",1);
+        }
+    }
+}
 static int frost_ice_range(CPUState *cpu,uint32_t address) {
     (void)address;
     if(!available() || psx_mod_read_byte(MMX4_PLAY+12)!=2 ||
@@ -931,6 +1001,8 @@ static int frost_ice_range(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,0);
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800B8AF8u,frost_stage_camera);
+    psx_mod_register_instruction_plugin(COOP_ID,0x800B8D64u,0xA42219D4u,frost_shaft_camera_expand);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B9E54u,frost_ice_range);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800257BCu,draw_armor);
     psx_mod_register_function_filter_plugin(COOP_ID,0x800B7078u,mushroom_stage_camera);

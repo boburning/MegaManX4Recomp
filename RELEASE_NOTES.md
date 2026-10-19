@@ -1,15 +1,19 @@
 # Mega Man X4 Recompiled - v0.1.1-coop-playtest.39
 
-**Intro rescue fix and a persistent local split-screen layout.**
+**Steadier split cameras and a persistent local split-screen layout.**
 
 - Fixed the intro rescue getting stuck with endless explosions when Zero/P2 enters the gate first. Both heroes can continue into part 2.
 - Local 8:3 keeps two panes through menus, movies, shared scenes and unavailable camera-pair frames.
 - Local split automatically loads its required authored-map renderer, preventing distant terrain corruption when Custom Renderer was disabled.
 - Reduced redundant background drawing in experimental offline side-by-side co-op.
+- Fixed the later Frost Walrus rising-platform camera and landing limit for P2, including when P1 is dead.
+- Scaled Zero attacks can connect again as their native attack pose changes after recovery.
 
 Local **8:3 split** remains experimental. The optimization reduces rendering work,
 but the reported severe lag is **not confirmed fixed**. Unified remains the default.
 Residual Jungle background banding remains under investigation; 32:9 is still deferred.
+The latest single-slash timing report157 remains **unconfirmed**; the new saber
+correction addresses a separately traced extra rejection rule.
 
 **Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
 Stacked lifebars and Either-player doors remain the defaults. Boss scaling,
