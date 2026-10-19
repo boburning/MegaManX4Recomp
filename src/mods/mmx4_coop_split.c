@@ -209,6 +209,23 @@ static uint32_t signed_half(uint32_t value) {
     /* Retail sra retains the sign bit, including negative odd fixed units. */
     return (value>>1)|(value&0x80000000u);
 }
+static void train_panorama_wrap(uint32_t camera) {
+    unsigned first=psx_mod_read_byte(camera+0x4Du);
+    unsigned last=psx_mod_read_byte(camera+0x4Eu);
+    unsigned width=psx_mod_read_byte(0x80172224u);
+    if(psx_mod_read_byte(camera+4)!=5 || first>last || last>=width)return;
+    int x=(int16_t)psx_mod_read_half(camera+10);
+    /* Retail273F8..274CC resets the scrolling plane's integer origin to
+     * the opposite authored screen. Canonical draws retain that reset;
+     * private draws roll it back, so an ever-increasing saved origin would
+     * reset to the same screen on every subsequent draw and appear frozen.
+     * Retain the same wrap in the simulation's saved plane. Fractional X,
+     * previous origins, foreground geometry and the train clock stay native. */
+    if(x>=(int)(last+1u)*256)
+        psx_mod_write_half(camera+10,(uint16_t)(first*256u));
+    else if(first && x<=(int)(first-1u)*256)
+        psx_mod_write_half(camera+10,(uint16_t)(last*256u));
+}
 static void owl_midboss_camera_unlock(CPUState *cpu,uint32_t address) {
     (void)address;
     uint32_t actor=cpu->gpr[16];
@@ -257,6 +274,35 @@ static int destructible_camera_unlock(CPUState *cpu,uint32_t address) {
     destructible_camera_call=0;
     psx_mod_counter_add("mmx4.coop.split-destructible-camera-unlocks",1);
     return mmx4_coop_finish(cpu,result);
+}
+void mmx4_coop_split_dragoon_camera_release(uint32_t actor) {
+    if(!available() || !psx_mod_read_word(state) ||
+       psx_mod_read_byte(MMX4_PLAY+12)!=12 || psx_mod_read_byte(MMX4_PLAY+13) ||
+       psx_mod_read_byte(MMX4_PLAY+0x1D)!=2 ||
+       actor<0x8013BED0u || actor>=0x8013BED0u+48u*0x9Cu ||
+       (actor-0x8013BED0u)%0x9Cu || !psx_mod_read_byte(actor) ||
+       psx_mod_read_byte(actor+1)!=65 || psx_mod_read_byte(actor+4)!=1 ||
+       psx_mod_read_byte(actor+5)!=3 ||
+       psx_mod_read_half(CAMERA+0x24)!=432 ||
+       psx_mod_read_half(CAMERA+0x26)!=272 ||
+       psx_mod_read_byte(CAMERA+0x48)!=4)return;
+    /* Retail7E400/7E424/7E430 writes target min272/max432 and follow step4
+     * after36B18 has ended the shared intro. P2's saved view still has the
+     * closed432..432 enclosure; a projected owner can lose the writes for
+     * both views. Publish exactly these targets/tuning to that enclosure.
+     * Keep origins, current limits, vertical rooms and native easing intact;
+     * hidden arrivals also need the release when they become visible again. */
+    for(unsigned seat=0;seat<2;++seat) {
+        uint32_t shadow=state+16u+seat*CAMERA_BYTES;
+        if(psx_mod_read_half(shadow+0x24)!=432 ||
+           psx_mod_read_half(shadow+0x26)!=432 ||
+           psx_mod_read_half(shadow+0x28)!=psx_mod_read_half(CAMERA+0x28) ||
+           psx_mod_read_half(shadow+0x2A)!=psx_mod_read_half(CAMERA+0x2A))continue;
+        psx_mod_write_half(shadow+0x24,psx_mod_read_half(CAMERA+0x24));
+        psx_mod_write_half(shadow+0x26,psx_mod_read_half(CAMERA+0x26));
+        psx_mod_write_byte(shadow+0x48,psx_mod_read_byte(CAMERA+0x48));
+        psx_mod_counter_add("mmx4.coop.split-dragoon-camera-releases",1);
+    }
 }
 static int mushroom_lift_camera(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
@@ -412,8 +458,14 @@ static int moving_background(CPUState *cpu,uint32_t address) {
                 }
                 psx_mod_write_word(shadow+base+axis,value);
             }
+            if(!storm)train_panorama_wrap(shadow+base);
         }
     }
+    /* A P2 scene transaction saves its installed camera once more on exit.
+     * Retain the same completed wrap there, or that save would replace P2's
+     * corrected shadow with the unwrapped native controller result again. */
+    if(!storm && train_view)for(unsigned layer=1;layer<3;++layer)
+        train_panorama_wrap(CAMERA+layer*0x54u);
     background_call=background_parallax=0;background_actor=background_dx=0;
     psx_mod_counter_add(storm?"mmx4.coop.split-storm-background-ticks":
                                "mmx4.coop.split-train-background-ticks",1);
