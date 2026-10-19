@@ -1,4 +1,4 @@
-# Local side-by-side prototype
+# Local side-by-side co-op
 
 Local co-op now has a separate Local co-op display dropdown: Unified (default) or
 Side by side 8:3 (Experimental). Each pane uses a native4:3 camera and the
@@ -38,9 +38,10 @@ teleport; later checks wait for each player to be inside its own viewport.
 
 ## Remaining limits
 
-This is a development prototype, not a new public release or a merged change.
-A short two-controller human check and further shared-scene/survivor coverage
-remain. Do not label the whole checklist item173 fully qualified yet.
+Shipping as an opt-in experimental display in Playtest38, authorized by the
+owner after offline native validation. A human two-controller feel/performance
+check remains useful; the automated movement uses accepted controller input.
+This does not claim retail-wide visual perfection.
 
 A band of incorrect-looking tiles at the top of Jungle's distant view remains
 visible with normal P2 movement. The same band appears in a same-location
@@ -59,3 +60,29 @@ prototype does not claim to have repaired that separate cache concern.
 Private screenshots and reports are retained beside the native run, including
 local-close.png, local-distant.png, local-pause.png and local-resized.png.
 GitHub32/39/41 intake is recorded separately in COOP_GITHUB_REVIEW38.md.
+
+The optional32:9 request is tracked as beads-eio.9.195. Native-wide per-pane
+capture and background-cache isolation require further implementation; changing
+only the output aspect would stretch the existing4:3 panes.
+
+## Release38 offline follow-up
+
+The additional hidden, muted original-disc check explicitly confirms
+netplay_status.active=false. Controller-driven P2 separation reaches1221.625
+while P1 remains500. Both retain32HP and their own HUDs. Pause/resume and resize
+pass;880 verified render transactions report0 mismatches, aborts, watchdogs or
+VRAM leaks. A native fatal-health request kills P1; P2 moves and the complete
+pair continues publishing, following the living seat, with no host-state leak.
+
+A separate native intro arena approach enters a shared script: pair mode0 and
+no stale pair during the scene, then valid mode2 after both players regain
+control. Composed screenshots are in build-pr23/local38/story-smoke.
+The first survivor assertion read the diagnostics envelope instead of its
+published field; the corrected run is release-smoke-v2. The long walking
+intro probe did not reach Dragoon within its time bound and is not shared-scene
+proof; the authored arena approach above supplies that check.
+
+Windows production packages and the Linux AppImage are built from the same
+committed source and framework pin. Windows and Linux helper tests cover the
+sandbox/abort/online-refusal behavior. A human two-controller feel check is
+still welcome, particularly for performance at higher internal resolutions.

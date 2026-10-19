@@ -1,4 +1,36 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.37
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.38
+
+**Two local cameras, one co-op game.**
+
+- New **Local co-op display** dropdown: **Unified** (default) or **Side by side 8:3 (Experimental)**. Each local player gets a 4:3 camera and their own HUD. Works offline with two controllers; online camera selection remains separate.
+- Menus and shared story scenes use one view, then return to the two local cameras.
+- Fixed X/P2's missing Aiming Laser beam in Zero's campaign.
+- Fixed the frozen Space Port and Final Weapon backgrounds in independent views.
+
+Local split is experimental and renders both views, so it can cost more performance.
+Jungle background artifacts remain under investigation. A genuine 32:9 mode with
+two 16:9 views is tracked for later; it is not included in this release.
+
+Original-disc offline movement, independent HUDs, pause/resume, resizing and
+protected render-state checks pass. The weapon and background fixes also pass
+actual two-peer Split netplay tests. [Evidence](docs/COOP_LOCAL_SPLIT38.md).
+
+GitHub #41's intro freeze remains unconfirmed. Current native tests pass through
+the gate, explosions, Dragoon's dialogue/rescue and healthy arrivals in part 2;
+the reporter has been asked for a fresh full diagnostic session. Other unchecked
+historical reports remain on the [numbered checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults.
+Boss scaling, Fight Double and Iris, and local split remain optional.
+Campaign memory-card saves carry forward. Public packages disable development cheats.
+
+Keep **Input Display and Recording** enabled. After a bug, quit normally and
+send the matching entire `saves/diagnostics/session-...` folder beside the
+executable or AppImage, the release version and a video timestamp. For netplay,
+include both computers' folders.
+
+## Previous v0.1.1-coop-playtest.37
 
 **More reliable P2 progression and independent boss hits.**
 
