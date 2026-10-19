@@ -1,4 +1,27 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.38
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.39
+
+**Intro rescue fix and lighter local split rendering.**
+
+- Fixed the intro rescue getting stuck with endless explosions when Zero/P2 enters the gate first. Both heroes can continue into part 2.
+- Reduced redundant background drawing in experimental offline side-by-side co-op.
+
+Local **8:3 split** remains experimental. The optimization reduces rendering work,
+but the reported severe lag is **not confirmed fixed**. Unified remains the default.
+Jungle background artifacts remain under investigation; 32:9 is still deferred.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Stacked lifebars and Either-player doors remain the defaults. Boss scaling,
+Fight Double and Iris, and local split remain optional. Campaign memory-card
+saves carry forward. Development cheats are disabled in public packages.
+
+Keep **Input Display and Recording** enabled. After a bug, quit normally and
+send the entire matching `saves/diagnostics/session-...` folder beside the
+executable or AppImage, the release version and a video timestamp. For netplay,
+include both computers' folders.
+
+[Known issues and numbered checklist](https://github.com/mstan/MegaManX4Recomp/blob/master/docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.38
 
 **Two local cameras, one co-op game.**
 
