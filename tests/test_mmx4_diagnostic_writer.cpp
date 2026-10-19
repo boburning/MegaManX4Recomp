@@ -70,6 +70,23 @@ int main(int argc,char **argv) {
     CHECK(writer.native(row,state,state.size()));
     writer.close();CHECK(writer);
     CHECK(contents(root/"recovered.csv").find("N ")!=std::string::npos);
+    // Mode changes use the same bounded queue and never alter replay rows.
+    // Owned copies must survive mutation while the filesystem worker is gated.
+    Writer<8> annotated;entered.store(false);released.store(false);
+    annotated.test_gate(gate);
+    annotated.open(root/"annotated.csv","header\n",root/"mode-changes.csv");
+    CHECK(annotated && annotated.is_open());
+    Mode mode{false,true,true,true,1};
+    CHECK(annotated.mode(7,123,mode));
+    mode={true,true,true,true,0};CHECK(annotated.mode(8,124,mode));
+    CHECK(annotated.native(row,state,state.size()));
+    mode={};released.store(true);annotated.close();CHECK(annotated);
+    CHECK(contents(root/"mode-changes.csv").find("7,123,local,local_split_8_3,2,1,zero\n")!=std::string::npos);
+    CHECK(contents(root/"mode-changes.csv").find("8,124,netplay,netplay_separate,2,1,x\n")!=std::string::npos);
+    std::ostringstream unchanged;unchanged<<"header\n";reference(unchanged,row,state);
+    CHECK(contents(root/"annotated.csv")==unchanged.str());
+    annotated.open(root/"mode-error.csv","header\n",root/"missing"/"modes.csv");
+    CHECK(!annotated && !annotated.is_open());
     writer.open(root/"invalid.csv","header\n");
     CHECK(!writer.native(row,state,state.size()+1));writer.close();CHECK(!writer);
     if(argc>2 && std::string(argv[2])=="benchmark") {

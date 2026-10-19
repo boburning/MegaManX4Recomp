@@ -100,6 +100,13 @@ static unsigned charge_updates;
 static unsigned weapon_uploads;
 static unsigned attached_effect_updates[2][2];
 static uint32_t second_assembly,saved_assembly;
+static unsigned palette_model;
+static uint32_t saved_colors,saved_palette;
+static uint8_t saved_palette_dirty;
+#define SHARED_COLORS 0x80112000u
+#define SHARED_PALETTE 0x80114000u
+#define PRIVATE_COLORS 0x80116000u
+#define PRIVATE_PALETTE 0x80118000u
 
 static uint8_t *address_ptr(uint32_t address) {
     uint32_t physical=address&0x1FFFFFFFu;
@@ -204,6 +211,11 @@ void mmx4_coop_enter_second(void) {
     psx_mod_write_byte(MMX4_PLAY+0x43,second[2]);
     saved_assembly=psx_mod_read_word(0x1F80001Cu);
     psx_mod_write_word(0x1F80001Cu,second_assembly);
+    if(palette_model) {
+        saved_colors=psx_mod_read_word(0x1F800024u);saved_palette=psx_mod_read_word(0x1F800028u);
+        saved_palette_dirty=psx_mod_read_byte(0x80166BB0u);
+        psx_mod_write_word(0x1F800024u,PRIVATE_COLORS);psx_mod_write_word(0x1F800028u,PRIVATE_PALETTE);
+    }
     projected=1;
 }
 void mmx4_coop_leave_second(void) {
@@ -219,6 +231,10 @@ void mmx4_coop_leave_second(void) {
     CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==second[2]);
     psx_mod_write_byte(MMX4_PLAY+0x43,saved_campaign);
     psx_mod_write_word(0x1F80001Cu,saved_assembly);
+    if(palette_model) {
+        psx_mod_write_word(0x1F800024u,saved_colors);psx_mod_write_word(0x1F800028u,saved_palette);
+        psx_mod_write_byte(0x80166BB0u,saved_palette_dirty);
+    }
     projected=0;
 }
 int mmx4_coop_finish(CPUState *cpu,uint32_t result) { cpu->gpr[2]=result;return 1; }
@@ -469,6 +485,22 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         CHECK(mmx4_coop_combat_actor_context());
         ++actor_updates[seat];
         ai_target_x[seat]=psx_mod_read_word(MMX4_PLAYER+8);
+        if(palette_model) {
+            if(psx_mod_read_byte(a0+1)==61 && !psx_mod_read_byte(a0+4)) {
+                /* Original788B8 ->7B7B4:64 source colors, one shared
+                 * destination block and one palette-upload request. */
+                uint32_t source=psx_mod_read_word(0x1F800024u)+0x6A0u;
+                uint32_t destination=psx_mod_read_word(0x1F800028u)+
+                    (psx_mod_read_byte(MMX4_PLAY+12)==3?0x780u:0x580u);
+                for(unsigned i=0;i<64;++i)
+                    psx_mod_write_half(destination+i*2,psx_mod_read_half(source+i*2));
+                psx_mod_write_byte(0x80166BB0u,psx_mod_read_byte(0x80166BB0u)|1u);
+            }else if(seat) {
+                CHECK(psx_mod_read_word(0x1F800024u)==PRIVATE_COLORS);
+                CHECK(psx_mod_read_word(0x1F800028u)==PRIVATE_PALETTE);
+            }
+            return 0x12345678u;
+        }
         if(owl_release_model) {
             unsigned i=owl_release_model-1;
             CPUState release={.gpr={[16]=a0,[17]=a0}};
@@ -528,6 +560,7 @@ static void setup(void) {
     memset(ram,0,sizeof ram);
     memset(scratchpad,0,sizeof scratchpad);
     second_assembly=saved_assembly=0;
+    palette_model=0;
     memset(attached_effect_updates,0,sizeof attached_effect_updates);
     memset(second,0,sizeof second);
     memset(second_vehicle,0,sizeof second_vehicle);
@@ -856,6 +889,43 @@ static void setup_split_actors(unsigned shots) {
         psx_mod_write_word(actor+12,20u<<16);
         psx_mod_write_word(actor+0x68,0x800F8000u);
     }
+}
+static void mushroom_shared_palette(void) {
+    for(unsigned campaign=0;campaign<2;++campaign)
+    for(unsigned mode=0;mode<2;++mode)for(unsigned owner=0;owner<2;++owner)
+    for(unsigned fortress=0;fortress<2;++fortress)for(unsigned condition=0;condition<3;++condition) {
+        target_camera_mode=mode;setup_split_actors(0);palette_model=1;
+        const uint32_t actor=0x8013BED0u;
+        psx_mod_write_byte(actor+0x9C,0);script_owner=(int)owner;
+        psx_mod_write_byte(actor+1,condition==2?60:61);
+        psx_mod_write_byte(actor+4,condition==1?1:0);
+        psx_mod_write_byte(MMX4_PLAYER+2,(uint8_t)campaign);second[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(MMX4_PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(MMX4_PLAY+12,fortress?12:3);
+        psx_mod_write_word(0x1F800024u,SHARED_COLORS);
+        psx_mod_write_word(0x1F800028u,SHARED_PALETTE);
+        psx_mod_write_byte(0x80166BB0u,8);
+        unsigned offset=fortress?0x580u:0x780u;
+        for(unsigned i=0;i<64;++i) {
+            psx_mod_write_half(SHARED_COLORS+0x6A0u+i*2,(uint16_t)(0x2100u+i));
+            psx_mod_write_half(SHARED_PALETTE+offset+i*2,0x55AAu);
+            psx_mod_write_half(PRIVATE_PALETTE+offset+i*2,0x6BB6u);
+        }
+        invoke(0x80021234u);
+        for(unsigned i=0;i<64;++i) {
+            CHECK(psx_mod_read_half(SHARED_PALETTE+offset+i*2)==
+                (condition==0?0x2100u+i:0x55AAu));
+            CHECK(psx_mod_read_half(PRIVATE_PALETTE+offset+i*2)==0x6BB6u);
+        }
+        CHECK(psx_mod_read_byte(0x80166BB0u)==(condition==0?9:8));
+        CHECK(actor_updates[owner]==1 && !actor_updates[owner^1u]);
+        CHECK(psx_mod_read_word(0x1F800024u)==SHARED_COLORS);
+        CHECK(psx_mod_read_word(0x1F800028u)==SHARED_PALETTE);
+        CHECK(psx_mod_read_byte(MMX4_PLAY+0x43)==campaign && !projected);
+        CHECK(psx_mod_read_byte(MMX4_PLAYER+0x5C)==32 && second[0x5C]==32);
+        CHECK(mmx4_coop_combat_snapshot_ready());
+    }
+    palette_model=0;
 }
 static void split_native_targets(void) {
     const uint32_t pools[]={0x80021234u,0x8002144Cu};
@@ -1310,6 +1380,7 @@ int main(void) {
     aiming_beam_owner();
     accepted_events();independent_solids();aim_selection();effect_ownership();armor_handoff();armor_forced_dismount();independent_hit_tokens();
     split_native_targets();
+    mushroom_shared_palette();
     double_counterpart_damage();
     iris_counterpart_damage();
     slash_intro_leader();

@@ -796,6 +796,15 @@ static void update_actor(CPUState *cpu,uint32_t address) {
     }
     actor_owner=target;
     actor_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+    /* Mushroom788B8 initializes its four rainbow CLUTs through7B7B4,
+     * copying stage colors+6A0 into the stage working palette. A survivor
+     * projection must not replace those resources with P2's hero palettes.
+     * Keep this scoped to native boss initialization; live AI and personal
+     * effects retain their existing resource bindings. */
+    unsigned mushroom_palette=actor_pool==0x80021234u &&
+        psx_mod_read_byte(actor+1)==61 && !psx_mod_read_byte(actor+4);
+    uint32_t stage_colors=mushroom_palette?psx_mod_read_word(0x1F800024u):0;
+    uint32_t stage_palette=mushroom_palette?psx_mod_read_word(0x1F800028u):0;
     uint8_t scene_camera[0xFC];
     int own_scene_camera=target && actor_pool==0x80021234u &&
         psx_mod_read_byte(MMX4_PLAY+12)==3 && !psx_mod_read_byte(MMX4_PLAY+13) &&
@@ -806,6 +815,10 @@ static void update_actor(CPUState *cpu,uint32_t address) {
         if(target) {
             mmx4_coop_enter_second();
             psx_mod_write_byte(MMX4_PLAY+0x43,actor_campaign);
+            if(mushroom_palette) {
+                psx_mod_write_word(0x1F800024u,stage_colors);
+                psx_mod_write_word(0x1F800028u,stage_palette);
+            }
         }
         if(psx_mod_read_byte(MMX4_PLAYER+0xBC) && !(captured && psx_mod_read_byte(actor+4)==2)) {
             if(psx_mod_read_byte(actor+3))result=mmx4_coop_call(cpu,0x8002B3C0u,actor,0);
@@ -818,8 +831,12 @@ static void update_actor(CPUState *cpu,uint32_t address) {
             psx_mod_counter_add(target?"mmx4.coop.p2-native-ai":"mmx4.coop.p1-native-ai",1);
         }
         if(target) {
+            uint8_t palette_refresh=mushroom_palette?
+                (uint8_t)(psx_mod_read_byte(0x80166BB0u)&1u):0;
             psx_mod_write_byte(MMX4_PLAY+0x43,psx_mod_read_byte(MMX4_PLAYER+2));
             mmx4_coop_leave_second();
+            if(palette_refresh)psx_mod_write_byte(0x80166BB0u,
+                (uint8_t)(psx_mod_read_byte(0x80166BB0u)|palette_refresh));
         }
     }
     /* The Mushroom midboss issues its intro directly on allocation. Start

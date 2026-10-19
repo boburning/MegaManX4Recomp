@@ -327,7 +327,25 @@ static int moving_background(CPUState *cpu,uint32_t address) {
         train_scene_call=1;
         int handled=mmx4_coop_lifecycle_train(cpu,address);
         train_scene_call=0;
-        if(handled)return handled;
+        if(handled) {
+            /* A P2-owned admission temporarily installs its camera. The
+             * nested world update publishes native scrolling to both saved
+             * views, but an uncommitted scene restores the old canonical
+             * camera afterward. Keep that canonical view's newly published
+             * scenery, or its next camera snapshot erases the scroll every
+             * frame. Foreground limits/origins and scene ownership still
+             * follow the lifecycle transaction; never rerun the controller. */
+            if(state && mmx4_coop_split_views()) {
+                unsigned previous=psx_mod_read_word(state+8u);
+                if(previous==1 || previous==2) {
+                    uint32_t shadow=state+16u+(previous-1u)*CAMERA_BYTES;
+                    uint8_t scenery[2u*0x54u];
+                    read_bytes(shadow+0x54u,scenery,sizeof scenery);
+                    write_bytes(CAMERA+0x54u,scenery,sizeof scenery);
+                }
+            }
+            return handled;
+        }
     }
     unsigned train_view=train_scene_call && state && mmx4_coop_split_views() &&
         mmx4_coop_ready() && !psx_mod_local_view_scope();

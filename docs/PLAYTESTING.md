@@ -90,8 +90,10 @@ new diagnostic session with a `baseline.pst` file.
    input display shows P1/P2's accepted buttons and **REC** while recording.
    It defaults on in fresh installs. If you copied older settings that turned
    it off, enable it again in **Mods** before testing.
-2. Reproduce the problem and note the stage, section, camera mode, which player
-   led, whether either player was dead, and the approximate video timestamp.
+2. Reproduce the problem and note the stage, which player led, and the
+   approximate video timestamp. New recordings identify the release and
+   effective play/camera mode automatically; include those manually for older
+   recordings that do not have this metadata.
 3. Quit normally. Open **`saves/diagnostics` beside the executable or AppImage**.
    `diagnostics-location.txt` beside the application names the session folder;
    `startup-log-location.txt` names the latest startup log.
@@ -103,6 +105,14 @@ Recordings include copies of your starting game saves. Send the whole folder
 with your video and release version, not just `metadata.json` or an empty
 memory-card directory. If no recording appears, send the location-file error
 and startup log. The AppImage writes diagnostics outside its temporary mount.
+
+New `session.json` metadata includes `game_version`, `initial_mode` and the
+committed co-op options. Camera labels distinguish `local_unified`,
+`local_split_8_3`, `netplay_unified` and `netplay_separate`; disabled co-op is
+`single_player`. `mode-changes.csv` records changes at their native input and
+game-frame boundaries, including campaign changes and partner initialization.
+It is written by the background recorder and does not change the replay input
+format. Include it when sending the full session folder.
 
 Local recordings support offline replay with the matching build and assets
 using [replay_mmx4_diagnostics.py](../tools/replay_mmx4_diagnostics.py).
