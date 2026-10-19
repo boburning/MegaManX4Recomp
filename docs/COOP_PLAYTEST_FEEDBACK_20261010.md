@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Current status, October19: **181 numbered items; 151 checked and 30 unchecked.**
+Current status, October19: **202 numbered items; 156 checked and 46 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
@@ -219,6 +219,27 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 179 | [x] | Each hero opens their character's own pause menu in either campaign | Native projection already exists; both menus visually checked in both campaigns. Controller QA covers ownership, guest Quit blocking, weapon selection and resume in local8:3 and Split/Unified LAN. [Evidence](COOP_PERSONAL_MENUS40.md). `beads-or94` |
 | 180 | [x] | Optional separate E-tank contents under co-op | Default-off option implemented. Shared acquisition/W-tanks and P1 saves preserved; private energy survives native reloads and snapshot/view transactions. Native local and real LAN healing/default-shared controls pass with matching peer state. [Evidence](COOP_PERSONAL_MENUS40.md). `beads-or94` |
 | 181 | [x] | Reduce Zero's boss damage by20% with co-op scaling | Exact carry for either seat/cooldown method; X/unscaled damage and native hit admission preserved. Matched native Frost controller trials measure36 raw Zero damage to14 HP with fractional carry; unit and Linux checks pass. [Evidence](COOP_PERSONAL_MENUS40.md). `beads-or94` |
+| 182 | [ ] | Storm Owl lasers appear in P1's view when P2 leads | Playtest39 local split recording supplied. `beads-t56p` |
+| 183 | [x] | Mushroom climb latches close behind P1 and trap P2 | Native39 closes with P2 below. Candidate holds the latch for a living partner in the shaft, then closes after both clear it. Unified visibility and dead/withdrawn exclusions retained. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-t56p` |
+| 184 | [x] | P2-led Mushroom midboss camera initially offset | Native entry used distant P1's camera. Initialize the one midboss scene in the entering P2 view. Native entry, actual final hit and corpse cleanup pass; post-fight traversal remains item187. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-t56p` |
+| 185 | [ ] | Mushroom lift P2 camera offset and follows high jumps | Two supplied recordings; investigate camera separately from panels. `beads-t56p` |
+| 186 | [ ] | Mushroom lift blue-block destruction stops with P1 dead | Surviving P2 must activate the native panel mechanics. `beads-t56p` |
+| 187 | [ ] | P2 invisible wall after Mushroom midboss | Original local split recording supplied. `beads-t56p` |
+| 188 | [ ] | P2 Ride Chaser dash reportedly speeds P1 and leaves P2 behind | Initial native control accelerates the correct vehicle; exact report not yet reproduced. `beads-t56p` |
+| 189 | [ ] | Slash Beast P2 background static, then animates incorrectly | Local split recording and video supplied. `beads-t56p` |
+| 190 | [x] | P2 does not trigger Slash Beast bomb scenes | Bind the shared train controller to the progressing hero and retain that seat through commands. All three actual native bomb admissions/endings pass at2256,3376,6736; final scene also passes with P1 dead. The5056 phase is intentionally not another bomb admission; do not use that as a failure. Other train reports remain open. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-t56p` |
+| 191 | [ ] | P2 does not trigger Slash Beast midboss | Supplied P2-led traversal. `beads-t56p` |
+| 192 | [ ] | P2 does not trigger Slash Beast train stop | Part2 scene controller. `beads-t56p` |
+| 193 | [ ] | P2 does not trigger the other Slash Beast train starting | Part2 scene controller; separate from stop. `beads-t56p` |
+| 194 | [ ] | P2 does not trigger Dragoon part1 fireballs and shaking | Check both start and end of section. `beads-t56p` |
+| 195 | [ ] | P2 does not trigger Dragoon part2 platform fireballs | Original local split recording supplied. `beads-t56p` |
+| 196 | [ ] | Intro part1 P2-led explosives leave P1's entrance-slope camera lower | Opening stage bugs.zip, Opening stage bugs 2.zip, PFuk8tsshi0 and rFtnY31SJcU indexed. Qualify independently from effects. `beads-eio.9.197` |
+| 197 | [ ] | P1-led intro explosions/shake absent in P2's pane | Check distance: distant local explosion flashes were intentionally isolated; nearby views should show appropriate effects. `beads-eio.9.197` |
+| 198 | [ ] | P2 near intro boss door sees explosions without screen shake | Separate the local shake command from shared explosion simulation. `beads-eio.9.197` |
+| 199 | [ ] | P2 does not trigger the first part2 breakable-object drop | Supplied local split recording/video; retain native object sequence. `beads-eio.9.197` |
+| 200 | [ ] | Intro part2 P2 does not spawn bees | Flying groups are emitted by the falling-object sequence (BF3B0), separately from the static type7 placements. The earlier static-enemy spawn check does not validate these groups. `beads-eio.9.197` |
+| 201 | [x] | P2 stays carried by a falling intro platform | Reproduced in matched native movement: P1 falls while P2 stays attached. Preserve BED90's native negative carry instruction across P2's collision pass. Native retest gives both action7/airborne with exactly1px foot-height difference throughout the drop, then both land healthy. Windows36/36 and Linux boundary checks pass. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-eio.9.197` |
+| 202 | [x] | P2 does not trigger intro part2 closing walls | Extend the native loaded-Y predicate to the leading living partner. P2 drops into the shaft, panels enter their original closing states and both retainHP32 while living P1 waits behind. Camera-settling setup required for debug teleports. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-eio.9.197` |
 
 ### October18 Playtest36 recurrence and new requests
 

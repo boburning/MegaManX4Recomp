@@ -1,4 +1,34 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.39
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.40
+
+**More reliable P2 progression, with optional separate E-tanks.**
+
+- Added **Separate E-tanks** to Co-op settings, off by default. Each player gets their own stored health energy when enabled; tank acquisition and campaign saves remain shared.
+- Reduced Zero's scaled boss damage by20% compared with the previous co-op scaling balance. X's damage and unscaled play are unchanged.
+- Split Mushroom's climbing latches wait for a living partner below them in the same shaft.
+- P2's Split Mushroom midboss entrance starts from the correct camera.
+- Either progressing player triggers Slash Beast's bomb scenes, including a surviving P2.
+- P2 falls normally from the opening stage's dropping slab, instead of staying attached to it.
+- The opening stage's closing walls activate when P2 descends ahead of a living P1.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified cameras, Stacked lifebars and Either-player doors remain the defaults.
+Separate E-tanks, boss scaling, Fight Double and Iris, and local8:3 split remain
+optional. Memory-card campaign saves carry forward; older emulator save states
+may be incompatible with this build. Public packages disable development cheats.
+
+Local8:3 split remains experimental. Remaining elevator, stage-effect, background
+and enemy-spawn reports are still under investigation. The latest single-slash
+timing report157 and severe local split lag remain **unconfirmed**, not declared
+fixed in this release. The unfinished Dragoon and elevator candidates are excluded.
+
+Keep **Input Display and Recording** enabled. After a bug, quit normally and send
+the entire matching `saves/diagnostics/session-...` folder beside the executable
+or AppImage, the release version and a video timestamp. For netplay, include both
+computers' folders.
+
+[Known issues and numbered checklist](https://github.com/mstan/MegaManX4Recomp/blob/master/docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.39
 
 **Steadier split cameras and a persistent local split-screen layout.**
 

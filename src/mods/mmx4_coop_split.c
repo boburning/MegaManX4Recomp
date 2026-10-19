@@ -23,10 +23,11 @@ static unsigned jungle_background_call;
 static unsigned frost_camera_call;
 static uint32_t background_actor,background_dx;
 static unsigned background_parallax;
+static unsigned train_scene_call;
 
 int mmx4_coop_split_snapshot_ready(void) {
     return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || destructible_camera_call || lift_camera_call || jungle_background_call || frost_camera_call || background_call ||
-        background_actor || background_dx || background_parallax);
+        background_actor || background_dx || background_parallax || train_scene_call);
 }
 int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
     /* Camera, placement and controller bytes use the guest-memory section. */
@@ -154,7 +155,7 @@ void mmx4_coop_split_reset(void) {
     if(!state || mmx4_coop_projected() || psx_mod_local_view_scope())return;
     for(unsigned offset=0;offset<STATE_BYTES;offset+=4)psx_mod_write_word(state+offset,0);
     scanning=bounds_call=supplemental=spatial_call=mushroom_camera_call=destructible_camera_call=lift_camera_call=jungle_background_call=background_call=0;
-    background_actor=background_dx=background_parallax=frost_camera_call=0;
+    background_actor=background_dx=background_parallax=frost_camera_call=train_scene_call=0;
 }
 int mmx4_coop_split_activate(void) {
     state=mmx4_coop_split_views()?psx_mod_memory_alloc(STATE_BYTES,4):0;
@@ -314,7 +315,24 @@ static int moving_background(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];
     unsigned storm=address==0x800DA298u;
     unsigned kind=storm?5u:address==0x800D8648u?0u:2u;
-    if(background_call || !available() || mmx4_coop_projected() ||
+    if(!storm && !train_scene_call && !background_call && mmx4_coop_ready() &&
+       !mmx4_coop_projected() && !psx_mod_local_view_scope() &&
+       psx_mod_read_byte(MMX4_PLAY)==6 && psx_mod_read_byte(MMX4_PLAY+12)==8 &&
+       actor>=TRAIN_POOL && actor<TRAIN_POOL+TRAIN_SLOTS*TRAIN_ACTOR_BYTES &&
+       !((actor-TRAIN_POOL)%TRAIN_ACTOR_BYTES) && psx_mod_read_byte(actor+1)==kind) {
+        /* D8BB4/D993C select phases from PLAYER.x. D8E94/D9B08 then
+         * start real camera locks, bomb scenes and train stop/start events.
+         * Keep this one controller with the progressing hero and retain
+         * that owner through the subsequent native command completion. */
+        train_scene_call=1;
+        int handled=mmx4_coop_lifecycle_train(cpu,address);
+        train_scene_call=0;
+        if(handled)return handled;
+    }
+    unsigned train_view=train_scene_call && state && mmx4_coop_split_views() &&
+        mmx4_coop_ready() && !psx_mod_local_view_scope();
+    if(background_call || (!available() && !train_view) ||
+       (mmx4_coop_projected() && !train_view) ||
        psx_mod_read_byte(MMX4_PLAY+12)!=(storm?7u:8u) || actor<TRAIN_POOL ||
        actor>=TRAIN_POOL+TRAIN_SLOTS*TRAIN_ACTOR_BYTES ||
        (actor-TRAIN_POOL)%TRAIN_ACTOR_BYTES ||
@@ -327,7 +345,7 @@ static int moving_background(CPUState *cpu,uint32_t address) {
     uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
     read_bytes(CAMERA,after,CAMERA_BYTES);
     unsigned previous=psx_mod_read_word(state+8u);
-    unsigned owner=previous?previous-1u:0u;
+    unsigned owner=train_view && mmx4_coop_projected()?1u:previous?previous-1u:0u;
     /* QA87 traces D9218 a0=80169CB8, ra=80021BDC. Native80021B34 and its
      * allocator8002B048 agree: four30-byte actors, table800F2AB4, kinds0/2.
      * The train's mode5 helpers cannot recreate these shared actor writes.

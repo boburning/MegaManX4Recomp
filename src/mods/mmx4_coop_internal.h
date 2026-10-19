@@ -131,6 +131,8 @@ int mmx4_coop_lifecycle_assessment_bounds(CPUState *cpu,uint32_t address);
 int mmx4_coop_assessment_copy(uint32_t actor,uint8_t copy[0x60]);
 /* Shared Mushroom lift admission; returns a handled native result in v0. */
 int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address);
+/* The train's single scenery controller also owns native scripted scenes. */
+int mmx4_coop_lifecycle_train(CPUState *cpu,uint32_t address);
 void mmx4_coop_lifecycle_room_entry(unsigned owner);
 void mmx4_coop_lifecycle_camera_bounds(CPUState *cpu,unsigned owner);
 void mmx4_coop_clear_current_attacks(void);

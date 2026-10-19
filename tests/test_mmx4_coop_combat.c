@@ -114,6 +114,10 @@ uint16_t psx_mod_read_half(uint32_t address) {
     return (uint16_t)(psx_mod_read_byte(address) |
         (uint16_t)psx_mod_read_byte(address+1)<<8);
 }
+void psx_mod_write_half(uint32_t address,uint16_t value) {
+    psx_mod_write_byte(address,(uint8_t)value);
+    psx_mod_write_byte(address+1,(uint8_t)(value>>8));
+}
 uint32_t psx_mod_read_word(uint32_t address) {
     return (uint32_t)psx_mod_read_half(address) |
         (uint32_t)psx_mod_read_half(address+2)<<16;
@@ -160,6 +164,17 @@ int mmx4_coop_ready(void) { return (int)ready; }
 int mmx4_coop_projected(void) { return (int)projected; }
 int mmx4_coop_split_views(void) {return (int)split;}
 int mmx4_coop_lifecycle_script_owner(void) {return script_owner;}
+static unsigned scene_camera_model,scene_camera_begins,scene_camera_ends;
+int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
+    CHECK(owner==1);
+    if(!scene_camera_model || !split)return 0;
+    ++scene_camera_begins;memcpy(canonical,address_ptr(0x801419B0u),0xFC);
+    psx_mod_write_half(0x801419BAu,4500);return 1;
+}
+void mmx4_coop_split_scene_camera_end(unsigned owner,const uint8_t canonical[0xFC],int committed) {
+    CHECK(owner==1);++scene_camera_ends;
+    if(!committed)memcpy(address_ptr(0x801419B0u),canonical,0xFC);
+}
 int mmx4_coop_alive(unsigned seat) { CHECK(seat<2);return (int)alive[seat]; }
 uint8_t *mmx4_coop_second_body(void) { return second; }
 uint8_t *mmx4_coop_first_body(void) {return first_saved;}
@@ -646,6 +661,14 @@ static void independent_solids(void) {
     CHECK(observed_sides[1]==0x11 && observed_carried[1]==0x21);
     CHECK(observed_vehicle_sides[1]==0x31 && observed_vehicle_carried[1]==0x41);
     CHECK(populated==mmx4_coop_combat_digest(2166136261u));
+    /* A falling solid explicitly disables carry before the P1 pass. Its
+     * new P1 contact result must not erase that instruction for P2, even
+     * when P2 had a positive carry history on the previous world tick. */
+    clear_calls();psx_mod_write_byte(ACTOR+0x76,255);invoke(SOLID);
+    CHECK(observed_carried[0]==255 && observed_carried[1]==255);
+    CHECK(psx_mod_read_byte(ACTOR+0x76)==0x20);
+    clear_calls();invoke(SOLID);
+    CHECK(observed_carried[1]==0x21); /* No permanent carry disable. */
     /* Reuse from a private player allocation must clear prior solid history. */
     mmx4_coop_enter_second();CHECK(invoke(ALLOC)==ACTOR);mmx4_coop_leave_second();
     CHECK(allocator_calls==1 && empty==mmx4_coop_combat_digest(2166136261u));
@@ -836,6 +859,19 @@ static void setup_split_actors(unsigned shots) {
 }
 static void split_native_targets(void) {
     const uint32_t pools[]={0x80021234u,0x8002144Cu};
+    for(unsigned camera_mode=0;camera_mode<2;++camera_mode) {
+        target_camera_mode=camera_mode;setup_split_actors(0);
+        psx_mod_write_byte(MMX4_PLAY+12,3);
+        psx_mod_write_byte(0x8013BED0u,0);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+1,33);
+        psx_mod_write_half(0x801419BAu,1000);
+        scene_camera_model=1;scene_camera_begins=scene_camera_ends=0;
+        invoke(0x80021234u);
+        CHECK(actor_updates[1]==1 && !projected);
+        CHECK(scene_camera_begins==camera_mode && scene_camera_ends==camera_mode);
+        CHECK(psx_mod_read_half(0x801419BAu)==1000);
+        CHECK(mmx4_coop_combat_snapshot_ready());scene_camera_model=0;
+    }
     for(target_camera_mode=0;target_camera_mode<2;++target_camera_mode)
     for(unsigned shots=0;shots<2;++shots) {
         setup_split_actors(shots);ai_direct_write=1;

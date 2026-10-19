@@ -441,6 +441,11 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
          * action zero; a living P2 must supply this read without revival. */
         if(psx_mod_read_byte(MMX4_PLAYER+5))psx_mod_write_byte(a0+6,1);
         break;
+    case 0x800D8648:
+    case 0x800D9218:
+        ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        psx_mod_write_word(a0+0x18,psx_mod_read_word(MMX4_PLAYER+8));
+        break;
     case 0x800C2BE0:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         if(psx_mod_read_byte(a0+0x72)&8u) {
@@ -1693,7 +1698,7 @@ int main(void) {
         case 8:warp_phase=1;warp_owner=0;p2[0]=0;break;
         }
         intro_survivor_crusher(&cpu,0x800C0574u);
-        CHECK(cpu.gpr[3]==(ineligible?394u:955u));
+        CHECK(cpu.gpr[3]==(ineligible>1?394u:955u));
         CHECK(psx_mod_read_half(PLAYER+14)==394 &&
             psx_mod_read_byte(PLAYER+0x5C)==(ineligible==1?16:0));
     }
@@ -2937,6 +2942,45 @@ int main(void) {
     }
     reset();
     CHECK(!personal_floor_momentum(&cpu));
+    /* Independent panes retain a partner below the same climbing shaft,
+     * even when P1 has scrolled the partner completely out of view. */
+    reset();split_views=1;latch_calls=0;
+    {
+        uint32_t fan=0x80165A30u;
+        psx_mod_write_byte(PLAY+12,3);psx_mod_write_byte(fan,1);
+        psx_mod_write_byte(fan+1,13);psx_mod_write_byte(fan+4,1);
+        psx_mod_write_half(fan+10,6152);psx_mod_write_half(fan+14,2232);
+        psx_mod_write_word(fan+0x68,0x800F0000u);
+        psx_mod_write_byte(0x800F0003u,16);psx_mod_write_byte(0x800F0023u,16);
+        put32(p2+8,6144u<<16);put32(p2+12,2500u<<16);
+        put32(p2+0x68,0x800F0020u);cpu.gpr[6]=PLAYER;
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);CHECK(!latch_calls);
+        put32(p2+12,2150u<<16);
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);CHECK(latch_calls==1);
+        psx_mod_write_byte(fan+5,0);put32(p2+8,100u<<16);put32(p2+12,2500u<<16);
+        mmx4_coop_call(&cpu,0x800C36E8u,fan,PLAY);CHECK(latch_calls==2);
+    }
+    /* Long-lived train scenery owns real scenes. It must follow progress
+     * rather than whichever hero stayed near
+     * the controller's allocation coordinate. P1's story remains canonical. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+      for(unsigned kind=0;kind<2;++kind) {
+        reset();split_views=mode;scene_calls=0;
+        uint32_t actor=0x80169CB8u;
+        uint32_t address=kind==0?0x800D8648u:0x800D9218u;
+        psx_mod_write_byte(PLAY+12,8);
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_half(actor+10,36);
+        psx_mod_write_half(actor+14,650);
+        psx_mod_write_half(PLAYER+10,128);psx_mod_write_half(PLAYER+14,650);
+        put32(p2+8,1800u<<16);put32(p2+12,650u<<16);
+        cpu.gpr[4]=actor;CHECK(scene_actor(&cpu,address));
+        CHECK(scene_calls==1 && psx_mod_read_half(actor+0x1A)==1800);
+        CHECK(observed_campaign==campaign && psx_mod_read_half(PLAYER+10)==128);
+        CHECK(!projected && mmx4_coop_lifecycle_snapshot_ready());
+      }
     CHECK(!colonel_palette_refreshes(&cpu));
     CHECK(!survivor_palette_animation(&cpu));
     puts("co-op lifecycle ownership checks passed");return 0;
