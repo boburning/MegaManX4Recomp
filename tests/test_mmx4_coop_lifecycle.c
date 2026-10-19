@@ -40,6 +40,11 @@ static unsigned stage_animation_frame;
 #define STAGE_PALETTE_OFFSET 0x9A0u
 static int split_views;
 static int both_door_players;
+static int private_etanks_option;
+int psx_mod_current_option_value(const char *key,char *value,uint32_t cap) {
+    assert(!strcmp(key,"separate_etanks") && cap>=6);
+    strcpy(value,private_etanks_option?"true":"false");return 1;
+}
 int mmx4_coop_both_door_players(void) {return both_door_players;}
 static unsigned stage_script_calls,scene_calls,observed_controls;
 static unsigned both_door_crossings;
@@ -639,7 +644,7 @@ static void reset(void) {
     door_map_queries=0;door_map_kind=0x38;
     CPUState cpu={0};memset(ram,0,sizeof ram);memset(p2,0,sizeof p2);
     memset(p2_vehicle,0,sizeof p2_vehicle);
-    fresh_game(&cpu,0);projected=local_view=0;inputs[0]=inputs[1]=0;
+    fresh_game(&cpu,0);separate_etanks=0;projected=local_view=0;inputs[0]=inputs[1]=0;
     world_calls=observed_campaign=pause_commit=pause_exit=world_draws=0;
     memset(assessment_calls,0,sizeof assessment_calls);
     assessment_cull=0;
@@ -837,7 +842,46 @@ static void prepare_direct_spawn(CPUState *cpu,unsigned campaign) {
     for(unsigned layer=0;layer<3;++layer)psx_mod_write_byte(0x801419F4u+layer*0x54u,1);
     psx_mod_write_half(0x801419B0u+0x1C,1888);
 }
+static int personal_tank_inventory(void) {
+    reset();private_etanks_option=1;mmx4_coop_lifecycle_activate();
+    CHECK(separate_etanks);inventory_initialized=0;
+    psx_mod_write_half(PLAY+0x5A,0x1000);
+    psx_mod_write_byte(PLAY+0x5C,0x90);
+    mmx4_coop_enter_second();CHECK(psx_mod_read_byte(PLAY+0x5C)==0x90);
+    psx_mod_write_byte(PLAY+0x5C,0x88);
+    /* A tank acquired by the guest is available to the campaign owner too;
+     * hearts, maxHP, lives, W-energy and story progress never become private. */
+    psx_mod_write_half(PLAY+0x5A,0x3001);
+    psx_mod_write_byte(PLAY+0x5D,0x84);psx_mod_write_byte(PLAY+0x5E,7);
+    mmx4_coop_leave_second();
+    CHECK(psx_mod_read_byte(PLAY+0x5C)==0x90 && psx_mod_read_byte(PLAY+0x5D)==0x80);
+    CHECK(psx_mod_read_half(PLAY+0x5A)==0x3001 && psx_mod_read_byte(PLAY+0x5E)==7);
+    psx_mod_write_byte(PLAY+0x5C,0x8E);
+    mmx4_coop_enter_second();CHECK(psx_mod_read_byte(PLAY+0x5C)==0x88);
+    CHECK(psx_mod_read_byte(PLAY+0x5D)==0x84);mmx4_coop_leave_second();
+    CPUState cpu={0};inputs[1]=START;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+    inputs[1]=0;pause_commit=1;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);pause_commit=0;
+    CHECK(p2[0x5C]==13 && psx_mod_read_byte(PLAYER+0x5C)==16);
+    CHECK(second_inventory.etanks[0]==0x87 && psx_mod_read_byte(PLAY+0x5C)==0x8E);
+    /* Guest energy is authoritative in rollback and render transactions. */
+    Mmx4SnapshotIO count={NULL,NULL,0,0,MMX4_SNAPSHOT_COUNT,1};
+    CHECK(mmx4_coop_lifecycle_snapshot(&count));uint32_t bytes=count.pos;
+    uint8_t *saved=malloc(bytes);CHECK(saved);
+    Mmx4SnapshotIO io={saved,NULL,bytes,0,MMX4_SNAPSHOT_WRITE,1};CHECK(mmx4_coop_lifecycle_snapshot(&io));
+    uint32_t digest=mmx4_coop_lifecycle_digest(1);
+    second_inventory.etanks[0]=0x81;CHECK(digest!=mmx4_coop_lifecycle_digest(1));
+    io=(Mmx4SnapshotIO){NULL,saved,bytes,0,MMX4_SNAPSHOT_READ,1};
+    CHECK(mmx4_coop_lifecycle_snapshot(&io) && digest==mmx4_coop_lifecycle_digest(1));
+    mmx4_coop_lifecycle_view_save();second_inventory.etanks[0]=0;
+    mmx4_coop_lifecycle_view_restore();CHECK(digest==mmx4_coop_lifecycle_digest(1));
+    separate_etanks=0;io=(Mmx4SnapshotIO){NULL,saved,bytes,0,MMX4_SNAPSHOT_VALIDATE,1};
+    CHECK(!mmx4_coop_lifecycle_snapshot(&io));free(saved);
+    private_etanks_option=0;mmx4_coop_lifecycle_activate();CHECK(!separate_etanks);
+    reset();return 0;
+}
+
 int main(void) {
+    CHECK(!personal_tank_inventory());
     CPUState cpu={0};reset();
     /* Hub return pads include Slash's wall-adjacent spawn. Enrollment may
      * prefer +24 elsewhere; a refight return must wait for the existing

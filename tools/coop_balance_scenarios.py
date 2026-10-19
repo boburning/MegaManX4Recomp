@@ -71,7 +71,8 @@ def boss_balance(s, spider=False):
     if s.boss_scaling:
         raw = final['mmx4.coop.boss-damage-before-scaling'] - initial.get('mmx4.coop.boss-damage-before-scaling', 0)
         applied = final['mmx4.coop.boss-damage-after-scaling'] - initial.get('mmx4.coop.boss-damage-after-scaling', 0)
-        assert applied == raw // 2 and hp == 48 - applied, (raw, applied, hp)
+        zero = final.get('mmx4.coop.zero-boss-damage-before-scaling',0) - initial.get('mmx4.coop.zero-boss-damage-before-scaling',0)
+        assert applied == (raw*5-zero)//10 and hp == 48 - applied, (raw, zero, applied, hp)
         separate=getattr(s,'boss_cooldowns','per_player')=='per_player'
         counter='mmx4.coop.per-player-boss-cooldown' if separate else 'mmx4.coop.shorter-boss-cooldown'
         assert final[counter] > initial.get(counter, 0)

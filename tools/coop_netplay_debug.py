@@ -74,12 +74,16 @@ class NetplayDevelopment:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ports', type=int, nargs=2, required=True, metavar=('HOST', 'GUEST'))
-    parser.add_argument('command', choices=('stage', 'checkpoint', 'health', 'invulnerable', 'teleport', 'enemy-health','weapon','frost-field'))
+    parser.add_argument('command', choices=('stage', 'checkpoint', 'health', 'invulnerable', 'teleport', 'enemy-health','weapon','frost-field','etanks'))
     parser.add_argument('values', type=int, nargs='+')
     args = parser.parse_args()
     runtime = NetplayDevelopment(*args.ports)
     if args.command == 'teleport':
         runtime.teleport(*args.values)
+    elif args.command == 'etanks':
+        if len(args.values)!=2 or not 0<=args.values[0]<=32 or not 0<=args.values[1]<=2:
+            parser.error('etanks requires energy0..32 and seat0/1/2 (both)')
+        runtime.fixture(6,252,args.values[0],args.values[1])
     elif args.command == 'frost-field':
         if len(args.values)!=1 or not 0<=args.values[0]<4:
             parser.error('frost-field requires one authored region0..3')

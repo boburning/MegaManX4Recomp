@@ -117,6 +117,7 @@ def balance_saved_slashes(s):
         status=r.request('input_route_status');trial['after_load_route']=status
         assert not status['waiting_for_load'] and status['index']==0 and status['remaining']>15,status
         r.fixture(6,253,mode)
+        trial['counters_before']={c['name']:c['count'] for c in r.request('mod_counters')['counters']}
         trial['mode_applied_route']=r.request('input_route_status')
         assert trial['mode_applied_route']['index']==0,trial['mode_applied_route']
         deadline=time.monotonic()+45;last_capture=-1000;image_index=0
@@ -132,6 +133,8 @@ def balance_saved_slashes(s):
             time.sleep(.01)
         else:raise TimeoutError('Saved slash route did not finish')
         r.release();time.sleep(.2)
+        trial['counters_after']={c['name']:c['count'] for c in r.request('mod_counters')['counters']}
+        trial['final_hp']=r.read(actor+0x5c,1)[0]
         new=set(sessions.glob('session-*'))-previous;assert len(new)==1,new
         folder=new.pop();trial['session']=folder.name
         trial['inputs']=[[int(v)for v in line[2:].split(',')]

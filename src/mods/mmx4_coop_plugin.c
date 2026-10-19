@@ -821,6 +821,20 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         guest(cpu,0x80037104u,PLAYER,0);guest(cpu,0x800371E4u,PLAYER,0);
         if(first_arg)leave_second();
         psx_mod_write_word(diagnostic+0x54,1);
+    }else if(command==6 && first_arg==252 && second_arg<=32 && third_arg<=2 &&
+             mmx4_coop_ready()) {
+        /* Private QA: acquire the campaign's two E-tanks, then prepare a
+         * seat's energy. Actual selection/healing/consumption is native.
+         * The same setup arrives through agreed inputs on both peers. */
+        psx_mod_write_half(PLAY+0x5A,(uint16_t)(psx_mod_read_half(PLAY+0x5A)|0x3000u));
+        if(third_arg!=1)for(unsigned i=0;i<2;++i)
+            psx_mod_write_byte(PLAY+0x5C+i,(uint8_t)(0x80u|second_arg));
+        if(third_arg!=0) {
+            enter_second();
+            for(unsigned i=0;i<2;++i)psx_mod_write_byte(PLAY+0x5C+i,(uint8_t)(0x80u|second_arg));
+            leave_second();
+        }
+        psx_mod_write_word(diagnostic+0x54,1);
     }else if(command==6 && first_arg==253 && second_arg<=1 &&
              mmx4_coop_balance_development_mode(second_arg)) {
         /* Matched saved-fight OFF/ON controls, through the same agreed
@@ -1459,7 +1473,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x41503458u); /* X4PA, native per-player hit-table context */
+    mmx4_snapshot_fixed(s,0x42503458u); /* X4PB, personal tanks and tenth-HP damage */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_preference(s,hud_side_by_side);
@@ -1619,7 +1633,7 @@ static void activate(void) {
     }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
-    static const PSXModSnapshotProvider snapshot={5,snapshot_bytes,snapshot_write,
+    static const PSXModSnapshotProvider snapshot={6,snapshot_bytes,snapshot_write,
         snapshot_validate,snapshot_read,snapshot_ready};
     psx_mod_register_snapshot_provider(ID,&snapshot);
     psx_mod_register_savestate_plugin(ID,snapshot_resources_restored);

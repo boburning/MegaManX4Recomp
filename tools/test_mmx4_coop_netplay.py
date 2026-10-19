@@ -257,6 +257,7 @@ def prepare_peer(args, case: Path, seat: int, ports: list[int], jitter: bool,
         f'id = "coop"\nenabled = false\n[feature.values]\ncameras = "{args.cameras}"\n'
         f'hud_layout = "{getattr(args, "hud_layout", "stacked")}"\n'
         f'boss_doors = "{getattr(args, "boss_doors", "either")}"\n'
+        f'separate_etanks = {str(getattr(args,"separate_etanks",False)).lower()}\n'
         f'ultimate_armor_x = {str(getattr(args,"ultimate_armor",False)).lower()}\n'
         f'black_zero = {str(getattr(args,"black_zero",False)).lower()}\n', encoding="utf-8")
     saves = directory / "saves"

@@ -1,7 +1,8 @@
 /* SLUS-00561 native lifecycle and seat ownership. See
  * docs/COOP_LIFECYCLE_MENU_EVIDENCE.md for original executable evidence.
  * P1 owns the one native campaign/save record, including all upgrades.
- * Only P2's transient health/ammo/weapon and menu/pickup ownership live here. */
+ * P2's transient health/ammo/weapon, optional E-tank contents and menu/pickup
+ * ownership live here. Tank acquisition still belongs to the campaign. */
 #include "mmx4_coop_internal.h"
 #include "mmx4_cheats.h"
 #include "mod_netplay.h"
@@ -24,7 +25,7 @@ static int door_pool_actor(uint32_t actor) {
 static unsigned frost_path_contact_call;
 
 typedef struct {
-    uint8_t character, hp, ammo[16], weapon;
+    uint8_t character, hp, ammo[16], weapon, etanks[2];
 } Inventory;
 typedef struct { uint32_t actor; uint8_t owner; } PickupOwner;
 typedef struct { uint32_t actor,serial; uint8_t owner,recovered; } SceneOwner;
@@ -47,6 +48,7 @@ static SceneOwner scenes[32];
 static uint16_t menu_previous[2], select_previous;
 static uint16_t story_pad[3];
 static unsigned inventory_initialized, inventory_projected;
+static unsigned separate_etanks;
 static unsigned stage_known, last_stage, last_section, last_lives;
 static unsigned carry_resources, carry_dead, carry_first_dead, carry_departure, carry_refill;
 static unsigned departed, select_ticks, select_release, rejoin_pending;
@@ -89,9 +91,11 @@ static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
     MMX4_SNAPSHOT_BOOL(s,inventory->character);MMX4_SNAPSHOT_U8(s,inventory->hp);
     mmx4_snapshot_bytes(s,inventory->ammo,sizeof inventory->ammo);
     MMX4_SNAPSHOT_U8(s,inventory->weapon);
+    for(unsigned i=0;i<2;++i)MMX4_SNAPSHOT_U8(s,inventory->etanks[i]);
 }
 int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
     /* Campaign/upgrades are owned by P1's native save record in guest RAM. */
+    mmx4_snapshot_fixed(s,separate_etanks);
     snapshot_inventory(s,&second_inventory);snapshot_inventory(s,&saved_inventory);
     for(unsigned i=0;i<PICKUP_CAPACITY;++i) {
         uint32_t actor=mmx4_snapshot_integer(s,pickups[i].actor,4,UINT32_MAX);
@@ -166,12 +170,20 @@ static void inventory_read(Inventory *out) {
     out->hp=psx_mod_read_byte(PLAY+0x45);
     read_bytes(PLAY+0x49,out->ammo,16);
     out->weapon=psx_mod_read_byte(PLAY+0x60);
+    read_bytes(PLAY+0x5C,out->etanks,2);
 }
 static void inventory_write(const Inventory *in) {
     psx_mod_write_byte(PLAY+0x43,in->character);
     psx_mod_write_byte(PLAY+0x45,in->hp);
     write_bytes(PLAY+0x49,in->ammo,16);
     psx_mod_write_byte(PLAY+0x60,in->weapon);
+    if(separate_etanks) {
+        /* Both players own tanks acquired by the one campaign. Contents
+         * belong to the projected seat; W-tanks remain shared. */
+        unsigned flags=psx_mod_read_half(PLAY+0x5A);
+        for(unsigned i=0;i<2;++i)psx_mod_write_byte(PLAY+0x5C+i,
+            (uint8_t)(in->etanks[i]|((flags&(0x1000u<<i))?0x80u:0u)));
+    }
 }
 void mmx4_coop_lifecycle_project(void) {
     if(inventory_projected)return;
@@ -181,6 +193,7 @@ void mmx4_coop_lifecycle_project(void) {
         second_inventory.character=(uint8_t)(saved_inventory.character^1u);
         second_inventory.hp=psx_mod_read_byte(PLAY+0x46);
         memset(second_inventory.ammo,48,sizeof second_inventory.ammo);
+        memcpy(second_inventory.etanks,saved_inventory.etanks,2);
         inventory_initialized=1;
     }
     inventory_write(&second_inventory);inventory_projected=1;
@@ -241,6 +254,9 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     trace_previous.valid=0;
 }
 void mmx4_coop_lifecycle_activate(void) {
+    char value[16];
+    separate_etanks=psx_mod_current_option_value("separate_etanks",value,sizeof value) &&
+        !strcmp(value,"true");
     /* Reactivation starts a new native runtime; no campaign bytes are touched. */
     fresh_game(NULL,0);
     last_stage=last_section=last_lives=0;
@@ -2265,12 +2281,15 @@ uint32_t mmx4_coop_lifecycle_digest(uint32_t seed) {
     seed=hash_byte(seed,in->character);seed=hash_byte(seed,in->hp);
     for(unsigned i=0;i<16;++i)seed=hash_byte(seed,in->ammo[i]);
     seed=hash_byte(seed,in->weapon);
+    seed=hash_word(seed,separate_etanks);
+    if(separate_etanks)for(unsigned i=0;i<2;++i)seed=hash_byte(seed,in->etanks[i]);
     seed=hash_word(seed,inventory_projected);
     if(inventory_projected) {
         in=&saved_inventory;
         seed=hash_byte(seed,in->character);seed=hash_byte(seed,in->hp);
         for(unsigned i=0;i<16;++i)seed=hash_byte(seed,in->ammo[i]);
         seed=hash_byte(seed,in->weapon);
+        if(separate_etanks)for(unsigned i=0;i<2;++i)seed=hash_byte(seed,in->etanks[i]);
     }
     seed=hash_word(seed,inventory_initialized);seed=hash_word(seed,stage_known);
     seed=hash_word(seed,last_stage);seed=hash_word(seed,last_section);

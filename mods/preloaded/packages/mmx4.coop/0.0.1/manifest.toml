@@ -88,6 +88,14 @@ when = { local_cameras = "split" }
 
 [[option]]
 feature = "coop"
+id = "separate_etanks"
+label = "Separate E-tank contents"
+description = "Give each player their own E-tank energy. Both share tanks acquired by Player 1's campaign; pickups refill the collector's tanks and each character's pause menu uses their own supply. Off shares energy as before. W-tanks stay shared. Requires a fresh boot; the netplay host chooses for both players."
+type = "boolean"
+default = false
+
+[[option]]
+feature = "coop"
 id = "both_story_bosses"
 label = "Fight Double and Iris"
 description = "After your campaign's encounter, return to the boss door for the other fight before continuing the story. Works in local and online co-op; the netplay host chooses for both players."
@@ -98,7 +106,7 @@ default = false
 feature = "coop"
 id = "boss_scaling"
 label = "Co-op boss scaling"
-description = "Double effective boss health using the selected hit cooldown method. Works in local and online co-op. Off preserves the original balance."
+description = "Double effective boss health using the selected hit cooldown method, and reduce Zero's damage to bosses by 20%. Works in local and online co-op. Off preserves the original balance."
 type = "boolean"
 default = false
 
@@ -106,7 +114,7 @@ default = false
 feature = "coop"
 id = "boss_cooldowns"
 label = "Boss hit cooldowns"
-description = "With co-op boss scaling enabled, both methods halve boss hit cooldowns. Separate cooldowns let each player damage a boss independently, with short recovery for Zero's ground and aerial slashes; each blade hits a boss once. Reduced shared cooldowns uses one shared timer. The netplay host chooses for both players."
+description = "With co-op boss scaling enabled, both methods halve boss hit cooldowns. Separate cooldowns let each player damage a boss independently, with short recovery for Zero's ground and aerial slashes and native attack contact checks. Reduced shared cooldowns uses one shared timer. The netplay host chooses for both players."
 type = "choice"
 default = "per_player"
 [[option.choice]]
