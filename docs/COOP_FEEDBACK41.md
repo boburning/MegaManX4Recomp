@@ -86,21 +86,44 @@ This qualifies the reproduced handoff freeze, not every later train phase or
 a new two-peer session. Receipt: `slash-fixed-qualification.json` and
 `slash-waterfall-final/` beneath `build-pr23/feedback41/`.
 
+## Mushroom survivor rainbow palettes (203)
+
+The reproduced ordering is important: P1 dies **before** P2 enters the boss
+room. Killing P1 after admission misses the defect because the shared rainbow
+palette has already been initialized. The before run shows black afterimages
+in both panes, with P2 healthy and the ordinary boss sprite still colored.
+
+Mushroom's native initialization calls8007B7B4 to copy64 colors from the stage
+colors into its working palette. P2's actor projection substitutes hero
+palette pointers and then restores the previous palette-upload flags. That
+writes the rainbow colors to the wrong palette and loses the upload request.
+During this boss's initialization only, preserve the canonical stage color
+and palette pointers and carry the native dirty bit through the projection.
+Boss AI, reaction phases and hero resource ownership otherwise remain native.
+
+The matched native local8:3 survivor retest has colored trails in both panes;
+all128 working-palette bytes match the original color source. Its before
+control contains black0000/8000 entries instead. Private evidence is
+`workshop-current/clones-survivor-entry-2/` versus
+`workshop-fixed2/clones-survivor-fixed/`. Native fatal P1 damage and a room
+position fixture prepare admission; boss HP12 prepares the low-health pattern.
+Neither run forces palette colors, boss phases or an attack result.
+
+The boundary regression fails on the old implementation and passes with the
+fix. It checks both owners/campaigns and camera policies, stage3 and fortress
+palette offsets, initialization versus live updates and unrelated bosses.
+Windows and GCC/Linux combat checks pass. This is native local-render
+qualification plus portable boundary coverage, not a fresh two-peer run.
+
 ## Remaining bounded investigations
 
 - **Elevator185:** checkpoint2 early-ascent probes on unchanged code and the
   deferred repeated-command candidate both keep cameraY equal. The sampled
-  short jump reaches44px relative height; it does not qualify the reported
-  high-jump case. The speculative change is removed from the implementation.
+  held/double-jump control on unchanged code reaches105px relative height
+  across205 observations with equal cameraY. This early-ascent check does not
+  clear every later lift phase. The speculative change is removed from the implementation.
   It remains privately retained for further investigation. Authentic ceiling
   crush rules remain unchanged.
-- **Copies203:** checkpoint3 and a teleport to the upper shaft reach the
-  original boss61 through native admission; preceding traversal is bypassed.
-  Captures cover12 alive and20 survivor observations, using a native fatal P1
-  request with P2 healthy at32HP and ordinary boss AI. Viewed copies retain
-  color; the exact black rainbow-trail phase remains unreproduced. No palette
-  override or boss-phase forcing is added. An invalid checkpoint4 attempt is
-  excluded.
 - **Waterfall204:** actual native movement from432 to726 measures343 frames
   in5.719s with both players together (59.98fps), and330 in5.484s with P1 at
   the observed safe original spawn (60.18fps). Both remain healthy. This first
@@ -108,3 +131,15 @@ a new two-peer session. Receipt: `slash-fixed-qualification.json` and
   The earlier unsafe separated-position teleport is excluded. Full timings,
   body traces and background phase profiles are in
   `slash-waterfall-final/waterfall-route-timing.json`.
+
+## New Sigma recording intake (206-207)
+
+`Sigma stage3 bugs40.zip` has four native diagnostic sessions. The longest
+contains202878 inputs, including63261 gameplay rows in the refight section.
+It is Playtest40, offline local8:3, Both-player doors and boss scaling enabled.
+The video recording failure does not mean these inputs are missing. Its
+archive SHA256 isbac76e69799077d46c55579fa5cf31cb50716e1d1f6090b49b152071b5b17a08.
+
+Track Dragoon's refight camera lock as206 and Slash Beast's repeated weakness
+stun as207. Native room controls and scaling-on/off comparisons are pending;
+input positions alone cannot establish a camera's bounds or a boss reaction.

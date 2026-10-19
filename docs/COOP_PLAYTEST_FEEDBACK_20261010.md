@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Current status, October19: **205 numbered items; 161 checked and 44 unchecked.**
+Current status, October19: **207 numbered items; 162 checked and 45 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
@@ -240,9 +240,11 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 200 | [ ] | Intro part2 P2 does not spawn bees | Flying groups are emitted by the falling-object sequence (BF3B0), separately from the static type7 placements. The earlier static-enemy spawn check does not validate these groups. `beads-eio.9.197` |
 | 201 | [x] | P2 stays carried by a falling intro platform | Reproduced in matched native movement: P1 falls while P2 stays attached. Preserve BED90's native negative carry instruction across P2's collision pass. Native retest gives both action7/airborne with exactly1px foot-height difference throughout the drop, then both land healthy. Windows36/36 and Linux boundary checks pass. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-eio.9.197` |
 | 202 | [x] | P2 does not trigger intro part2 closing walls | Extend the native loaded-Y predicate to the leading living partner. P2 drops into the shaft, panels enter their original closing states and both retainHP32 while living P1 waits behind. Camera-settling setup required for debug teleports. [Evidence](COOP_STAGE_CONTROLLERS40.md). `beads-eio.9.197` |
-| 203 | [ ] | Split Mushroom's rainbow copies turn black after P1 dies | Local8:3 report, video vtSGsKW2dhk. Actual boss61 native AI captured before and after a fatal P1 request: P2 retains32HP and viewed copies retain color. Exact black-trail phase not reproduced; no palette override added. [Current limits](COOP_FEEDBACK41.md). `beads-eio.9.199` |
+| 203 | [x] | Split Mushroom's rainbow copies turn black after P1 dies | Reproduced when P1 dies before boss initialization; later deaths miss it. Preserve canonical stage palette bindings and the native upload request during projected Mushroom initialization. Matched native local8:3 retest shows colored trails and all128 palette bytes matching the original source. Windows/Linux boundary checks cover both rosters and both stage/fortress offsets. [Evidence and limits](COOP_FEEDBACK41.md). `beads-eio.9.199` |
 | 204 | [ ] | Web Spider waterfall/log platforms slow down with both players present | Local8:3 report, video vtSGsKW2dhk around9:00-10:10. Bounded native movement from432 reaches726: both together59.98fps, P1 away60.18fps, all healthy. No slowdown reproduced in that stretch; this does not clear the full moving-log section. [Current limits](COOP_FEEDBACK41.md). `beads-eio.9.200` |
 | 205 | [x] | Diagnostics must identify the effective play/camera mode and release without asking testers | Native session records the actual release and local8:3 despite saved netplay preference Unified. Session metadata includes committed co-op options; asynchronous mode-changes.csv retains initialization and runtime transitions. Windows/Linux recorder and writer checks pass, covering all five mode labels without changing input-v2. [Evidence](COOP_FEEDBACK41.md). Not yet released. `beads-eio.9.201` |
+| 206 | [ ] | Both cameras lock in Magma Dragoon's refight, resembling Mushroom's arena | Sigma stage 3 bugs40.zip contains native Playtest40 recordings, including a 202878-row Sigma run. Saved configuration identifies local8:3, Both doors and boss scaling. Investigate original refight camera transitions; a failed video recording does not mean diagnostics are absent. `beads-eio.9.203` |
+| 207 | [ ] | Slash Beast can be repeatedly stunned by his weakness | Same Playtest40 diagnostic archive and local8:3/scaling settings. Compare native weakness reactions with scaling off before attributing the effect to independent hit cooldowns; ordinary weakness stun alone is not proof of regression. `beads-eio.9.204` |
 
 ### October18 Playtest36 recurrence and new requests
 
