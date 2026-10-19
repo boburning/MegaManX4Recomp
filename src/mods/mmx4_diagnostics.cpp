@@ -20,6 +20,7 @@ extern "C" {
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -29,6 +30,9 @@ extern "C" {
 #include <vector>
 #ifndef MMX4_DIAGNOSTIC_BUILD_ID
 #define MMX4_DIAGNOSTIC_BUILD_ID "diagnostic-test-build"
+#endif
+#ifndef MMX4_DIAGNOSTIC_RELEASE_VERSION
+#define MMX4_DIAGNOSTIC_RELEASE_VERSION "unknown-development-version"
 #endif
 
 namespace {
@@ -47,6 +51,39 @@ std::string baseline_path;
 bool baseline_loaded;
 std::vector<uint8_t> expected_baseline;
 std::vector<uint8_t> pending_baseline;
+mmx4_diagnostic::Mode recorded_mode;
+bool mode_recorded;
+
+mmx4_diagnostic::Mode effective_mode() {
+    bool coop=mod_runtime_snapshot_package_active("mmx4.coop")!=0;
+    unsigned campaign=mmx4_coop_projected()?mmx4_coop_first_body()[2]:psx_mod_read_byte(MMX4_PLAY+0x43);
+    return {psx_mod_netplay_is_active()!=0,coop,coop && mmx4_coop_split_views()!=0,
+        coop && mmx4_coop_ready()!=0,campaign};
+}
+void json_string(std::ostream& out,const char *value) {
+    static const char hex[]="0123456789abcdef";
+    out<<'"';
+    for(const unsigned char *p=(const unsigned char*)value;*p;++p) {
+        if(*p=='"' || *p=='\\')out<<'\\'<<char(*p);
+        else if(*p<32)out<<"\\u00"<<hex[*p>>4]<<hex[*p&15];
+        else out<<char(*p);
+    }
+    out<<'"';
+}
+void option_metadata(std::ostream& out) {
+    static const char *keys[]={"local_cameras","cameras","hud_layout","boss_doors",
+        "boss_scaling","boss_cooldowns","separate_etanks","both_story_bosses",
+        "ultimate_armor_x","black_zero"};
+    out<<'{';bool first=true;
+    for(const char *key:keys) {
+        out<<(first?"":", ");first=false;json_string(out,key);out<<": ";
+        char value[128]{};
+        if(!psx_mod_option_value("mmx4.coop","coop",key,value,sizeof value))out<<"null";
+        else if(!strcmp(value,"true") || !strcmp(value,"false"))out<<value;
+        else json_string(out,value);
+    }
+    out<<'}';
+}
 
 #ifndef MMX4_DIAGNOSTIC_TEST
 std::filesystem::path application_directory() {
@@ -186,14 +223,19 @@ void begin() {
         auto folder=application_directory()/"saves"/"diagnostics"/("session-"+std::to_string(stamp));
         if(!std::filesystem::create_directories(folder))throw std::runtime_error("session directory unavailable");
         recording.open(folder/"inputs.csv",std::string("# mmx4-input-v2\n# execution ")+PSX_EXECUTION_ID+
-            "\n# plan "+plan_identity()+"\n# build " MMX4_DIAGNOSTIC_BUILD_ID "\n");
+            "\n# plan "+plan_identity()+"\n# build " MMX4_DIAGNOSTIC_BUILD_ID "\n",folder/"mode-changes.csv");
         if(!recording)throw std::runtime_error(recording.error_text());
+        mode_recorded=false;
         std::ofstream metadata(folder/"session.json");
         metadata<<"{\n  \"format_version\": 1,\n  \"input_format\": \"mmx4-input-v2\",\n"
             <<"  \"writer\": \"bounded-background-v1\",\n  \"flush_interval_ms\": 100,\n"
             <<"  \"netplay\": "<<(psx_mod_netplay_is_active()?"true":"false")
             <<",\n  \"execution\": \""<<PSX_EXECUTION_ID
-            <<"\",\n  \"build\": \"" MMX4_DIAGNOSTIC_BUILD_ID "\"";
+            <<"\",\n  \"build\": \"" MMX4_DIAGNOSTIC_BUILD_ID "\",\n  \"game_version\": ";
+        json_string(metadata,MMX4_DIAGNOSTIC_RELEASE_VERSION);
+        metadata<<",\n  \"initial_mode\": ";mmx4_diagnostic::mode_json(metadata,effective_mode());
+        metadata<<",\n  \"mode_history\": \"mode-changes.csv\",\n  \"coop_options\": ";
+        option_metadata(metadata);
         if(!pending_baseline.empty()) {
             std::ofstream baseline(folder/"baseline.pst",std::ios::binary);
             baseline.write((const char*)pending_baseline.data(),pending_baseline.size());
@@ -330,6 +372,11 @@ int inputs(CPUState *cpu,uint32_t address) {
             psx_mod_counter_add("mmx4.diagnostics.replayed-inputs",1);
         }
     }else if(recording.is_open() && !recording_failed) {
+        const auto mode=effective_mode();
+        if(!mode_recorded || !(mode==recorded_mode)) {
+            recording.mode(sequence,(unsigned)row[1],mode);
+            recorded_mode=mode;mode_recorded=true;
+        }
         State state{};unsigned size=capture_state(state);
         recording.native(row,state,size);
         if(!recording) {
@@ -347,6 +394,7 @@ void activate() {
     release_sources();
     close_recording();replay.close();recording.clear();replay.clear();
     started=inside=replaying=replay_failed=recording_failed=false;sequence=0;
+    mode_recorded=false;
     pending_baseline.clear();
     expected_baseline.clear();baseline_loaded=false;
     replay_buttons={0xFFFFu,0xFFFFu};

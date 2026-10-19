@@ -1,6 +1,18 @@
 #include "mmx4_coop_internal.h"
+static unsigned train_delegate;
 int mmx4_coop_lifecycle_train(CPUState *cpu,uint32_t address) {
-    (void)cpu;(void)address;return 0;
+    if(!train_delegate)return 0;
+    /* The production lifecycle binds one train update to its progressing
+     * hero and restores an uncommitted P2 scene's canonical camera. Model
+     * that composition too; a no-op delegate cannot catch discarded scroll. */
+    unsigned owner=train_delegate-1u;
+    uint8_t canonical[0xFC];
+    int own=owner && mmx4_coop_split_scene_camera_begin(owner,canonical);
+    if(owner)mmx4_coop_enter_second();
+    uint32_t result=mmx4_coop_call(cpu,address,cpu->gpr[4],cpu->gpr[5]);
+    if(owner)mmx4_coop_leave_second();
+    if(own)mmx4_coop_split_scene_camera_end(owner,canonical,0);
+    return mmx4_coop_finish(cpu,result);
 }
 int mmx4_coop_lifecycle_lift_start(CPUState *cpu,uint32_t address) {
     (void)cpu;(void)address;return 0;
@@ -1249,6 +1261,31 @@ static void train_backgrounds(CPUState *cpu) {
         CHECK(mmx4_coop_split_digest(2166136261u)==digest);
     }
     cpu->gpr[4]=actor;psx_mod_write_byte(actor,0x81);
+    /* Native local8:3 reproduces a frozen canonical/P1 layer while P2's
+     * private layer advances. The P2 trigger-owner transaction must retain
+     * the world pool's delta across the next P1 camera snapshot, once only. */
+    psx_mod_write_byte(actor+1,0);psx_mod_write_byte(actor+4,1);
+    psx_mod_write_word(actor+0x18,0x80000u);
+    mmx4_coop_split_camera_prepare(0);
+    for(unsigned owner=0;owner<2;++owner) {
+        train_delegate=owner+1u;
+        for(unsigned tick=0;tick<3;++tick) {
+            uint32_t origins[2][2];
+            for(unsigned seat=0;seat<2;++seat)for(unsigned layer=1;layer<3;++layer)
+                origins[seat][layer-1]=psx_mod_read_word(saved_camera(seat,layer)+8);
+            uint32_t fg=psx_mod_read_word(CAMERA+8);calls=train_calls;
+            invoke(cpu,0x800D8648u);CHECK(train_calls==calls+1);
+            CHECK(psx_mod_read_word(CAMERA+8)==fg);
+            for(unsigned seat=0;seat<2;++seat)for(unsigned layer=1;layer<3;++layer)
+                CHECK(psx_mod_read_word(saved_camera(seat,layer)+8)==
+                    origins[seat][layer-1]+(0x80000u>>(layer-1)));
+            CHECK(psx_mod_read_word(CAMERA+0x54u+8)==psx_mod_read_word(saved_camera(0,1)+8));
+            CHECK(psx_mod_read_word(CAMERA+0xA8u+8)==psx_mod_read_word(saved_camera(0,2)+8));
+            invoke(cpu,0x80027850u);mmx4_coop_split_camera(cpu,0);
+            CHECK(psx_mod_read_word(saved_camera(0,1)+8)==origins[0][0]+0x80000u);
+        }
+    }
+    train_delegate=0;
     /* Unified calls the original once and allocates no private camera state. */
     split=0;CHECK(mmx4_coop_split_activate());
     calls=train_calls;invoke(cpu,0x800D8648u);CHECK(train_calls==calls+1);

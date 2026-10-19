@@ -94,7 +94,7 @@ set(MMX4_COOP_CONTRACT_FILES
     src/mods/mmx4_coop_balance.c src/mods/mmx4_coop_assessment.c
     src/mods/mmx4_coop_debug_protocol.c src/mods/mmx4_coop_debug_protocol.h
     src/mods/mmx4_diagnostics.cpp src/mods/mmx4_diagnostics.h src/mods/mmx4_diagnostic_paths.h
-    src/mods/mmx4_diagnostic_writer.h
+    src/mods/mmx4_diagnostic_writer.h src/mods/mmx4_diagnostic_mode.h
     src/mods/mmx4_widescreen_plugin.c
     mods/preloaded/packages/mmx4.coop/0.0.1/manifest.toml)
 set(MMX4_COOP_CONTRACT "mmx4-coop-delay-v3\n")
@@ -135,7 +135,8 @@ string(SUBSTRING "${MMX4_COOP_CONTRACT_HASH}" 0 40 MMX4_COOP_CONTRACT_SHORT_HASH
 set_property(SOURCE src/mods/mmx4_coop_plugin.c APPEND PROPERTY COMPILE_DEFINITIONS
     "MMX4_COOP_NETPLAY_COMPATIBILITY=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\"")
 set_property(SOURCE src/mods/mmx4_diagnostics.cpp APPEND PROPERTY COMPILE_DEFINITIONS
-    "MMX4_DIAGNOSTIC_BUILD_ID=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\"")
+    "MMX4_DIAGNOSTIC_BUILD_ID=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\""
+    "MMX4_DIAGNOSTIC_RELEASE_VERSION=\"${MMX4_RELEASE_VERSION}\"")
 set_property(SOURCE src/mods/mmx4_startup_log.cpp APPEND PROPERTY COMPILE_DEFINITIONS
     "MMX4_STARTUP_BUILD_ID=\"${MMX4_COOP_PROFILE_PREFIX}:${MMX4_COOP_CONTRACT_SHORT_HASH}\"")
 add_custom_command(TARGET psx-runtime POST_BUILD

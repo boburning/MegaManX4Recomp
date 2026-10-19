@@ -1646,11 +1646,11 @@ int main(void) {
         }
     /* The platform's native threshold still decides admission. Extend only
      * its loaded X for either a leading living P2 or a P2 survivor. */
-    for(unsigned test=0;test<16;++test) {
+    for(unsigned subtype=0;subtype<15;++subtype)for(unsigned test=0;test<16;++test) {
         reset();uint32_t platform=0x80165A30u+0x8Cu;
         psx_mod_write_byte(PLAY+12,0);psx_mod_write_byte(PLAY+13,1);
         psx_mod_write_byte(platform,1);psx_mod_write_byte(platform+1,1);
-        psx_mod_write_byte(platform+2,5);psx_mod_write_byte(platform+4,1);
+        psx_mod_write_byte(platform+2,(uint8_t)subtype);psx_mod_write_byte(platform+4,1);
         p2[10]=0xD1;p2[11]=7; /*2001, past subtype5's2000 threshold. */
         cpu.gpr[16]=platform;cpu.gpr[3]=1872;cpu.gpr[2]=0x12345678;
         switch(test) {
@@ -1666,7 +1666,7 @@ int main(void) {
         case 10:cpu.gpr[16]=platform+1;break;
         case 11:psx_mod_write_byte(platform,0);break;
         case 12:psx_mod_write_byte(platform+1,2);break;
-        case 13:psx_mod_write_byte(platform+2,14);break;
+        case 13:psx_mod_write_byte(platform+2,15);break;
         case 14:psx_mod_write_byte(platform+4,2);break;
         case 15:psx_mod_write_byte(platform+5,1);break;
         }

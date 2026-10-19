@@ -1669,8 +1669,12 @@ static void intro_platform_activation(CPUState *cpu,uint32_t address) {
        psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+12) ||
        psx_mod_read_byte(PLAY+13)!=1 || !mmx4_coop_alive(1) ||
        !door_pool_actor(actor) || !psx_mod_read_byte(actor) ||
-       psx_mod_read_byte(actor+1)!=1 || psx_mod_read_byte(actor+2)>=14 ||
+       psx_mod_read_byte(actor+1)!=1 || psx_mod_read_byte(actor+2)>=15 ||
        psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5))return;
+    /* The authored table has15 entries. Subtype14 is the lower breakable
+     * object at752/304, armed atX592 just like its subtype1 upper piece.
+     * Excluding it lets P2 drop the upper piece while the lower one waits
+     * indefinitely for P1. Native code retains the drop and collision. */
     int32_t second=(int16_t)(body_word(mmx4_coop_second_body(),8)>>16);
     if(!mmx4_coop_alive(0) || second>(int32_t)cpu->gpr[3]) {
         cpu->gpr[3]=(uint32_t)second;

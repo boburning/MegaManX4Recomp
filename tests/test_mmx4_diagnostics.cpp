@@ -26,6 +26,9 @@ static std::map<std::string,unsigned> counters;
 static std::string save_root,shown[2];
 static std::string application_root;
 static bool online;
+static bool coop_active=true,split_views_config;
+static std::map<std::string,std::string> coop_options{{"local_cameras","unified"},
+    {"cameras","unified"},{"hud_layout","stacked"},{"boss_scaling","false"}};
 static bool diagnostics_active=true;
 static bool projected_context;
 static std::array<uint8_t,0xE4> canonical_first;
@@ -42,8 +45,16 @@ int psx_mod_register_snapshot_loaded_observer(const char*,PSXModSnapshotLoadedOb
 int psx_mod_register_snapshot_provider(const char*,const PSXModSnapshotProvider*) {return 1;}
 int psx_mod_local_view_scope(void) {return 0;}
 int psx_mod_netplay_is_active(void) {return online;}
+int psx_mod_option_value(const char *package,const char *feature,const char *key,char *out,uint32_t size) {
+    if(size)out[0]=0;
+    auto it=coop_options.find(key);
+    if(strcmp(package,"mmx4.coop") || strcmp(feature,"coop") || !coop_active ||
+       it==coop_options.end() || it->second.size()>=size)return 0;
+    memcpy(out,it->second.c_str(),it->second.size()+1);return 1;
+}
 int mod_runtime_snapshot_package_active(const char *id) {
-    return !strcmp(id,"mmx4.diagnostics") && diagnostics_active;
+    return (!strcmp(id,"mmx4.diagnostics") && diagnostics_active) ||
+        (!strcmp(id,"mmx4.coop") && coop_active);
 }
 int psx_mod_set_controller_source(uint32_t seat,PSXModControllerSource source) {sources.at(seat)=source;return 1;}
 void psx_mod_counter_add(const char* name,uint32_t n) {counters[name]+=n;}
@@ -58,6 +69,7 @@ const std::string& mod_runtime_fingerprint() {static const std::string fp="fixtu
 const std::filesystem::path& mod_runtime_root() {static const auto root=std::filesystem::path(save_root)/"mods";return root;}
 }
 int mmx4_coop_ready(void) {return 1;}
+int mmx4_coop_split_views(void) {return split_views_config;}
 int mmx4_coop_projected(void) {return projected_context;}
 uint8_t *mmx4_coop_first_body(void) {return canonical_first.data();}
 void mmx4_coop_development_mask_pad(void) {}
@@ -72,6 +84,7 @@ uint32_t mmx4_coop_call(CPUState*,uint32_t,uint32_t,uint32_t) {
 uint16_t mmx4_coop_input(unsigned seat);
 namespace {std::filesystem::path application_directory() {return std::filesystem::u8path(application_root);}}
 #define MMX4_DIAGNOSTIC_TEST
+#define MMX4_DIAGNOSTIC_RELEASE_VERSION "fixture-release-for-test"
 #include "../src/mods/mmx4_diagnostics.cpp"
 uint16_t mmx4_coop_input(unsigned seat) {
     uint16_t buttons=pads.at(seat);mmx4_diagnostics_resolve_input(seat,&buttons);
@@ -126,6 +139,14 @@ int main(int argc,char **argv) {
     CHECK(std::filesystem::exists(file.parent_path()/"card2.absent"));
     CHECK(std::filesystem::exists(file.parent_path()/"mods-state.toml"));
     CHECK(std::filesystem::exists(file.parent_path()/"session.json"));
+    {std::ifstream meta(file.parent_path()/"session.json");
+     std::string text((std::istreambuf_iterator<char>(meta)),{});
+     CHECK(text.find("\"game_version\": \"fixture-release-for-test\"")!=std::string::npos);
+     CHECK(text.find("\"camera_mode\": \"local_unified\"")!=std::string::npos);
+     CHECK(text.find("\"local_cameras\": \"unified\"")!=std::string::npos);
+     CHECK(text.find("\"boss_scaling\": false")!=std::string::npos);
+     CHECK(text.find("\"mode_history\": \"mode-changes.csv\"")!=std::string::npos);}
+    CHECK(std::filesystem::exists(file.parent_path()/"mode-changes.csv"));
     {std::ifstream location(std::filesystem::path(save_root)/"diagnostics-location.txt");
      std::string text((std::istreambuf_iterator<char>(location)),{});
      CHECK(text.find(std::filesystem::absolute(file.parent_path()).make_preferred().u8string())!=std::string::npos);}
@@ -166,6 +187,7 @@ int main(int argc,char **argv) {
     psx_mod_write_half(MMX4_PLAYER+10,400);psx_mod_write_half(MMX4_PLAYER+14,200);
     auto projected_row=sample();
     CHECK(projected_row[9]==0 && projected_row[11]==17 && projected_row[13]==123 && projected_row[14]==77);
+    CHECK(effective_mode().campaign==0);
     projected_context=false;
     // Netplay traces must identify their mode, rather than masquerading as
     // independently playable offline recordings.
@@ -177,6 +199,26 @@ int main(int argc,char **argv) {
         if(text.find("\"netplay\": true")!=std::string::npos)network_metadata=true;
     }
     CHECK(network_metadata);
+    // Effective runtime flags take precedence over saved preferences, which
+    // still say Unified here. Changes are queued into a separate sidecar;
+    // the existing N/C input trace remains replay-compatible.
+    split_views_config=true;inputs(&cpu,0x80012328u);
+    online=false;inputs(&cpu,0x80012328u);
+    split_views_config=false;inputs(&cpu,0x80012328u);
+    coop_active=false;inputs(&cpu,0x80012328u);recording.flush();
+    bool found_modes=false;
+    for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(application_root)/"saves/diagnostics")) {
+        std::ifstream in(entry.path()/"mode-changes.csv");
+        std::string text((std::istreambuf_iterator<char>(in)),{});
+        if(text.find("netplay_separate")==std::string::npos)continue;
+        CHECK(text.find("netplay_unified")!=std::string::npos);
+        CHECK(text.find("local_split_8_3")!=std::string::npos);
+        CHECK(text.find("local_unified")!=std::string::npos);
+        CHECK(text.find("single_player,1,0,")!=std::string::npos);
+        CHECK(std::count(text.begin(),text.end(),'\n')==6);
+        found_modes=true;
+    }
+    CHECK(found_modes);coop_active=true;
     // Loading or rewinding starts a new replayable segment with its exact
     // restored machine image. It must not append a time jump to old inputs.
     online=false;activate();inputs(&cpu,0x80012328u);
