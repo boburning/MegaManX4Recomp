@@ -1369,7 +1369,6 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
        psx_mod_read_byte(PLAY+0x0F) ||
        (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
         !mmx4_coop_lifecycle_nova_active() && !paired)) {
-        if(local_split)psx_mod_set_local_pair_presentation(0);
         return 0;
     }
     uint32_t buffer=psx_mod_read_word(0x80142F80u);
@@ -1389,7 +1388,6 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
         PSXModStereoFrame pair={sizeof pair,1,rectangle.x,rectangle.y,rectangle.w,rectangle.h};
         psx_mod_set_local_pair_presentation(1);
         committed=psx_mod_render_local_pair(cpu,&pair,draw_local_pair,&buffer);
-        if(!committed)psx_mod_set_local_pair_presentation(0);
         psx_mod_counter_add(committed?"mmx4.coop.local-pair-committed":"mmx4.coop.local-pair-refused",1);
     }else {
         committed=psx_mod_render_local_view(cpu,&rectangle,draw_local_view,&buffer);
@@ -1567,7 +1565,11 @@ static void activate(void) {
     x_variant=mmx4_cheats_character_enabled(0)!=0;
     local_split=!psx_mod_netplay_is_active() && !strcmp(local_cameras,"split");
     local_aspect_set=0;
-    psx_mod_set_local_pair_presentation(0);
+    if(local_split)(void)psx_mod_set_fixed_display_aspect(4,3);
+    /* The selected layout belongs to the session, including menus, movies
+     * and shared story frames. The presenter duplicates the canonical 4:3
+     * view when no fresh private pair exists; never change the guest aspect. */
+    psx_mod_set_local_pair_presentation(local_split);
     split_views=local_split || mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
     memset(&first,0,sizeof first);memset(&second,0,sizeof second);
     bank_count=ui_bank_count=inside=enrolled=failed=rendering=projected=camera_call=camera_update_call=hud_call=upload_guard=0;

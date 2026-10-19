@@ -143,6 +143,25 @@ int main(int argc, char** argv) {
         return fail("archived interpolation unexpectedly selectable");
     }
 
+    // Private local cameras must resolve authored tiles even if the player
+    // disabled the standalone renderer. Unified and disabled co-op retain
+    // that preference instead of silently enabling an elective enhancement.
+    if(!manager.set_feature_enabled("mmx4.enhancement.widescreen","widescreen",false,&error) ||
+       !manager.set_feature_enabled("mmx4.coop","coop",true,&error))return fail(error);
+    for(const char* layout:{"unified","split"}) {
+        if(!manager.set_feature_option("mmx4.coop","coop","local_cameras",layout,&error))return fail(error);
+        const auto plan=manager.resolve(kGameId,"",kDiscSha256);
+        bool renderer=false;
+        for(const auto& plugin:plan.plugins)renderer|=plugin.id=="mmx4.widescreen";
+        if(!plan.ok || renderer!=(std::string(layout)=="split"))
+            return fail("local split renderer dependency was not conditional");
+    }
+    if(!manager.set_feature_enabled("mmx4.coop","coop",false,&error))return fail(error);
+    const auto solo_plan=manager.resolve(kGameId,"",kDiscSha256);
+    for(const auto& plugin:solo_plan.plugins)
+        if(plugin.id=="mmx4.widescreen")return fail("disabled co-op forced the renderer");
+    if(!solo_plan.ok)return fail("disabled co-op plan failed");
+
     if(fs::weakly_canonical(root).parent_path()!=fs::weakly_canonical(fs::temp_directory_path()))
         return fail("test cleanup path escaped the temporary directory");
     fs::remove_all(root, ec);
