@@ -10,7 +10,7 @@
 Mega Man X4 on Windows and Linux, with **two-player co-op in alpha**.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Download Playtest 37](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.37)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Download Playtest 38](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.38)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -25,7 +25,7 @@ as the other hero. Arrive together, tackle bosses together, and share team retri
 | Make it your co-op run | Choices |
 | --- | --- |
 | Play together | Local co-op with two controllers or separate keyboard bindings; two-player netplay from the launcher. |
-| Pick your view | **Unified** camera by default. **Split (Experimental)** gives each netplay player an independent screen. Local play uses Unified. |
+| Pick your view | **Unified** camera by default. **Split (Experimental)** gives each netplay player an independent screen. Local co-op also offers **side by side 8:3 (Experimental)**, with two 4:3 views in one window. |
 | Arrange your HUD | Stacked lifebars by default, or side by side. Independent screens show their own player's meter. |
 | Set the door rule | Either player opens boss doors by default. Optionally wait for both living, present players. |
 | Fight both story bosses | Opt into Double **and** Iris in sequence; return to the inner door for the second fight. |
@@ -51,7 +51,7 @@ The netplay host chooses the shared options.
 
 1. Download the **Windows ZIP** and extract it, or make the **Linux AppImage** executable and run it. Linux requires x86_64 and glibc 2.38 or newer.
 2. Select your own **Mega Man X4 USA (SLUS-00561)** disc image. Choose the `.cue` from a `.cue` + `.bin` set. OpenBIOS is included; a separate BIOS dump is optional.
-3. For **local co-op**, enable **Mods → X + Zero Co-op**, assign Player 1 and Player 2 in **Controls**, then press **Play**. For **netplay**, press **Netplay** and host or join using **X + Zero Co-op**. Both peers need the same release.
+3. For **local co-op**, enable **Mods → X + Zero Co-op**, assign Player 1 and Player 2 in **Controls**, and choose **Local co-op display** for Unified or side by side 8:3, then press **Play**. For **netplay**, press **Netplay** and host or join using **X + Zero Co-op**. Both peers need the same release.
 
 Co-op requires OpenGL and takes effect on a fresh game boot. Single-player remains available.
 

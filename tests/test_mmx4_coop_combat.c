@@ -34,6 +34,7 @@
 uint8_t mmx4_coop_solid_contact_bits(uint32_t actor,unsigned seat);
 
 typedef struct { uint32_t address; PSXModFunctionFilterCallback callback; } Filter;
+static unsigned aiming_calls;
 static Filter filters[32];
 static unsigned filter_count;
 static unsigned local_view;
@@ -223,6 +224,13 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
     /* Re-entered native dispatch must decline the active host filter. */
     if (address!=ARMOR_MOUNT && address!=NATIVE_AI && address!=0x8002B3C0u)
         CHECK(!filter(address)(cpu,address));
+    if(address==0x800D67DCu) {
+        CHECK(projected && !psx_mod_read_byte(MMX4_PLAYER+2));
+        CHECK(psx_mod_read_byte(MMX4_PLAYER+0x93)==6);
+        CHECK(psx_mod_read_word(a0+0x5C)==0x8013BED0u);
+        psx_mod_write_word(a0+8,psx_mod_read_word(MMX4_PLAYER+8));
+        ++aiming_calls;return 0xCAFEu;
+    }
     unsigned seat=projected;
     if (address==ARMOR_UPDATE || address==ARMOR_MOUNT) {
         if (address==ARMOR_UPDATE) ++armor_updates;
@@ -1240,7 +1248,30 @@ static void iris_counterpart_damage(void) {
     }
 }
 
+static void aiming_beam_owner(void) {
+    setup();const uint32_t beam=0x801435B0u;
+    second[2]=0;second[0x93]=6;
+    psx_mod_write_byte(MMX4_PLAYER+2,1);psx_mod_write_byte(MMX4_PLAYER+0x93,0);
+    psx_mod_write_byte(MMX4_PLAY+0x43,1);
+    psx_mod_write_byte(beam,1);psx_mod_write_byte(beam+1,9);
+    psx_mod_write_word(beam+0x5C,0x8013BED0u);
+    CPUState cpu={.gpr={[4]=beam}};
+    uint8_t p1[sizeof second],p2[sizeof second];
+    memcpy(p1,address_ptr(MMX4_PLAYER),sizeof p1);memcpy(p2,second,sizeof p2);
+    unsigned before=aiming_calls;
+    CHECK(filter(0x800D67DCu)(&cpu,0x800D67DCu) && cpu.gpr[2]==0xCAFEu);
+    CHECK(aiming_calls==before+1 && psx_mod_read_word(beam+8)==30u<<16);
+    CHECK(!memcmp(p1,address_ptr(MMX4_PLAYER),sizeof p1) && !memcmp(p2,second,sizeof p2));
+    CHECK(!projected && psx_mod_read_byte(MMX4_PLAY+0x43)==1 && mmx4_coop_combat_snapshot_ready());
+    mmx4_coop_enter_second();CHECK(!filter(0x800D67DCu)(&cpu,0x800D67DCu));mmx4_coop_leave_second();
+    second[2]=1;CHECK(!filter(0x800D67DCu)(&cpu,0x800D67DCu));second[2]=0;
+    psx_mod_write_byte(beam+1,8);CHECK(!filter(0x800D67DCu)(&cpu,0x800D67DCu));
+    psx_mod_write_byte(beam+1,9);cpu.gpr[4]=beam+4;
+    CHECK(!filter(0x800D67DCu)(&cpu,0x800D67DCu));
+    cpu.gpr[4]=0x801441B0u;CHECK(!filter(0x800D67DCu)(&cpu,0x800D67DCu));
+}
 int main(void) {
+    aiming_beam_owner();
     accepted_events();independent_solids();aim_selection();effect_ownership();armor_handoff();armor_forced_dismount();independent_hit_tokens();
     split_native_targets();
     double_counterpart_damage();

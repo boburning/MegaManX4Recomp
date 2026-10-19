@@ -75,6 +75,7 @@ static unsigned projected;
 static unsigned camera_call;
 static unsigned camera_update_call;
 static unsigned split_views;
+static unsigned local_split,local_aspect_set;
 static uint32_t fixture_sequence;
 static unsigned fixture_invulnerable;
 #ifdef MMX4_COOP_NETPLAY_DEBUG
@@ -1310,6 +1311,20 @@ typedef struct {
     unsigned projected,rendering,hud_call,upload_guard,failed;
     uint8_t dirty,cheat;
 } LocalViewContext;
+static void local_context_save(LocalViewContext *context) {
+    *context=(LocalViewContext){first,second,{0},world_packet_used,
+        projected,rendering,hud_call,upload_guard,failed,saved_dirty,saved_cheat};
+    memcpy(context->resources,saved_resources,sizeof saved_resources);
+    mmx4_coop_lifecycle_view_save();mmx4_widescreen_view_save();
+}
+static void local_context_restore(const LocalViewContext *context) {
+    first=context->first;second=context->second;
+    memcpy(saved_resources,context->resources,sizeof saved_resources);
+    world_packet_used=context->world_packet_used;saved_dirty=context->dirty;saved_cheat=context->cheat;
+    projected=context->projected;rendering=context->rendering;hud_call=context->hud_call;
+    upload_guard=context->upload_guard;failed=context->failed;
+    mmx4_coop_lifecycle_view_restore();mmx4_widescreen_view_restore();
+}
 static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     (void)alpha;
     uint32_t buffer=*(uint32_t *)user;
@@ -1330,8 +1345,20 @@ static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     guest(cpu,0x800EC228u,buffer+0x9Cu,0);
     return !failed;
 }
+static int draw_local_pair(CPUState *cpu,void *user,uint32_t seat) {
+    LocalViewContext context;
+    local_context_save(&context);
+    local_view_seat=mmx4_coop_split_view_seat(seat);
+    int ok=draw_local_view(cpu,user,0);
+    /* Host plugin contexts must return to the common baseline between views,
+     * as well as the framework's CPU/RAM/VRAM checkpoint. Neither draw ticks AI. */
+    local_context_restore(&context);
+    return ok;
+}
 static int present_local_view(CPUState *cpu,uint32_t address) {
     unsigned paired=mmx4_coop_lifecycle_paired_door();
+    if(local_split && !local_aspect_set)
+        local_aspect_set=(unsigned)psx_mod_set_fixed_display_aspect(4,3);
     /* An ordinary world freeze (including an ice bird's field effect) is
      * not a request to replace the partner's view with the canonical image.
      * The existing private transaction can redraw the frozen saved camera;
@@ -1341,7 +1368,10 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
        cpu->gpr[31]!=0x80012080u || (mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
        psx_mod_read_byte(PLAY+0x0F) ||
        (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
-        !mmx4_coop_lifecycle_nova_active() && !paired))return 0;
+        !mmx4_coop_lifecycle_nova_active() && !paired)) {
+        if(local_split)psx_mod_set_local_pair_presentation(0);
+        return 0;
+    }
     uint32_t buffer=psx_mod_read_word(0x80142F80u);
     if(cpu->gpr[4]!=buffer+0x9Cu)return 0;
     local_view_call=1;
@@ -1352,18 +1382,21 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
     PSXModRenderPass rectangle={sizeof rectangle,0,
         psx_mod_read_half(buffer+0x14u),psx_mod_read_half(buffer+0x16u),
         psx_mod_read_half(buffer+0x18u),psx_mod_read_half(buffer+0x1Au)};
-    LocalViewContext context={first,second,{0},world_packet_used,
-        projected,rendering,hud_call,upload_guard,failed,saved_dirty,saved_cheat};
-    memcpy(context.resources,saved_resources,sizeof saved_resources);
-    mmx4_coop_lifecycle_view_save();mmx4_widescreen_view_save();
     uint32_t before=state_digest();
-    int committed=psx_mod_render_local_view(cpu,&rectangle,draw_local_view,&buffer);
-    first=context.first;second=context.second;
-    memcpy(saved_resources,context.resources,sizeof saved_resources);
-    world_packet_used=context.world_packet_used;saved_dirty=context.dirty;saved_cheat=context.cheat;
-    projected=context.projected;rendering=context.rendering;hud_call=context.hud_call;
-    upload_guard=context.upload_guard;failed=context.failed;
-    mmx4_coop_lifecycle_view_restore();mmx4_widescreen_view_restore();
+    LocalViewContext context;local_context_save(&context);
+    int committed;
+    if(local_split) {
+        PSXModStereoFrame pair={sizeof pair,1,rectangle.x,rectangle.y,rectangle.w,rectangle.h};
+        psx_mod_set_local_pair_presentation(1);
+        committed=psx_mod_render_local_pair(cpu,&pair,draw_local_pair,&buffer);
+        if(!committed)psx_mod_set_local_pair_presentation(0);
+        psx_mod_counter_add(committed?"mmx4.coop.local-pair-committed":"mmx4.coop.local-pair-refused",1);
+    }else {
+        committed=psx_mod_render_local_view(cpu,&rectangle,draw_local_view,&buffer);
+    }
+    /* Also restore outside callbacks: a transaction watchdog can unwind a
+     * draw before its callback has a chance to restore host plugin state. */
+    local_context_restore(&context);
     if(state_digest()!=before)psx_mod_counter_add("mmx4.coop.local-view-state-leak",1);
     psx_mod_counter_add(committed?"mmx4.coop.local-view-committed":"mmx4.coop.local-view-refused",1);
     if(committed)psx_mod_counter_add(local_view_seat?
@@ -1521,8 +1554,9 @@ static void snapshot_resources_restored(void) {
 static void activate(void) {
     mmx4_diagnostics_reset();
     ui_layout_ready=0;memset(ui_layout,0,sizeof ui_layout);
-    char cameras[16],layout[24],ultimate[8],black[8],doors[8];
+    char cameras[16],local_cameras[16],layout[24],ultimate[8],black[8],doors[8];
     if(!psx_mod_current_option_value("cameras",cameras,sizeof cameras))strcpy(cameras,"unified");
+    if(!psx_mod_current_option_value("local_cameras",local_cameras,sizeof local_cameras))strcpy(local_cameras,"unified");
     hud_side_by_side=psx_mod_current_option_value("hud_layout",layout,sizeof layout) &&
         !strcmp(layout,"side_by_side");
     ultimate_armor_x=psx_mod_current_option_value("ultimate_armor_x",ultimate,sizeof ultimate) &&
@@ -1531,7 +1565,10 @@ static void activate(void) {
     boss_door_both=psx_mod_current_option_value("boss_doors",doors,sizeof doors) && !strcmp(doors,"both");
     mmx4_cheats_configure_coop((int)ultimate_armor_x,(int)black_zero);
     x_variant=mmx4_cheats_character_enabled(0)!=0;
-    split_views=mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
+    local_split=!psx_mod_netplay_is_active() && !strcmp(local_cameras,"split");
+    local_aspect_set=0;
+    psx_mod_set_local_pair_presentation(0);
+    split_views=local_split || mmx4_coop_views_requested(psx_mod_netplay_is_active(),cameras);
     memset(&first,0,sizeof first);memset(&second,0,sizeof second);
     bank_count=ui_bank_count=inside=enrolled=failed=rendering=projected=camera_call=camera_update_call=hud_call=upload_guard=0;
     traced_failure=0;

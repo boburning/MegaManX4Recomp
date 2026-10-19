@@ -24,7 +24,8 @@ CO-OP PLAYTEST
   enabling co-op takes effect on a fresh boot. The X + Zero Co-op netplay
   profile enables it for both peers; use the same release on both computers.
   Unified is the default camera mode. The host may choose Split (Experimental)
-  for independent online views; offline play uses Unified.
+  for independent online views. Local co-op display also offers Side by side 8:3
+  (Experimental), with two 4:3 cameras in one window. Requires a fresh boot.
 
   Select Netplay in the launcher to host or join a two-player room using the
   X + Zero Co-op profile. For local play, Controls offers Player 1 and Player 2
