@@ -7,7 +7,7 @@ message or issue closure has been posted.
 
 | Issue | Evidence and disposition | Next useful check |
 | --- | --- | --- |
-| [41](https://github.com/mstan/MegaManX4Recomp/issues/41): intro gate explosions never finish | Initially unconfirmed because only the old startup attachment had been reviewed. Now attempted on current code: native gate traversal succeeds in both X/Unified and Zero/local Split campaigns, with both players healthy, checkpoint2 reached, maximum X released to4544 and control unfrozen. | Keep open as not reproduced, not fixed. A full current session recording of the failure is still needed to identify its cause. The old log alone cannot establish it. |
+| [41](https://github.com/mstan/MegaManX4Recomp/issues/41): intro gate explosions never finish | Initially unconfirmed because only the old startup attachment had been reviewed. Now attempted on current code: native gate traversal succeeds in both X/Unified and Zero/local Split campaigns, with both players healthy, checkpoint2 reached, maximum X released to4544 and control unfrozen. A further X/Unified attempt also completes Dragoon's dialogue/rescue and loads playable part2 with both heroes. | Keep open as not reproduced, not fixed. A full current session recording of the failure is still needed to identify its cause. The old log alone cannot establish it. |
 | [39](https://github.com/mstan/MegaManX4Recomp/issues/39): Cyber weapon and Space Port/Final Weapon backgrounds | Reproduced and fixed. The beam updater read Zero/P1 while X/P2 owned Aiming Laser; two native background controllers updated only the canonical camera after private camera snapshots. Actual two-peer Split baselines fail and the corrected native cases pass. | Qualified locally; include the fixes in the next public build. See implementation and evidence below. |
 | [32](https://github.com/mstan/MegaManX4Recomp/issues/32): missing X hover jets | The latest supplied sessions match31 (a2ed2a04). Checklist149 and3ac1021 document the actual native effect33 owner correction, released32. Current37 includes it; prior native X/P2 hover qualification matched the initialized X/P1 blue/white jets, followed the owner and expired on landing. | Ask for a newer recording only if this exact symptom remains; do not re-open149 solely from31 evidence. |
 | 32: Slash Beast background and peer death effects | The video frames show both views and the peer's missing death burst. Existing train per-view code is not proof that this particular surviving-peer phase works. The frames alone cannot establish animation cadence. Neither remainder is qualified fixed by the hover correction. | Replay the paired31 encounter or a bounded equivalent on37; compare actual death-effect frames on each view and train layer phase while the other seat is stationary/dead. Keep open. |
@@ -94,3 +94,11 @@ gate; it is not accepted as traversal evidence. No correction is claimed for
 41 because these actual gate traversals did not reproduce the endless loop.
 Keep the issue open for a failing full session, rather than conflating it with
 the separately fixed intro part2 falling platforms.
+
+A final extended X/Unified attempt (intro-rescue-pulsed) continues through the
+actual Dragoon rescue and native dialogue, rather than stopping after the gate.
+At frame7881 (4425 frames after setup), stage0/section1 is playable: both heroes
+active and visible at144/443 and144/442, both32HP, story/freeze0, no script or
+door locks. The earlier extended harness held Cross continuously at dialogue
+and waited; using separate native confirm presses completes it. That harness
+input mistake is not accepted as a reproduction of the reporter's freeze.
