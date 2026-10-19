@@ -1909,7 +1909,7 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
         memset(record,0,sizeof *record);record=NULL;
     }
     if(record)owner=record->owner;
-    else if((address==0x800D1248u || address==0x800D1284u) && script_active)
+    else if((address==0x800D0374u || address==0x800D1248u || address==0x800D1284u) && script_active)
         owner=script_owner;
     else if(!mmx4_coop_alive(0) && mmx4_coop_alive(1))owner=1;
     else if(refight_portal && psx_mod_read_byte(actor+4)==1 &&
@@ -2372,6 +2372,11 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_filter_plugin(ID,0x800C165Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C169Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800CE894u,cyber_assessment);
+    /* Act1 Dragoon first issues action15, then waits for PLAYER+C0=FF.
+     * A P2-led door can withdraw P1 before this actor runs. Keep its native
+     * command and subsequent completion reads on the committed scene owner;
+     * redirecting only the command leaves D05B0 waiting on absent P1 forever. */
+    psx_mod_register_function_filter_plugin(ID,0x800D0374u,scene_actor);
     /* Intro rescue actors live in the small sprite pool, outside the enemy
      * and stage-script projections. Their initialization and camera wait
      * must use the same body that owns the boss victory. Native D12C0 sets

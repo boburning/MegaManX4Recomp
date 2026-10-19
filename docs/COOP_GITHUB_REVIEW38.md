@@ -1,14 +1,15 @@
 # GitHub review for local split development
 
-Reviewed against Playtest37 (master06e940c) on 2026-10-18, with subsequent
-fixes qualified on the local development branch. The changes are not yet a
-public playtest release. Private attachments remain in build-pr23/issue-review38; no reporter
-message or issue closure has been posted.
+Initially reviewed against Playtest37 (master06e940c) on 2026-10-18.
+The issue39 fixes shipped in Playtest38. The subsequent issue41 follow-up
+identified a distinct Zero/P2-first case, reproduced and corrected below.
+Private attachments remain in build-pr23/issue-review38; the follow-up native
+recordings are in build-pr23/issue41-followup.
 
 | Issue | Evidence and disposition | Next useful check |
 | --- | --- | --- |
-| [41](https://github.com/mstan/MegaManX4Recomp/issues/41): intro gate explosions never finish | Initially unconfirmed because only the old startup attachment had been reviewed. Now attempted on current code: native gate traversal succeeds in both X/Unified and Zero/local Split campaigns, with both players healthy, checkpoint2 reached, maximum X released to4544 and control unfrozen. A further X/Unified attempt also completes Dragoon's dialogue/rescue and loads playable part2 with both heroes. | Keep open as not reproduced, not fixed. A full current session recording of the failure is still needed to identify its cause. The old log alone cannot establish it. |
-| [39](https://github.com/mstan/MegaManX4Recomp/issues/39): Cyber weapon and Space Port/Final Weapon backgrounds | Reproduced and fixed. The beam updater read Zero/P1 while X/P2 owned Aiming Laser; two native background controllers updated only the canonical camera after private camera snapshots. Actual two-peer Split baselines fail and the corrected native cases pass. | Qualified locally; include the fixes in the next public build. See implementation and evidence below. |
+| [41](https://github.com/mstan/MegaManX4Recomp/issues/41): intro gate explosions never finish | The explicit Zero/P2-first follow-up reproduces the stall on38's qualified development executable. Dragoon commands P2 but waits for withdrawn P1's completion flag. Projecting the actor's whole update through its committed owner fixes that mismatch. | Native local Unified qualification now completes both dialogues and loads playable part2 with both heroes. Earlier successful runs moved both players together and did not establish this leading-P2 case. See follow-up evidence below. |
+| [39](https://github.com/mstan/MegaManX4Recomp/issues/39): Cyber weapon and Space Port/Final Weapon backgrounds | Reproduced and fixed. The beam updater read Zero/P1 while X/P2 owned Aiming Laser; two native background controllers updated only the canonical camera after private camera snapshots. Actual two-peer Split baselines fail and the corrected native cases pass. | Released in Playtest38. See implementation and evidence below. |
 | [32](https://github.com/mstan/MegaManX4Recomp/issues/32): missing X hover jets | The latest supplied sessions match31 (a2ed2a04). Checklist149 and3ac1021 document the actual native effect33 owner correction, released32. Current37 includes it; prior native X/P2 hover qualification matched the initialized X/P1 blue/white jets, followed the owner and expired on landing. | Ask for a newer recording only if this exact symptom remains; do not re-open149 solely from31 evidence. |
 | 32: Slash Beast background and peer death effects | The video frames show both views and the peer's missing death burst. Existing train per-view code is not proof that this particular surviving-peer phase works. The frames alone cannot establish animation cadence. Neither remainder is qualified fixed by the hover correction. | Replay the paired31 encounter or a bounded equivalent on37; compare actual death-effect frames on each view and train layer phase while the other seat is stationary/dead. Keep open. |
 | 32: diagnostics cannot be disabled | The diagnostics manifest explicitly says the netplay co-op playtest profile includes recording automatically; coop_inputs calls the recorder on netplay even when the standalone diagnostics package is disabled. This explains why unchecking the separate mod does not disable netplay recording. | Describe this as current playtest policy, and improve the setting text if it implies that this checkbox also disables mandatory netplay diagnostics. A display-only preference can be considered separately. |
@@ -102,3 +103,54 @@ active and visible at144/443 and144/442, both32HP, story/freeze0, no script or
 door locks. The earlier extended harness held Cross continuously at dialogue
 and waited; using separate native confirm presses completes it. That harness
 input mistake is not accepted as a reproduction of the reporter's freeze.
+
+
+## Issue41: Zero/P2 enters first
+
+The reporter's follow-up6258744710 says that X entering first works while
+Zero entering first fails. It does not identify seat, campaign or camera mode.
+The following qualification uses X's campaign, Zero/P2 leading, local Unified.
+It establishes that specific current-code failure without assuming the
+reporter's missing settings or treating their submission difficulty as a
+proven recorder fault.
+
+Both heroes start on the observed floor before the first breakable gate;
+P2 starts80 pixels ahead. The trailing hero moves only to keep a100-pixel gap.
+Stage selection, position and invulnerability are development setup fixtures.
+Actual gate destruction, traversal, auto-walk, dialogue and section loading
+use the original executable and controller input, with no forced completion.
+
+- Unchanged38 development executable3baf71bb: P2 enters the real door first,
+  the scene locks at frame6656 and P2 reaches C0=FF at6678. The scene stays
+  locked through9570, with explosions continuing and no part2. P1 is withdrawn
+  at32HP; P2 remains visible at32HP. The composed image was inspected.
+- X/P1-first control on the same executable advances to part2 at8008 and
+  unlocks at8766. This control establishes section progress; its capture stops
+  before the partner finishes the final arrival.
+- Original D0548 commands action15 through80036AE4. That command is already
+  redirected to the surviving scene owner, but D05B0 reads PLAYER+C0 directly.
+  It therefore waits on withdrawn P1 after P2 finishes. The existing later
+  D1248/D1284 rescue filters do not cover this act1 Dragoon actor.
+- The fix adds D0374 to the existing scene-owner projection. Its native
+  command and completion predicate now read the same body, while the campaign
+  stays canonical. Both development and release TOML hook lists were updated;
+  full_62 was regenerated by the recompiler rather than edited.
+- Corrected native run fixed-zero-p2-dialogue reaches playable part2 at8321,
+ 4875 frames after setup. Both heroes are active/visible, state1,32HP, at
+ 144/443 and144/442; all story, script, door and freeze locks are zero.
+  The final composed image was inspected. Separate confirm edges also finish
+  part2's ordinary X dialogue; an earlier harness stopped confirming after
+  the section change and is not accepted as final arrival qualification.
+- All36 Windows title checks pass. The ownership model covers both seats in
+  both campaigns, and also compiles/runs under Linux GCC. These model tests
+  supplement the native reproduction; they are not a netplay qualification.
+
+One hidden launch failed before frame0 because the Windows desktop exhausted
+its window-object allowance. The successful control and corrected run use a
+separate invisible desktop, with dummy audio. The private runner's watchdog is
+30 seconds to tolerate captured frames; production policy is unchanged. No
+visible window is opened on the owner's desktop.
+
+Qualified executable SHA256:
+3035c27de3bfcdacf3bd51bd86448921e908ff79716a64efdd260decbee527e9.
+The separate draft local-render performance change is not part of this build.

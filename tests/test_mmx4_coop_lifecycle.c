@@ -484,6 +484,16 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             psx_mod_write_byte(a0,0);
         }
         break;
+    case 0x800D0374:
+        observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        if(!psx_mod_read_byte(a0+5)) {
+            /* D0548 starts the outgoing walk; D05B0 later reads the same
+             * singleton's completion byte. No synthetic completion here. */
+            mmx4_coop_call(cpu,0x80036AE4u,0x15,0);
+            psx_mod_write_byte(a0+5,1);
+        }else if(psx_mod_read_byte(MMX4_PLAYER+0xC0)==255)
+            psx_mod_write_byte(a0+5,2);
+        break;
     case 0x800D1248:
         observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         psx_mod_write_word(a0+8,psx_mod_read_word(MMX4_PLAYER+8)+352u*65536u);
@@ -2315,6 +2325,25 @@ int main(void) {
     mmx4_coop_call(&cpu,0x800BD654u,actor,0);
     CHECK(scene_calls==1 && observed_campaign==0 && psx_mod_read_byte(PLAY+0x1D)==8);
     CHECK(p2[0x5C]==12 && psx_mod_read_byte(PLAYER+4)==3 && !projected);
+
+    /* Dragoon's act1 actor must observe completion from the body it sent
+     * walking, even with a healthy trailing P1 in the other campaign. */
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned owner=0;owner<2;++owner) {
+        reset();psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);
+        second_inventory.character=p2[2]=(uint8_t)(campaign^1u);
+        script_active=1;script_owner=owner;
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        mmx4_coop_call(&cpu,0x800D0374u,actor,0);
+        CHECK(psx_mod_read_byte(actor+5)==1 && script_owner==owner);
+        CHECK(observed_campaign==campaign && !projected);
+        CHECK(psx_mod_read_byte(PLAYER+0xC0)==(owner?0:1) && p2[0xC0]==(owner?1:0));
+        if(owner)p2[0xC0]=255;else psx_mod_write_byte(PLAYER+0xC0,255);
+        mmx4_coop_call(&cpu,0x800D0374u,actor,0);
+        CHECK(psx_mod_read_byte(actor+5)==2 && observed_campaign==campaign);
+        CHECK(!projected && psx_mod_read_byte(PLAY+0x43)==campaign);
+        CHECK((owner?psx_mod_read_byte(PLAYER+0xC0):p2[0xC0])==0);
+    }
 
     /* Rescue actors use the committed winner, including a surviving P2.
      * A living but lagging P1 must not steal the scene either. */
