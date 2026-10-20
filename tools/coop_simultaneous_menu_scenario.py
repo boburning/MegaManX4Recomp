@@ -93,11 +93,24 @@ def simultaneous_menus(s, capture=None):
     pulse(0xffbf,x);pulse(0xbfff,x);shot('x-weapon-selected')
     selected=r.read(0x801754b4,1)[0]
     r.input(0xbfff,zero);frames(4);r.release();frames(2)
+    # LAN host input crosses the configured delay before simulation sees it.
+    # Retain each chord long enough to apply, rather than replacing it early.
+    step=6 if hasattr(r,'development')else 2
     r.input(0xffb7,x)  # Start+Down during native E-tank use.
-    frames(8)
+    frames(step)
     assert list(r.read(0x801721c0,2))==[6,2],'Tank use allowed unpause'
-    assert r.read(0x801754b4,1)[0]==selected,'Tank use allowed P1 navigation'
-    r.release();frames(80)
+    if not x:assert r.read(0x801754b4,1)[0]!=selected,'Tank use blocked partner navigation'
+    r.input(0xbff7,x);frames(step)  # Start+Cross selects another weapon.
+    changed=r.players()[x][0x93]
+    assert changed!=1 and r.players()[zero][0x5c]&127<32,('No equipment change during healing',changed)
+    # Keep Start held while returning to Lightning Web, so neither a tank
+    # finishing between inputs nor a held Start can resume the shared world.
+    r.input(0xffe7,x);frames(step)  # Start+Up.
+    r.input(0xbff7,x);frames(step)
+    assert r.players()[x][0x93]==1,'Partner weapon confirmation was blocked'
+    r.input(0xfff7,x);frames(80)
+    assert list(r.read(0x801721c0,2))==[6,2],'Held Start resumed after healing'
+    r.release();frames(2)
     shot('zero-tank-completed');row=resumed(x)
     bodies=r.players()
     assert bodies[zero][0x5c]&127==32 and bodies[x][0x5c]&127==16,row
@@ -198,7 +211,8 @@ def simultaneous_menus(s, capture=None):
             assert after[key]==before[key],('Menu render transaction failed',key,before,after)
         assert after['verify_checks']>before['verify_checks'],after
     result=dict(native=True,campaign=s.campaign,two_character_menus=True,
-        independent_weapon_and_tank_management=True,tank_locks_both=True,
+        independent_weapon_and_tank_management=True,tank_blocks_unpause=True,
+        partner_equipment_during_healing=True,held_start_not_queued=True,
         either_player_resumes=True,required_private_etanks=True,paused_snapshot_restored=snapshot_restored,
         prepared_energy_per_tank=16,prepared_energy_per_seat=32,total_native_healing=48,
         guest_quit_blocked=True,campaign_confirmation_serialized=True,shared_options_returned=True,surviving_p2_menu=True,

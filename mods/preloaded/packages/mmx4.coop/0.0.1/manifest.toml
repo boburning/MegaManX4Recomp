@@ -90,7 +90,7 @@ when = { local_cameras = "split" }
 feature = "coop"
 id = "simultaneous_menus"
 label = "Independent pause menus"
-description = "Either player opens both character menus. Each player manages their own weapons and E-tanks; either player resumes both. Tank use locks both menus until it finishes. Automatically requires separate E-tank contents, regardless of the setting below. W-tank energy remains shared. Local play shows both menus side by side; netplay shows your character's menu with either camera setting. On by default for every co-op mode. Requires a fresh boot; the netplay host chooses for both players."
+description = "Either player opens both character menus. Each player manages their own weapons and E-tanks; either player resumes both. During tank use, the partner can keep managing their menu; gameplay resumes only after consumption finishes. Automatically requires separate E-tank contents, regardless of the setting below. W-tank energy remains shared. Local play shows both menus side by side; netplay shows your character's menu with either camera setting. On by default for every co-op mode. Requires a fresh boot; the netplay host chooses for both players."
 type = "boolean"
 default = "true"
 

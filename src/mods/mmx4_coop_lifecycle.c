@@ -1188,7 +1188,7 @@ static int personal_busy(unsigned seat) {
 static int personal_tank_request(unsigned seat,uint16_t edge) {
     const uint8_t *menu=personal_menu[seat].native;
     return (personal_eligible&(1u<<seat)) && menu[4]==1 && menu[5]==1 &&
-        menu[0x14]>=10 && menu[0x14]<=12 && edge==0x40;
+        menu[0x14]>=10 && menu[0x14]<=12 && (edge&~START)==0x40;
 }
 /* The secondary menu must not start a second fade/music transition. */
 static int personal_shared_effect(CPUState *cpu,uint32_t address) {
@@ -1265,22 +1265,33 @@ static uint32_t personal_tick(CPUState *cpu,uint32_t address) {
         unsigned resume=0;
         for(unsigned seat=0;seat<2;++seat)
             resume|=(personal_eligible&(1u<<seat)) && (edge[seat]&START);
-        /* A tank confirmation wins over a simultaneous resume request. Both
-         * Start edges and held inputs during healing are consumed, not queued. */
+        /* A tank confirmation wins over a simultaneous resume request.
+         * Blocked exit/tank edges are consumed, never queued after healing. */
         if(interactive && !busy && !modal && !tank[0] && !tank[1] && resume) {
             for(unsigned seat=0;seat<2;++seat) {
                 personal_menu[seat].native[4]=2;personal_menu[seat].native[5]=0;
             }
         }
-        unsigned first=tank[1] && !tank[0]?1:0;
+        /* Tick an existing P2 heal before P1's shared Options/Quit frontend.
+         * Healing must continue under that frontend, whose assets draw last. */
+        unsigned first=personal_busy(1) || (tank[1] && !tank[0])?1:0;
         for(unsigned turn=0;turn<2;++turn) {
             unsigned seat=first^turn;
-            if(modal && seat)continue;
-            int allowed=interactive && !busy && (!modal || !seat) &&
+            if(modal && seat && !personal_busy(seat))continue;
+            int allowed=interactive && (!modal || !seat) &&
                 (personal_eligible&(1u<<seat));
             /* Native Options uses Start to return to the character menu.
              * Let P1 close that modal without interpreting it as team resume. */
             uint16_t mask=modal && !seat?0:START;
+            if(busy) {
+                const uint8_t *menu=personal_menu[seat].native;
+                /* Equipment and cursor input stay live. Serialize new tank
+                 * uses (W energy is shared), and cover native Escape/Quit
+                 * confirmations that can leave the menu without Start.
+                 * Options, including its Start-to-return, remains usable. */
+                if(tank[seat] || (!seat && (menu[5]==6 ||
+                   (menu[5]==2 && menu[0x14]==13))))mask|=0x40;
+            }
             uint16_t buttons=allowed?(uint16_t)(input[seat]&~mask):0;
             uint16_t previous=allowed?(uint16_t)(old[seat]&~mask):0;
             result=personal_step(cpu,address,seat,buttons,previous);

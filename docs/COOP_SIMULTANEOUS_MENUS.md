@@ -21,11 +21,14 @@ restores that preference without rewriting it. W-tank energy remains shared.
 Both the option and effective E-tank policy are recorded in diagnostics;
 the option enters the native match configuration and source compatibility ID.
 
-Either tank operation blocks navigation, confirmations and unpause for both
-players until it completes. Requests on the same frame are deterministic:
-tank confirmation takes priority over resume; simultaneous tank requests
-start P1's operation first. The other request is discarded. Inputs pressed
-or held during healing are consumed, requiring a new press after completion.
+Tank use blocks unpause while the partner keeps navigating and confirming
+equipment. Options remains usable, and healing continues behind P1's shared
+Options/Quit frontend. Escape and Quit cannot leave the menu during healing.
+Requests on the same frame are deterministic: tank confirmation takes priority
+over resume; simultaneous tank requests start P1's operation first. A second
+tank cannot start until the first finishes, including the shared W-tank.
+Blocked exit and tank requests are consumed, requiring a fresh press after
+completion; holding Start through healing never resumes gameplay afterward.
 
 Dead or withdrawn players cannot use a tank, change equipment or resume.
 Their native menu can still be shown. P1 retains Quit and escape authority;
@@ -39,7 +42,7 @@ weapon selections, inventories and input history participate in snapshots and
 deterministic state digests. Older snapshot layouts are rejected.
 
 Boundary qualification passes the two rosters, either opener,
-shared/split models, independent navigation and equipment, healing priority,
+shared/split models, equipment changes during healing, healing priority,
 no held-input resume, private contents, shared-W request serialization,
 snapshot restoration, guest restrictions and surviving-player resume. The
 focused Windows CTests pass, including catalog defaults and emitted hooks.
@@ -62,6 +65,18 @@ heals 48 HP across the team. That exceeds a shared pool and verifies the
 required private contents with the separate-tank preference off. Its 2,756
 render verification checks pass without mismatches or aborted draws.
 
+The healing-input refinement passes a fresh Local 8:3 controller run: X
+changes weapon while Zero is still healing, returns to Lightning Web, holds
+Start past completion, then resumes with a new press. Its 3,158 render checks
+pass. A separate native Unified run opens P1's Options during P2's E-tank
+use; P2's health rises from 4 to 9 under that frontend and reaches 32 before
+resuming. All 298 render checks pass, and its Options capture is clean.
+The same live equipment/held-Start check passes Unified LAN with X as P2
+and Zero as P1; both peers retain matching authoritative core/mod checksums.
+The LAN harness holds each chord for six frames so it crosses the configured
+input delay before observation. Its initial two-frame observation failed to
+see the change; that attempt is retained and is not counted as a pass.
+
 Composed screenshots were inspected for both character menus and shared
 frontends, including a clean Options page after suppressing the stray P2
 sprite. `PSX_RENDER_PASS_VERIFY=1` remains enabled: the native checks require
@@ -74,6 +89,9 @@ Evidence is retained under `build-pr23/paired-menu/` and
 `/home/matthew/mmx4-paired-menus-20261020/`: `qa8` contains the local native
 checks; `qa10` contains the final clean-Options check and both connected modes;
 `qa11-energy-proof/runtime` records the limited-energy proof above.
+`qa12-tank-navigation/local-split-0` records live equipment management during
+healing; `qa13-options-tank/runtime` records healing under Options.
+`qa14-tank-lan/netplay-unified-1` records the final connected recheck.
 The LAN runs qualify identical Linux development artifacts, not cross-build,
 cross-OS or public-lobby compatibility. Windows full-runtime linking is being
 checked separately; the Windows model/catalog results are not a claim of

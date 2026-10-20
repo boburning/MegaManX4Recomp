@@ -353,7 +353,12 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
                     psx_mod_write_byte(tank,(uint8_t)(0x80u|energy-1));
                     psx_mod_write_byte(MMX4_PLAYER+0x5C,(uint8_t)(hp+1));
                 }else psx_mod_write_byte(menu+5,1);
-            }else if(edge==0x40 && sub==1)psx_mod_write_byte(menu+5,psx_mod_read_byte(menu+0x14)==12?4:3);
+            }else if(sub==5 && (edge&0x800))psx_mod_write_byte(menu+5,2);
+            else if(edge==0x40 && (sub==6 || (sub==2 && psx_mod_read_byte(menu+0x14)==13)))
+                psx_mod_write_byte(menu+4,2);
+            else if(edge==0x40 && sub==2 && psx_mod_read_byte(menu+0x14)==14)
+                psx_mod_write_byte(menu+5,5);
+            else if(edge==0x40 && sub==1)psx_mod_write_byte(menu+5,psx_mod_read_byte(menu+0x14)==12?4:3);
             else if(edge==0x4000)psx_mod_write_byte(menu+0x14,(uint8_t)(psx_mod_read_byte(menu+0x14)+2));
             else if(edge==0x40)psx_mod_write_byte(MMX4_PLAYER+0x93,2);
             if(edge&0x100)psx_mod_write_byte(menu+5,6);
@@ -970,10 +975,19 @@ static int simultaneous_menu_ownership(void) {
         mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
         CHECK(personal_busy(zero) && personal_active && !world_calls);
         unsigned selected=personal_menu[x].native[0x14];
-        inputs[0]=inputs[1]=START|0x4000|0x40;
+        /* The partner can navigate and confirm equipment while Start stays
+         * held. Healing continues and cannot queue a later world resume. */
+        inputs[x]=START|0x4000;inputs[zero]=START;
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_busy(zero) && personal_menu[x].native[0x14]==selected+2);
+        if(x)p2[0x93]=0;else psx_mod_write_byte(PLAYER+0x93,0);
+        inputs[x]=START|0x40;
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_busy(zero) && (x?p2[0x93]:psx_mod_read_byte(PLAYER+0x93))==2);
+        inputs[0]=inputs[1]=START;
         for(unsigned i=0;i<5;++i) {
             mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
-            CHECK(personal_active && personal_menu[x].native[0x14]==selected && !world_calls);
+            CHECK(personal_active && personal_menu[x].native[0x14]==selected+2 && !world_calls);
         }
         CHECK(!personal_busy(zero));
         CHECK((zero?p2[0x5C]:psx_mod_read_byte(PLAYER+0x5C))==(zero?15:19));
@@ -999,14 +1013,40 @@ static int simultaneous_menu_ownership(void) {
     for(unsigned w=0;w<2;++w) {
         reset();simultaneous_menus=separate_etanks=personal_active=personal_initialized=menu_active=1;
         personal_eligible=3;personal_model=1;psx_mod_write_byte(PLAY+1,2);
+        psx_mod_write_byte(PLAY+(w?0x5E:0x5C),0x90);second_inventory.etanks[0]=0x90;
         for(unsigned seat=0;seat<2;++seat) {
             personal_menu[seat].native[4]=1;personal_menu[seat].native[5]=1;
             personal_menu[seat].native[0x14]=(uint8_t)(w?12:10);
-            inputs[seat]=0x40;
+            inputs[seat]=START|0x40;
         }
         mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
         CHECK(personal_busy(0) && !personal_busy(1));
+        inputs[0]=inputs[1]=0;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        inputs[1]=0x40;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_busy(0) && !personal_busy(1) && personal_active);
     }
+    /* Options remain usable during a partner heal. Tick the healer under
+     * shared frontends, but prevent Escape/Quit from bypassing the exit lock. */
+    reset();simultaneous_menus=separate_etanks=personal_active=personal_initialized=menu_active=1;
+    personal_eligible=3;personal_model=1;psx_mod_write_byte(PLAY+1,2);
+    personal_menu[0].native[4]=personal_menu[1].native[4]=1;
+    personal_menu[0].native[5]=2;personal_menu[0].native[0x14]=14;
+    personal_menu[1].native[5]=3;second_inventory.etanks[0]=0x90;
+    inputs[0]=0x40;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_menu[0].native[5]==5 && personal_busy(1));
+    unsigned energy=second_inventory.etanks[0]&127u;
+    inputs[0]=START;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_menu[0].native[5]==2 && personal_active && personal_busy(1));
+    CHECK((second_inventory.etanks[0]&127u)==energy-1);
+    personal_menu[0].native[0x14]=13;inputs[0]=0x40;
+    mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_menu[0].native[4]==1 && personal_active && !world_calls);
+    inputs[0]=SELECT;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_menu[0].native[5]==6 && personal_busy(1));
+    energy=second_inventory.etanks[0]&127u;
+    inputs[0]=0x40;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_menu[0].native[4]==1 && personal_active && !world_calls);
+    CHECK((second_inventory.etanks[0]&127u)==energy-1);
     /* Guest Quit/escape and dead-seat input cannot change campaign flow. */
     reset();simultaneous_menus=separate_etanks=personal_active=personal_initialized=menu_active=1;
     personal_eligible=3;personal_model=1;psx_mod_write_byte(PLAY+1,2);
