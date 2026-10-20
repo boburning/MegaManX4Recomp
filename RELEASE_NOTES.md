@@ -1,4 +1,28 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.41
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.42
+
+**Reliable P2 pause menus, Dragoon cameras and moving train scenery.**
+
+- Fixed P2 opening P1's pause menu and losing controls after quitting and starting another game.
+- Fixed Magma Dragoon's refight locking one or both split cameras, whichever player starts the fight.
+- Fixed Slash Beast's scenery freezing in P2's view after the background loops. Both stage sections keep scrolling.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified remains the default; local 8:3 split remains experimental. Campaign
+saves carry forward; emulator save states from older builds may be incompatible.
+Public packages disable development cheats and omit loading-speed mods.
+
+The nearby intro explosion shake and missing bee groups remain under
+investigation. Single-slash timing report157 remains **unconfirmed**. Other
+unchecked reports stay on the numbered checklist.
+
+Keep **Input Display and Recording** enabled. After a bug, quit normally and
+send the matching `saves/diagnostics/session-...` folder beside the executable
+or AppImage, plus a video timestamp if available. For netplay, include both
+computers' folders.
+
+[Known issues and numbered checklist](https://github.com/mstan/MegaManX4Recomp/blob/master/docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.41
 
 **Survivor rainbow effects, leading-player stage objects and moving train scenery.**
 
