@@ -10,7 +10,7 @@
 Mega Man X4 on Windows and Linux, with **two-player co-op in alpha**.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Download Playtest 40](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.40)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Download Playtest 43](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.43)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -27,7 +27,7 @@ as the other hero. Arrive together, tackle bosses together, and share team retri
 | Play together | Local co-op with two controllers or separate keyboard bindings; two-player netplay from the launcher. |
 | Pick your view | **Unified** camera by default. **Split (Experimental)** gives each netplay player an independent screen. Local co-op also offers **side by side 8:3 (Experimental)**, with two 4:3 views in one window. |
 | Arrange your HUD | Stacked lifebars by default, or side by side. Independent screens show their own player's meter. |
-| Manage your supplies | Each hero opens their own character's pause menu. E-tank energy is shared by default; optionally give each player a separate supply. |
+| Manage your supplies | Either player opens both heroes' own pause menus. Choose weapons and manage supplies independently; either player resumes both. E-tank energy is separate while independent menus are enabled, and healing blocks unpause while your partner can keep navigating. |
 | Set the door rule | Either player opens boss doors by default. Optionally wait for both living, present players. |
 | Fight both story bosses | Opt into Double **and** Iris in sequence; return to the inner door for the second fight. |
 | Turn up the challenge | Optional double effective boss health and shorter hit cooldowns, with separate timers for each player or one shared timer. Scaling also reduces Zero's boss damage by 20%. |

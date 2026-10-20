@@ -1,4 +1,29 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.42
+# Mega Man X4 Recompiled - v0.1.1-coop-playtest.43
+
+**Two heroes, two pause menus.**
+
+- Either player opens both character menus. X and Zero can independently select weapons and manage their supplies; either player resumes the team.
+- Independent pause menus are on by default in local Unified, local 8:3 and netplay. They require separate E-tank energy for each player.
+- Tank use blocks unpause while the other player can keep navigating and selecting equipment. Gameplay resumes only after healing finishes and a player presses Start again.
+- Menus fade smoothly back into gameplay, with the stage restored while the screen is black.
+
+**Windows ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Unified remains the default; local 8:3 split remains experimental. Campaign
+saves carry forward; emulator save states from older builds may be incompatible.
+Public packages disable development cheats and omit loading-speed mods.
+
+The nearby intro explosion shake and missing bee groups remain under
+investigation. Single-slash timing report157 remains **unconfirmed**. Other
+unchecked reports stay on the numbered checklist.
+
+Keep **Input Display and Recording** enabled. After a bug, quit normally and
+send the matching `saves/diagnostics/session-...` folder beside the executable
+or AppImage, plus a video timestamp if available. For netplay, include both
+computers' folders.
+
+[Known issues and numbered checklist](https://github.com/mstan/MegaManX4Recomp/blob/master/docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v0.1.1-coop-playtest.42
 
 **Reliable P2 pause menus, Dragoon cameras and moving train scenery.**
 

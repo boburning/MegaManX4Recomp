@@ -1,7 +1,7 @@
 # Independent co-op pause menus
 
 Requested October 20, after Playtest 42. Item 209, `beads-eio.9.207`.
-Implemented on `feature/paired-pause-menus`; not yet in a published release.
+Included in Playtest 43 through [PR #54](https://github.com/mstan/MegaManX4Recomp/pull/54).
 
 The co-op option **Independent pause menus** defaults on. Either living,
 present character can pause. Both character menus open; each controller
