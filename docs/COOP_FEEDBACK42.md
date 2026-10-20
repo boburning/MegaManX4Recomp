@@ -1,7 +1,7 @@
 # Playtest 41 follow-up
 
 Intake on October 19. These reports remain open until the corresponding
-native behavior is qualified. No Playtest 42 release is claimed here.
+native behavior is qualified. Fixes189/206/208 now ship in Playtest42.
 
 | Item | Current evidence |
 |---|---|
@@ -88,3 +88,6 @@ cannot enroll the co-op renderer and is excluded. A Dragoon probe timed out
 waiting for a private screenshot before its approach; it establishes neither
 fight activation nor a gameplay regression. No user windows were opened and
 all background launches were muted.
+
+
+Published: [v0.1.1-coop-playtest.42](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.42). Windows36 and Linux30 production checks and public-package qualification pass. The release receipt records actual uploaded asset digests; the remaining reports above stay open.
