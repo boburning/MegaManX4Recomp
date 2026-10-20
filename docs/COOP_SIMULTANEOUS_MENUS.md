@@ -36,6 +36,11 @@ its shared Options/Quit frontend blocks P2 interaction and team resume.
 Start closes P1's native Options page first; another fresh press is required
 to resume gameplay. Options/Quit pages never draw a partner world sprite.
 Native fades, sound transitions and the resume world update run once.
+Both personal views replay the native fade's existing shade; private draws
+never advance its task. Menu graphics stop uploading before gameplay palette
+restoration, and the presenter switches to world drawing at the native fade-in
+phase. Local Unified changes back from two menus to its shared view while
+black; local 8:3 keeps its two views throughout the return.
 Only living characters apply native equipment changes on exit. Stage resets
 retire both menus and their guards. Both personal menu records, their original
 weapon selections, inventories and input history participate in snapshots and
@@ -77,6 +82,19 @@ The LAN harness holds each chord for six frames so it crosses the configured
 input delay before observation. Its initial two-frame observation failed to
 see the change; that attempt is retained and is not counted as a pass.
 
+Owner QA accepted menu management, but reported an abrupt, artifacted return.
+Before/after native frame captures reproduce the missing private fade: the
+old menus remain bright throughout the exit, including the gameplay fade-in.
+The corrected Local 8:3 and Unified captures show menu fade-out, a black
+palette/layout handoff, then a clean stage fade-in. The current lifecycle test
+covers both frame buffers' displayed shades, the black restoration boundary,
+no late menu uploads and exactly one shared world update. Windows focused
+checks and all 30 Linux CTests pass after the change.
+A fresh Split LAN run with Zero as P1 also passes healing, independent
+equipment, both resume directions and render restoration; both peers retain
+matching authoritative checksums. These checks qualify identical private
+Linux artifacts, not cross-OS matchmaking.
+
 Composed screenshots were inspected for both character menus and shared
 frontends, including a clean Options page after suppressing the stray P2
 sprite. `PSX_RENDER_PASS_VERIFY=1` remains enabled: the native checks require
@@ -92,6 +110,13 @@ checks; `qa10` contains the final clean-Options check and both connected modes;
 `qa12-tank-navigation/local-split-0` records live equipment management during
 healing; `qa13-options-tank/runtime` records healing under Options.
 `qa14-tank-lan/netplay-unified-1` records the final connected recheck.
+`qa15-exit-before/runtime/exit-frames` retains the old exit; its capture run
+completed the native checks but failed its optional video encoding because
+Linux FFmpeg was absent. `qa17-exit-fade/runtime` and
+`qa18-exit-unified/runtime` retain the corrected 60-frame sequences and phase
+logs, with clean render verification. `qa16` is an intermediate capture before
+adding the missing fade overlay and is not the final qualification artifact.
+`qa19-fade-lan/runtime` records the connected regression check.
 The LAN runs qualify identical Linux development artifacts, not cross-build,
 cross-OS or public-lobby compatibility. Windows full-runtime linking is being
 checked separately; the Windows model/catalog results are not a claim of

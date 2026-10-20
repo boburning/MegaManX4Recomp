@@ -1224,7 +1224,10 @@ static uint32_t personal_step(CPUState *cpu,uint32_t address,unsigned seat,
         if(personal_menu[seat].native[0x14]>=13)edge&=(uint16_t)~0x40u;
     }
     psx_mod_write_half(PAD,input);psx_mod_write_half(PAD+2,old);psx_mod_write_half(PAD+4,edge);
-    mmx4_coop_menu_assets(cpu,seat);
+    /* Native exit substate2 restores gameplay palettes and commits equipment.
+     * Reinstalling a portrait afterward corrupts the first world frames. */
+    if(personal_menu[seat].native[4]!=2 || personal_menu[seat].native[5]<2)
+        mmx4_coop_menu_assets(cpu,seat);
     if(seat) {mmx4_coop_enter_second();menu_projecting=1;}
     personal_pass=menu_guard=1;personal_seat=seat;
     uint32_t result=mmx4_coop_call(cpu,address,MENU,0);
@@ -1305,11 +1308,31 @@ static uint32_t personal_tick(CPUState *cpu,uint32_t address) {
         menu_active=personal_active=0;
     return result;
 }
+int mmx4_coop_lifecycle_resuming_world(void) {
+    /* Retail substate3 draws the restored world while its shared fade opens.
+     * Keep gameplay paused, but let private cameras present that same world. */
+    return personal_active && personal_initialized && menu_active &&
+        personal_menu[0].native[4]==2 && personal_menu[0].native[5]>=3;
+}
+unsigned mmx4_coop_lifecycle_menu_fade(uint32_t buffer) {
+    if(!personal_active || !personal_initialized || !menu_active)return 0;
+    unsigned fading=psx_mod_read_byte(0x80141BDCu);
+    /* Stay black while the native exit restores the stage palette/equipment,
+     * including the boundary after its fade task has retired. */
+    if(!fading && personal_menu[0].native[4]==2 &&
+       personal_menu[0].native[5]<=2)return 255;
+    if(!fading)return 0;
+    /* 80012A3C has already built this frame's subtractive TILE in the shared
+     * ordering table. Reuse its displayed shade, without ticking the task. */
+    unsigned index=buffer==0x80166CB0u;
+    return psx_mod_read_byte(0x80169D7Cu+index*16u);
+}
 int mmx4_coop_lifecycle_personal_menus(void) {
     /* Native campaign Options/Quit own a separate shared frontend, including
      * their confirmation pages. Present that frontend once until it returns. */
     int modal=personal_menu[0].native[4]==1 && personal_menu[0].native[5]>=5;
-    return personal_active && personal_initialized && menu_active && !modal;
+    return personal_active && personal_initialized && menu_active && !modal &&
+        !mmx4_coop_lifecycle_resuming_world();
 }
 int mmx4_coop_lifecycle_draw_menu(CPUState *cpu,unsigned seat) {
     if(seat>1 || !mmx4_coop_lifecycle_personal_menus() || mmx4_coop_projected())return 0;

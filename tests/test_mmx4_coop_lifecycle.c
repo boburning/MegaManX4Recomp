@@ -25,6 +25,7 @@ static uint8_t p2_vehicle[0xB0],p1_vehicle_backup[0xB0];
 static unsigned projected,ready=1,world_calls,observed_campaign,collect_calls[2];
 static unsigned pause_commit,pause_exit,world_draws;
 static unsigned personal_model,personal_native_calls[2],personal_draws[2];
+static unsigned personal_exit_model,menu_asset_calls[2],late_menu_assets;
 static unsigned assessment_calls[2];
 static unsigned assessment_cull;
 static unsigned reward_calls,save_calls,observed_menu_select;
@@ -113,7 +114,11 @@ void psx_mod_counter_add(const char *name,uint32_t amount) {
     if(!strcmp(name,"mmx4.coop.concurrent-return-arrivals"))direct_arrivals+=amount;
     if(!strcmp(name,"mmx4.coop.both-door-crossings"))both_door_crossings+=amount;
 }
-void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat) {(void)cpu;(void)seat;}
+void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat) {
+    (void)cpu;++menu_asset_calls[seat];
+    if(psx_mod_read_byte(0x801754A4u)==2 && psx_mod_read_byte(0x801754A5u)>=2)
+        ++late_menu_assets;
+}
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
     (void)owner;(void)canonical;return 0;
 }
@@ -330,6 +335,9 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         break;
     case 0x80023D90:
         ++personal_draws[projected];break;
+    case 0x800129F0:case 0x800129A4:
+        if(personal_exit_model)psx_mod_write_byte(0x80141BDCu,1);
+        break;
     case 0x8002FCAC:
         if(personal_model) {
             const uint32_t menu=0x801754A0u;
@@ -341,6 +349,21 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
                 else if(sub==1)mmx4_coop_call(cpu,0x8002FD70u,menu,0);
                 else {psx_mod_write_byte(menu+4,1);psx_mod_write_byte(menu+5,psx_mod_read_byte(MMX4_PLAYER+2)?1:0);}
             }else if(main==2) {
+                if(personal_exit_model) {
+                    if(!sub) {
+                        mmx4_coop_call(cpu,0x800129F0u,8,0);psx_mod_write_byte(menu+5,1);
+                    }else if(sub==1 && !psx_mod_read_byte(0x80141BDCu)) {
+                        psx_mod_write_byte(0x80166BB0u,1);psx_mod_write_byte(menu+5,2);
+                    }else if(sub==2) {
+                        mmx4_coop_call(cpu,0x80031064u,menu,0);
+                        mmx4_coop_call(cpu,0x800129A4u,8,0);psx_mod_write_byte(menu+5,3);
+                    }else if(sub==3 && !psx_mod_read_byte(0x80141BDCu)) {
+                        psx_mod_write_byte(MMX4_PLAY+1,0);
+                        psx_mod_write_byte(menu+4,0);psx_mod_write_byte(menu+5,0);
+                    }
+                    mmx4_coop_call(cpu,sub<2?0x80023D90u:0x80023D68u,0,0);
+                    break;
+                }
                 /* Commit once per hero, but the world remains shared. */
                 mmx4_coop_call(cpu,0x80031064u,menu,0);
                 psx_mod_write_byte(MMX4_PLAY+1,0);
@@ -706,6 +729,7 @@ static void reset(void) {
     fresh_game(&cpu,0);separate_etanks=simultaneous_menus=0;projected=local_view=0;inputs[0]=inputs[1]=0;
     world_calls=observed_campaign=pause_commit=pause_exit=world_draws=0;
     personal_model=0;memset(personal_native_calls,0,sizeof personal_native_calls);
+    personal_exit_model=late_menu_assets=0;memset(menu_asset_calls,0,sizeof menu_asset_calls);
     memset(personal_draws,0,sizeof personal_draws);
     memset(assessment_calls,0,sizeof assessment_calls);
     assessment_cull=0;
@@ -941,6 +965,42 @@ static int personal_tank_inventory(void) {
     reset();return 0;
 }
 
+static int simultaneous_menu_exit(void) {
+    CPUState cpu={0};
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode) {
+        reset();simultaneous_menus=personal_active=personal_initialized=menu_active=1;
+        personal_eligible=3;personal_model=personal_exit_model=1;split_views=mode;
+        memset(personal_menu,0,sizeof personal_menu);
+        for(unsigned seat=0;seat<2;++seat)personal_menu[seat].native[4]=1;
+        psx_mod_write_byte(PLAY+1,2);psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        inputs[1]=START;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(mmx4_coop_lifecycle_personal_menus() && !mmx4_coop_lifecycle_resuming_world());
+        CHECK(personal_menu[0].native[5]==1 && personal_menu[1].native[5]==1);
+        psx_mod_write_byte(0x80169D7Cu,64);psx_mod_write_byte(0x80169D8Cu,128);
+        CHECK(mmx4_coop_lifecycle_menu_fade(0x80166C10u)==64);
+        CHECK(mmx4_coop_lifecycle_menu_fade(0x80166CB0u)==128);
+        inputs[1]=0;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(!world_calls && !late_menu_assets);
+        psx_mod_write_byte(0x80141BDCu,0);mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_menu[0].native[5]==2 && personal_menu[1].native[5]==2);
+        CHECK(mmx4_coop_lifecycle_personal_menus() && !mmx4_coop_lifecycle_resuming_world());
+        CHECK(mmx4_coop_lifecycle_menu_fade(0x80166C10u)==255);
+        unsigned assets=menu_asset_calls[0]+menu_asset_calls[1];
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(!mmx4_coop_lifecycle_personal_menus() && mmx4_coop_lifecycle_resuming_world());
+        CHECK(personal_active && psx_mod_read_byte(PLAY+1)==2 && world_calls==1);
+        CHECK(!mmx4_coop_lifecycle_draw_menu(&cpu,0) && !mmx4_coop_lifecycle_draw_menu(&cpu,1));
+        for(unsigned i=0;i<3;++i)mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(world_calls==1 && !late_menu_assets && assets==menu_asset_calls[0]+menu_asset_calls[1]);
+        psx_mod_write_byte(0x80141BDCu,0);mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(!personal_active && !mmx4_coop_lifecycle_resuming_world() && !psx_mod_read_byte(PLAY+1));
+        CHECK(world_calls==1 && !projected && !late_menu_assets);
+        CHECK(!mmx4_coop_lifecycle_menu_fade(0x80166CB0u));
+    }
+    reset();return 0;
+}
+
 static int simultaneous_menu_ownership(void) {
     CPUState cpu={0};
     for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
@@ -1078,6 +1138,7 @@ static int simultaneous_menu_ownership(void) {
 }
 
 int main(void) {
+    CHECK(!simultaneous_menu_exit());
     CHECK(!simultaneous_menu_ownership());
     CHECK(!personal_tank_inventory());
     CPUState cpu={0};reset();

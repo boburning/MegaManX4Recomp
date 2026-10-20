@@ -1382,6 +1382,20 @@ static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     }else guest(cpu,0x80023D68u,0,0);
     if(failed || projected || rendering || hud_call)return 0;
     guest(cpu,0x800EC228u,buffer+0x9Cu,0);
+    unsigned shade=mmx4_coop_lifecycle_menu_fade(buffer);
+    if(shade) {
+        /* Clearing the private ordering table drops the shared fade task's
+         * screen tile. Replay its current shade after the private image; the
+         * render transaction restores GPU state, and never advances the fade. */
+        unsigned index=buffer==0x80166CB0u;
+        uint32_t mode=psx_mod_read_word(0x8012F49Cu+index*8u);
+        if((mode>>24)!=0xE1u)mode=0xE1000045u;
+        gpu_set_gp0_source(0);
+        gpu_write_gp0(mode);
+        gpu_write_gp0(0x62000000u|shade|(shade<<8)|(shade<<16));
+        gpu_write_gp0(0);
+        gpu_write_gp0(0x00F00140u);
+    }
     return !failed;
 }
 static int draw_local_pair(CPUState *cpu,void *user,uint32_t seat) {
@@ -1398,6 +1412,7 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
     unsigned paired=mmx4_coop_lifecycle_paired_door();
     int menu=mmx4_coop_lifecycle_personal_menus() &&
         psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+1)==2;
+    int returning=mmx4_coop_lifecycle_resuming_world();
     int local_menu=menu && !psx_mod_netplay_is_active();
     if(!local_split && !psx_mod_netplay_is_active())
         psx_mod_set_local_pair_presentation(local_menu);
@@ -1408,7 +1423,7 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
      * The existing private transaction can redraw the frozen saved camera;
      * real story owners, fades and transition locks retain their gates. */
     if((!split_views && !menu) || local_view_call || projected || inside || !mmx4_coop_ready() ||
-       psx_mod_read_byte(PLAY)!=6 || (!menu && psx_mod_read_byte(PLAY+1)!=0) ||
+       psx_mod_read_byte(PLAY)!=6 || (!menu && !returning && psx_mod_read_byte(PLAY+1)!=0) ||
        cpu->gpr[31]!=0x80012080u || (!menu && mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
        psx_mod_read_byte(PLAY+0x0F) ||
        (!menu && psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
