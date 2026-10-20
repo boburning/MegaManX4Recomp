@@ -49,6 +49,12 @@ static uint16_t menu_previous[2], select_previous;
 static uint16_t story_pad[3];
 static unsigned inventory_initialized, inventory_projected;
 static unsigned separate_etanks;
+/* Native MENU and its saved pre-pause weapon are personal. The world, fade
+ * controller, campaign Quit and W-tank remain shared and run at most once. */
+typedef struct { uint8_t native[0x34], original_weapon; } PersonalMenu;
+static PersonalMenu personal_menu[2];
+static unsigned simultaneous_menus, personal_active, personal_initialized, personal_eligible;
+static unsigned personal_pass, personal_seat, personal_rendering;
 static unsigned stage_known, last_stage, last_section, last_lives;
 static unsigned carry_resources, carry_dead, carry_first_dead, carry_departure, carry_refill;
 static unsigned departed, select_ticks, select_release, rejoin_pending;
@@ -82,7 +88,7 @@ static void start_arrival(CPUState *cpu,unsigned seat);
 static uint32_t body_word(const uint8_t *body,unsigned at);
 
 int mmx4_coop_lifecycle_snapshot_ready(void) {
-    return !(inventory_projected || menu_projecting || normal_guard || menu_guard || world_guard ||
+    return !(inventory_projected || menu_projecting || personal_pass || personal_rendering || normal_guard || menu_guard || world_guard ||
         pickup_guard || collect_guard || save_guard || reward_guard || death_guard || death_check_guard ||
         capsule_guard || scene_guard || script_pool_guard || command_guard || control_guard || text_guard ||
         text_init_guard || flip_guard || warp_guard || door_wait || door_terrain_guard || surface_call || frost_path_contact_call);
@@ -96,6 +102,13 @@ static void snapshot_inventory(Mmx4SnapshotIO *s,Inventory *inventory) {
 int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
     /* Campaign/upgrades are owned by P1's native save record in guest RAM. */
     mmx4_snapshot_fixed(s,separate_etanks);
+    mmx4_snapshot_fixed(s,simultaneous_menus);
+    MMX4_SNAPSHOT_BOOL(s,personal_active);MMX4_SNAPSHOT_BOOL(s,personal_initialized);
+    MMX4_SNAPSHOT_FIELD(s,personal_eligible,1,3);
+    for(unsigned seat=0;seat<2;++seat) {
+        mmx4_snapshot_bytes(s,personal_menu[seat].native,sizeof personal_menu[seat].native);
+        MMX4_SNAPSHOT_U8(s,personal_menu[seat].original_weapon);
+    }
     snapshot_inventory(s,&second_inventory);snapshot_inventory(s,&saved_inventory);
     for(unsigned i=0;i<PICKUP_CAPACITY;++i) {
         uint32_t actor=mmx4_snapshot_integer(s,pickups[i].actor,4,UINT32_MAX);
@@ -210,6 +223,9 @@ void mmx4_coop_lifecycle_view_save(void) {
 void mmx4_coop_lifecycle_view_restore(void) {
     second_inventory=view_second_inventory;saved_inventory=view_saved_inventory;
     inventory_initialized=view_inventory_initialized;inventory_projected=view_inventory_projected;
+    /* A render watchdog can unwind before draw_menu clears its guard. View
+     * restoration is outside that draw, including the failure path. */
+    personal_rendering=0;
 }
 
 static PickupOwner *pickup_record(uint32_t actor,int create) {
@@ -251,12 +267,18 @@ static void fresh_game(CPUState *cpu,uint32_t address) {
     flip_guard=0;
     departure_vehicle_active=departure_vehicle_visible=0;
     menu_active=menu_owner=menu_projecting=0;
+    personal_active=personal_initialized=personal_eligible=0;
+    personal_pass=personal_seat=personal_rendering=0;
+    memset(personal_menu,0,sizeof personal_menu);
     trace_previous.valid=0;
 }
 void mmx4_coop_lifecycle_activate(void) {
     char value[16];
+    simultaneous_menus=!psx_mod_current_option_value("simultaneous_menus",value,sizeof value) ||
+        strcmp(value,"false");
     separate_etanks=psx_mod_current_option_value("separate_etanks",value,sizeof value) &&
         !strcmp(value,"true");
+    separate_etanks|=simultaneous_menus;
     /* Reactivation starts a new native runtime; no campaign bytes are touched. */
     fresh_game(NULL,0);
     last_stage=last_section=last_lives=0;
@@ -388,6 +410,9 @@ void mmx4_coop_lifecycle_reset(void) {
      * guard bypasses P2's menu projection and leaves menu_active latched when
      * the unwrapped native menu resumes gameplay. */
     menu_active=0;menu_owner=0;menu_guard=menu_projecting=0;
+    personal_active=personal_initialized=personal_eligible=0;
+    personal_pass=personal_seat=personal_rendering=0;
+    memset(personal_menu,0,sizeof personal_menu);
 }
 
 static int native_initial_arrival(void) {
@@ -1147,13 +1172,186 @@ void mmx4_coop_lifecycle_tick(CPUState *cpu) {
 
 /* Wrapper guards permit exactly one native call and preserve CPU registers
  * through the core's call service. Only the outer filter completes the entry. */
+static void personal_menu_read(PersonalMenu *menu) {
+    read_bytes(MENU,menu->native,sizeof menu->native);
+    menu->original_weapon=psx_mod_read_byte(0x8013B818u);
+}
+static void personal_menu_write(const PersonalMenu *menu) {
+    write_bytes(MENU,menu->native,sizeof menu->native);
+    psx_mod_write_byte(0x8013B818u,menu->original_weapon);
+}
+static int personal_busy(unsigned seat) {
+    const uint8_t *menu=personal_menu[seat].native;
+    /* +28 also stores the old substate in Quit: it is not a busy flag. */
+    return menu[4]==1 && (menu[5]==3 || menu[5]==4);
+}
+static int personal_tank_request(unsigned seat,uint16_t edge) {
+    const uint8_t *menu=personal_menu[seat].native;
+    return (personal_eligible&(1u<<seat)) && menu[4]==1 && menu[5]==1 &&
+        menu[0x14]>=10 && menu[0x14]<=12 && (edge&~START)==0x40;
+}
+/* The secondary menu must not start a second fade/music transition. */
+static int personal_shared_effect(CPUState *cpu,uint32_t address) {
+    (void)address;
+    return personal_pass && personal_seat==1?mmx4_coop_finish(cpu,0):0;
+}
+static int personal_menu_draw(CPUState *cpu,uint32_t address) {
+    (void)address;
+    int modal=!personal_seat && psx_mod_read_byte(MENU+4)==1 &&
+        psx_mod_read_byte(MENU+5)>=5;
+    return personal_pass && !personal_rendering && !modal?mmx4_coop_finish(cpu,0):0;
+}
+static int personal_dead_commit(CPUState *cpu,uint32_t address) {
+    (void)address;
+    if(!personal_pass || (personal_eligible&(1u<<personal_seat)))return 0;
+    /* Retail weapon installation rewrites animation state. Never apply it
+     * to a corpse or a withdrawn partner just to finish the shared fade. */
+    if(!personal_seat) {
+        mmx4_coop_call(cpu,0x80021158u,0,0);
+        mmx4_coop_call(cpu,0x800129A4u,8,0);
+    }
+    psx_mod_write_byte(MENU+5,3);
+    return mmx4_coop_finish(cpu,0);
+}
+static uint32_t personal_step(CPUState *cpu,uint32_t address,unsigned seat,
+                              uint16_t input,uint16_t old) {
+    personal_menu_write(&personal_menu[seat]);
+    uint16_t edge=(uint16_t)(input&~old);
+    /* P1 owns the campaign's Quit, Escape and save/continue transitions. */
+    if(seat) {
+        input&=(uint16_t)~SELECT;old&=(uint16_t)~SELECT;edge&=(uint16_t)~SELECT;
+        psx_mod_write_byte(MENU+0x23,0);psx_mod_write_byte(MENU+0x24,0);
+        if(personal_menu[seat].native[0x14]>=13)edge&=(uint16_t)~0x40u;
+    }
+    psx_mod_write_half(PAD,input);psx_mod_write_half(PAD+2,old);psx_mod_write_half(PAD+4,edge);
+    /* Native exit substate2 restores gameplay palettes and commits equipment.
+     * Reinstalling a portrait afterward corrupts the first world frames. */
+    if(personal_menu[seat].native[4]!=2 || personal_menu[seat].native[5]<2)
+        mmx4_coop_menu_assets(cpu,seat);
+    if(seat) {mmx4_coop_enter_second();menu_projecting=1;}
+    personal_pass=menu_guard=1;personal_seat=seat;
+    uint32_t result=mmx4_coop_call(cpu,address,MENU,0);
+    personal_pass=menu_guard=0;
+    if(seat) {
+        uint8_t refresh=psx_mod_read_byte(0x80166BB0u)&1u;
+        menu_projecting=0;mmx4_coop_leave_second();
+        psx_mod_write_byte(0x80166BB0u,(uint8_t)(psx_mod_read_byte(0x80166BB0u)|refresh));
+    }
+    personal_menu_read(&personal_menu[seat]);
+    return result;
+}
+static uint32_t personal_tick(CPUState *cpu,uint32_t address) {
+    uint8_t pad[6];read_bytes(PAD,pad,sizeof pad);
+    uint16_t input[2]={mmx4_coop_input(0),mmx4_coop_input(1)};
+    uint16_t old[2]={menu_previous[0],menu_previous[1]};
+    uint16_t edge[2]={(uint16_t)(input[0]&~old[0]),(uint16_t)(input[1]&~old[1])};
+    memcpy(menu_previous,input,sizeof input);
+    uint32_t result=0;
+    if(!personal_initialized) {
+        result=personal_step(cpu,address,0,0,0);
+        /* Native initialization has populated the first menu. Initialize the
+         * other character once at the same fade boundary, in its own context. */
+        if(personal_menu[0].native[4]==0 && personal_menu[0].native[5]==2) {
+            memset(&personal_menu[1],0,sizeof personal_menu[1]);
+            personal_menu[1].native[5]=1;
+            uint8_t fading=psx_mod_read_byte(0x80141BDCu);
+            psx_mod_write_byte(0x80141BDCu,0);
+            personal_step(cpu,0x8002FD70u,1,0,0);
+            psx_mod_write_byte(0x80141BDCu,fading);
+            personal_initialized=1;
+        }
+    }else {
+        int busy=personal_busy(0) || personal_busy(1);
+        int modal=personal_menu[0].native[4]==1 && personal_menu[0].native[5]>=5;
+        int tank[2]={personal_tank_request(0,edge[0]),personal_tank_request(1,edge[1])};
+        int interactive=personal_menu[0].native[4]==1 && personal_menu[1].native[4]==1;
+        unsigned resume=0;
+        for(unsigned seat=0;seat<2;++seat)
+            resume|=(personal_eligible&(1u<<seat)) && (edge[seat]&START);
+        /* A tank confirmation wins over a simultaneous resume request.
+         * Blocked exit/tank edges are consumed, never queued after healing. */
+        if(interactive && !busy && !modal && !tank[0] && !tank[1] && resume) {
+            for(unsigned seat=0;seat<2;++seat) {
+                personal_menu[seat].native[4]=2;personal_menu[seat].native[5]=0;
+            }
+        }
+        /* Tick an existing P2 heal before P1's shared Options/Quit frontend.
+         * Healing must continue under that frontend, whose assets draw last. */
+        unsigned first=personal_busy(1) || (tank[1] && !tank[0])?1:0;
+        for(unsigned turn=0;turn<2;++turn) {
+            unsigned seat=first^turn;
+            if(modal && seat && !personal_busy(seat))continue;
+            int allowed=interactive && (!modal || !seat) &&
+                (personal_eligible&(1u<<seat));
+            /* Native Options uses Start to return to the character menu.
+             * Let P1 close that modal without interpreting it as team resume. */
+            uint16_t mask=modal && !seat?0:START;
+            if(busy) {
+                const uint8_t *menu=personal_menu[seat].native;
+                /* Equipment and cursor input stay live. Serialize new tank
+                 * uses (W energy is shared), and cover native Escape/Quit
+                 * confirmations that can leave the menu without Start.
+                 * Options, including its Start-to-return, remains usable. */
+                if(tank[seat] || (!seat && (menu[5]==6 ||
+                   (menu[5]==2 && menu[0x14]==13))))mask|=0x40;
+            }
+            uint16_t buttons=allowed?(uint16_t)(input[seat]&~mask):0;
+            uint16_t previous=allowed?(uint16_t)(old[seat]&~mask):0;
+            result=personal_step(cpu,address,seat,buttons,previous);
+            busy|=personal_busy(seat);
+            modal|=personal_menu[0].native[4]==1 && personal_menu[0].native[5]>=5;
+            if(psx_mod_read_byte(PLAY)!=6)break;
+        }
+    }
+    personal_menu_write(&personal_menu[0]);write_bytes(PAD,pad,sizeof pad);
+    if(psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+1)!=2)
+        menu_active=personal_active=0;
+    return result;
+}
+int mmx4_coop_lifecycle_resuming_world(void) {
+    /* Retail substate3 draws the restored world while its shared fade opens.
+     * Keep gameplay paused, but let private cameras present that same world. */
+    return personal_active && personal_initialized && menu_active &&
+        personal_menu[0].native[4]==2 && personal_menu[0].native[5]>=3;
+}
+unsigned mmx4_coop_lifecycle_menu_fade(uint32_t buffer) {
+    if(!personal_active || !personal_initialized || !menu_active)return 0;
+    unsigned fading=psx_mod_read_byte(0x80141BDCu);
+    /* Stay black while the native exit restores the stage palette/equipment,
+     * including the boundary after its fade task has retired. */
+    if(!fading && personal_menu[0].native[4]==2 &&
+       personal_menu[0].native[5]<=2)return 255;
+    if(!fading)return 0;
+    /* 80012A3C has already built this frame's subtractive TILE in the shared
+     * ordering table. Reuse its displayed shade, without ticking the task. */
+    unsigned index=buffer==0x80166CB0u;
+    return psx_mod_read_byte(0x80169D7Cu+index*16u);
+}
+int mmx4_coop_lifecycle_personal_menus(void) {
+    /* Native campaign Options/Quit own a separate shared frontend, including
+     * their confirmation pages. Present that frontend once until it returns. */
+    int modal=personal_menu[0].native[4]==1 && personal_menu[0].native[5]>=5;
+    return personal_active && personal_initialized && menu_active && !modal &&
+        !mmx4_coop_lifecycle_resuming_world();
+}
+int mmx4_coop_lifecycle_draw_menu(CPUState *cpu,unsigned seat) {
+    if(seat>1 || !mmx4_coop_lifecycle_personal_menus() || mmx4_coop_projected())return 0;
+    personal_menu_write(&personal_menu[seat]);
+    mmx4_coop_menu_assets(cpu,seat);
+    if(seat)mmx4_coop_enter_second();
+    personal_rendering=1;
+    mmx4_coop_call(cpu,0x80023D90u,0,0);
+    personal_rendering=0;
+    if(seat)mmx4_coop_leave_second();
+    return 1;
+}
 static int stage_normal(CPUState *cpu,uint32_t address) {
     if(normal_guard || !mmx4_coop_ready() || mmx4_coop_projected())return 0;
     /* The native dispatcher has returned to ordinary gameplay. A retired
      * menu must not suppress the partner's controller on subsequent frames.
      * The menu's nested world draw/update still owns its live projection. */
     if(!psx_mod_read_byte(PLAY+1) && !menu_projecting && !world_guard)
-        menu_active=menu_guard=0;
+        menu_active=menu_guard=personal_active=personal_initialized=0;
     warp_begin(cpu);
     if(warp_phase && !mmx4_coop_alive(warp_owner))warp_tick(cpu);
     uint16_t input[2]={mmx4_coop_input(0),mmx4_coop_input(1)};
@@ -1197,6 +1395,12 @@ static int stage_normal(CPUState *cpu,uint32_t address) {
     normal_guard=0;write_bytes(PAD,pad,6);
     if(psx_mod_read_byte(PLAY+1)==2 && owner>=0) {
         menu_active=1;menu_owner=(unsigned)owner;
+        if(simultaneous_menus) {
+            personal_active=1;personal_initialized=0;
+            personal_eligible=(unsigned)mmx4_coop_alive(0)|((unsigned)mmx4_coop_alive(1)<<1);
+            memset(personal_menu,0,sizeof personal_menu);
+            personal_menu_read(&personal_menu[0]);menu_owner=0;
+        }
         psx_mod_counter_add(owner?"mmx4.coop.p2-menu":"mmx4.coop.p1-menu",1);
     }
     return mmx4_coop_finish(cpu,result);
@@ -1204,6 +1408,7 @@ static int stage_normal(CPUState *cpu,uint32_t address) {
 
 static int pause_menu(CPUState *cpu,uint32_t address) {
     if(menu_guard || !mmx4_coop_ready() || mmx4_coop_projected())return 0;
+    if(personal_active)return mmx4_coop_finish(cpu,personal_tick(cpu,address));
     if(!menu_active) {menu_active=1;menu_owner=0;}
     uint8_t pad[6];read_bytes(PAD,pad,6);
     uint16_t input=mmx4_coop_input(menu_owner);
@@ -1234,6 +1439,7 @@ static int pause_menu(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int menu_world(CPUState *cpu,uint32_t address) {
+    if(personal_pass && personal_seat==1)return mmx4_coop_finish(cpu,0);
     if(world_guard || !menu_projecting || !mmx4_coop_projected())return 0;
     /* Both fade boundaries draw the world (80023D68), and exit-pause also
      * updates it once (80021158). Shared graphics/caches and actor pools must
@@ -2313,6 +2519,14 @@ uint32_t mmx4_coop_lifecycle_digest(uint32_t seed) {
     for(unsigned i=0;i<16;++i)seed=hash_byte(seed,in->ammo[i]);
     seed=hash_byte(seed,in->weapon);
     seed=hash_word(seed,separate_etanks);
+    seed=hash_word(seed,simultaneous_menus);
+    seed=hash_word(seed,personal_active);seed=hash_word(seed,personal_initialized);
+    seed=hash_word(seed,personal_eligible);
+    for(unsigned seat=0;seat<2;++seat) {
+        for(unsigned i=0;i<sizeof personal_menu[seat].native;++i)
+            seed=hash_byte(seed,personal_menu[seat].native[i]);
+        seed=hash_byte(seed,personal_menu[seat].original_weapon);
+    }
     if(separate_etanks)for(unsigned i=0;i<2;++i)seed=hash_byte(seed,in->etanks[i]);
     seed=hash_word(seed,inventory_projected);
     if(inventory_projected) {
@@ -2378,6 +2592,10 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
     psx_mod_register_function_entry_plugin(ID,0x800358A4u,direct_spawn);
     psx_mod_register_function_filter_plugin(ID,0x8001FF8Cu,stage_normal);
     psx_mod_register_function_filter_plugin(ID,0x8002FCACu,pause_menu);
+    psx_mod_register_function_filter_plugin(ID,0x80023D90u,personal_menu_draw);
+    psx_mod_register_function_filter_plugin(ID,0x80031064u,personal_dead_commit);
+    psx_mod_register_function_filter_plugin(ID,0x800129F0u,personal_shared_effect);
+    psx_mod_register_function_filter_plugin(ID,0x800129A4u,personal_shared_effect);
     psx_mod_register_function_filter_plugin(ID,0x80021158u,menu_world);
     psx_mod_register_function_filter_plugin(ID,0x80023D68u,menu_world);
     psx_mod_register_function_filter_plugin(ID,0x800BF76Cu,pickup_init);

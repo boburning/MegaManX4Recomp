@@ -55,6 +55,7 @@ def main():
     parser.add_argument('--jet-only',action='store_true',help='Check both native Jet rider entrance animations and composed frames')
     parser.add_argument('--personal-menus-only',action='store_true',help='Check character menus, tank healing and native weapon selection')
     parser.add_argument('--separate-etanks',action='store_true',help='Enable private E-tank contents in both test peers')
+    parser.add_argument('--individual-pausing',action='store_true',help='Use legacy one-owner pausing')
     parser.add_argument('--boss-return-only',action='store_true',help='Check partner arrival during boss-fight movement, jump and Nova')
     parser.add_argument('--train-only',action='store_true',help='Qualify both Slash Split background panes and CRCs')
     parser.add_argument('--latch-only',action='store_true',help='Qualify the native Mushroom latch and matching peer state')
@@ -67,9 +68,11 @@ def main():
     parser.add_argument('--expect-sprite-wrap',action='store_true',help='Capture the old build without the distant-sprite correction')
     parser.add_argument('--expect-duplicated-dragon',action='store_true',help='Capture the old screen-relative intro boss')
     parser.add_argument('--frontend',choices=('headless-opengl','hidden-window'),default='headless-opengl')
+    parser.add_argument('--boot-timeout',type=float,default=180,help='Bounded cold-runtime and native boot allowance')
+    parser.add_argument('--phase-timeout',type=float,default=45)
     parser.add_argument('--expect-camera-fallback',action='store_true',help='Require the unfixed Nova camera failure in an A/B baseline')
     parser.set_defaults(latency=0, jitter=0, seed=714, delay=2,
-                        frontend='headless-opengl', boot_timeout=100, phase_timeout=35)
+                        frontend='headless-opengl')
     args = parser.parse_args()
     if args.nova_only or args.boss_return_only:args.ultimate_armor=True
     for name in ('exe', 'bios', 'disc', 'config', 'game_root', 'output'):
@@ -111,9 +114,19 @@ def main():
             from coop_personal_menu_scenario import personal_menus
             scenario=Scenarios(NetplayRuntime(debug),args.output,args.campaign)
             scenario.separate_etanks=args.separate_etanks
+            scenario.simultaneous_menus=not args.individual_pausing
             def capture(label):
+                paths=[]
                 for seat,peer in enumerate(peers):
-                    peer.request('present_shot',path=str(args.output/('%s-p%d.png'%(label,seat+1))))
+                    path=args.output/('%s-p%d.png'%(label,seat+1))
+                    sequence=peer.request('present_shot_seq')['seq']
+                    peer.request('present_shot',path=str(path))
+                    deadline=time.monotonic()+12
+                    while peer.request('present_shot_seq')['seq']==sequence:
+                        if time.monotonic()>deadline:raise TimeoutError('Peer menu capture pending')
+                        time.sleep(.03)
+                    paths.append(path)
+                return paths
             try:
                 report['personal_menus']=personal_menus(scenario,capture)
                 tick=min(peer.status()['tick'] for peer in peers)

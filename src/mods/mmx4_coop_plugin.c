@@ -17,6 +17,7 @@
 #include "psx_netplay.h"
 #include "mod_snapshot.h"
 #include "gpu.h"
+#include "gpu_render.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -346,7 +347,24 @@ void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat) {
     uint32_t rect=diagnostic+0x80;
     psx_mod_write_half(rect,832);psx_mod_write_half(rect+2,256);
     psx_mod_write_half(rect+4,64);psx_mod_write_half(rect+6,256);
-    guest(cpu,0x800EA4D0,rect,assets[character].menu_gfx);
+    if(psx_mod_local_view_scope()) {
+        /* These are immutable presentation assets. Install them through the
+         * renderer's journalled upload, before it mutates CPU VRAM. GP0(A0)
+         * streams into CPU VRAM before the backend sees its commit, so it is
+         * unsuitable for these reversible own-menu texture switches. */
+        uint16_t pixels[64*256];
+        for(unsigned i=0;i<64*256;++i)
+            pixels[i]=psx_mod_read_half(assets[character].menu_gfx+i*2);
+        gr_vram_transfer_in(832,256,64,256,pixels);
+        for(unsigned i=0;i<256*2;++i)
+            pixels[i]=psx_mod_read_half(assets[character].menu[1]+i*2);
+        gr_vram_transfer_in(0,484,256,2,pixels);
+    } else {
+        guest(cpu,0x800EA4D0,rect,assets[character].menu_gfx);
+        /* Native170B0's pause palette also selects the portrait. Use its
+         * retained source for either hero. */
+        guest(cpu,0x800EA4D0,0x800F1AD0u,assets[character].menu[1]);
+    }
     menu_texture_owner=character;
 }
 /* Native GPU DMA masks its source to physical RAM. Retained character data
@@ -1015,8 +1033,9 @@ static int world_draw_visible(void) {
     if(psx_mod_read_byte(PLAY)!=6 || !psx_mod_read_byte(PLAYER+4))return 0;
     unsigned phase=psx_mod_read_byte(PLAY+1);
     /* Native pause fades draw the world while gameplay remains in minor2.
-     * Keep both seats in those world passes; Quit Game has its own backdrop. */
-    return phase==0 || (phase==2 && psx_mod_read_byte(0x801754A5u)<6);
+     * Keep both seats in those world passes. Options and Quit Game own
+     * frontend backdrops; neither may inherit a partner world sprite. */
+    return phase==0 || (phase==2 && psx_mod_read_byte(0x801754A5u)<5);
 }
 static int coop_hud(CPUState *cpu,uint32_t address) {
     if(hud_call || projected || !mmx4_coop_ready() || !world_draw_visible())return 0;
@@ -1322,12 +1341,12 @@ static uint32_t state_digest(void) {
 typedef struct {
     PlayerContext first,second;
     uint32_t resources[9],world_packet_used;
-    unsigned projected,rendering,hud_call,upload_guard,failed;
+    unsigned projected,rendering,hud_call,upload_guard,failed,menu_texture_owner;
     uint8_t dirty,cheat;
 } LocalViewContext;
 static void local_context_save(LocalViewContext *context) {
     *context=(LocalViewContext){first,second,{0},world_packet_used,
-        projected,rendering,hud_call,upload_guard,failed,saved_dirty,saved_cheat};
+        projected,rendering,hud_call,upload_guard,failed,menu_texture_owner,saved_dirty,saved_cheat};
     memcpy(context->resources,saved_resources,sizeof saved_resources);
     mmx4_coop_lifecycle_view_save();mmx4_widescreen_view_save();
 }
@@ -1337,16 +1356,20 @@ static void local_context_restore(const LocalViewContext *context) {
     world_packet_used=context->world_packet_used;saved_dirty=context->dirty;saved_cheat=context->cheat;
     projected=context->projected;rendering=context->rendering;hud_call=context->hud_call;
     upload_guard=context->upload_guard;failed=context->failed;
+    menu_texture_owner=context->menu_texture_owner;
     mmx4_coop_lifecycle_view_restore();mmx4_widescreen_view_restore();
 }
 static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     (void)alpha;
     uint32_t buffer=*(uint32_t *)user;
     uint8_t camera[0xFC];
-    if(!mmx4_coop_split_camera_copy(local_view_seat,camera))return 0;
-    mmx4_coop_split_local_explosion_palette(cpu,camera);
-    mmx4_coop_split_project_intro_boss();
-    project(0x801419B0u,camera,sizeof camera);
+    int menu=mmx4_coop_lifecycle_personal_menus();
+    if(!menu) {
+        if(!mmx4_coop_split_camera_copy(local_view_seat,camera))return 0;
+        mmx4_coop_split_local_explosion_palette(cpu,camera);
+        mmx4_coop_split_project_intro_boss();
+        project(0x801419B0u,camera,sizeof camera);
+    }
     gpu_set_gp0_source(0);
     gpu_write_gp0(0x02000000u|psx_mod_read_byte(buffer+0x2Du)|
         (uint32_t)psx_mod_read_byte(buffer+0x2Eu)<<8|
@@ -1354,15 +1377,31 @@ static int draw_local_view(CPUState *cpu,void *user,uint32_t alpha) {
     gpu_write_gp0(psx_mod_read_half(buffer+0x14u)|(uint32_t)psx_mod_read_half(buffer+0x16u)<<16);
     gpu_write_gp0(psx_mod_read_half(buffer+0x18u)|(uint32_t)psx_mod_read_half(buffer+0x1Au)<<16);
     guest(cpu,0x800EA714u,buffer+0x70u,12);
-    guest(cpu,0x80023D68u,0,0);
+    if(menu) {
+        if(!mmx4_coop_lifecycle_draw_menu(cpu,local_view_seat))return 0;
+    }else guest(cpu,0x80023D68u,0,0);
     if(failed || projected || rendering || hud_call)return 0;
     guest(cpu,0x800EC228u,buffer+0x9Cu,0);
+    unsigned shade=mmx4_coop_lifecycle_menu_fade(buffer);
+    if(shade) {
+        /* Clearing the private ordering table drops the shared fade task's
+         * screen tile. Replay its current shade after the private image; the
+         * render transaction restores GPU state, and never advances the fade. */
+        unsigned index=buffer==0x80166CB0u;
+        uint32_t mode=psx_mod_read_word(0x8012F49Cu+index*8u);
+        if((mode>>24)!=0xE1u)mode=0xE1000045u;
+        gpu_set_gp0_source(0);
+        gpu_write_gp0(mode);
+        gpu_write_gp0(0x62000000u|shade|(shade<<8)|(shade<<16));
+        gpu_write_gp0(0);
+        gpu_write_gp0(0x00F00140u);
+    }
     return !failed;
 }
 static int draw_local_pair(CPUState *cpu,void *user,uint32_t seat) {
     LocalViewContext context;
     local_context_save(&context);
-    local_view_seat=mmx4_coop_split_view_seat(seat);
+    local_view_seat=mmx4_coop_lifecycle_personal_menus()?seat:mmx4_coop_split_view_seat(seat);
     int ok=draw_local_view(cpu,user,0);
     /* Host plugin contexts must return to the common baseline between views,
      * as well as the framework's CPU/RAM/VRAM checkpoint. Neither draw ticks AI. */
@@ -1371,17 +1410,23 @@ static int draw_local_pair(CPUState *cpu,void *user,uint32_t seat) {
 }
 static int present_local_view(CPUState *cpu,uint32_t address) {
     unsigned paired=mmx4_coop_lifecycle_paired_door();
+    int menu=mmx4_coop_lifecycle_personal_menus() &&
+        psx_mod_read_byte(PLAY)==6 && psx_mod_read_byte(PLAY+1)==2;
+    int returning=mmx4_coop_lifecycle_resuming_world();
+    int local_menu=menu && !psx_mod_netplay_is_active();
+    if(!local_split && !psx_mod_netplay_is_active())
+        psx_mod_set_local_pair_presentation(local_menu);
     if(local_split && !local_aspect_set)
         local_aspect_set=(unsigned)psx_mod_set_fixed_display_aspect(4,3);
     /* An ordinary world freeze (including an ice bird's field effect) is
      * not a request to replace the partner's view with the canonical image.
      * The existing private transaction can redraw the frozen saved camera;
      * real story owners, fades and transition locks retain their gates. */
-    if(!split_views || local_view_call || projected || inside || !mmx4_coop_ready() ||
-       psx_mod_read_byte(PLAY)!=6 || psx_mod_read_byte(PLAY+1)!=0 ||
-       cpu->gpr[31]!=0x80012080u || (mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
+    if((!split_views && !menu) || local_view_call || projected || inside || !mmx4_coop_ready() ||
+       psx_mod_read_byte(PLAY)!=6 || (!menu && !returning && psx_mod_read_byte(PLAY+1)!=0) ||
+       cpu->gpr[31]!=0x80012080u || (!menu && mmx4_coop_lifecycle_script_owner()>=0 && !paired) ||
        psx_mod_read_byte(PLAY+0x0F) ||
-       (psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
+       (!menu && psx_mod_read_byte(PLAY+0x1C) && !mmx4_coop_lifecycle_initial_arrival() &&
         !mmx4_coop_lifecycle_nova_active() && !paired)) {
         return 0;
     }
@@ -1391,14 +1436,15 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
     uint32_t result=guest(cpu,address,cpu->gpr[4],cpu->gpr[5]);
     guest(cpu,0x800EA20Cu,0,0);
     int port=psx_netplay_local_port();
-    local_view_seat=mmx4_coop_split_view_seat(port>=0 && port<2?(unsigned)port:0);
+    unsigned seat=port>=0 && port<2?(unsigned)port:0;
+    local_view_seat=menu?seat:mmx4_coop_split_view_seat(seat);
     PSXModRenderPass rectangle={sizeof rectangle,0,
         psx_mod_read_half(buffer+0x14u),psx_mod_read_half(buffer+0x16u),
         psx_mod_read_half(buffer+0x18u),psx_mod_read_half(buffer+0x1Au)};
     uint32_t before=state_digest();
     LocalViewContext context;local_context_save(&context);
     int committed;
-    if(local_split) {
+    if(local_split || local_menu) {
         PSXModStereoFrame pair={sizeof pair,1,rectangle.x,rectangle.y,rectangle.w,rectangle.h};
         psx_mod_set_local_pair_presentation(1);
         committed=psx_mod_render_local_pair(cpu,&pair,draw_local_pair,&buffer);
@@ -1473,7 +1519,7 @@ static void snapshot_ui_banks(Mmx4SnapshotIO *s,UiBank *cache,unsigned *live_cou
     if(s->mode==MMX4_SNAPSHOT_READ)memset(cache+count,0,(4096-count)*sizeof cache[0]);
 }
 static int snapshot_walk(Mmx4SnapshotIO *s) {
-    mmx4_snapshot_fixed(s,0x42503458u); /* X4PB, personal tanks and tenth-HP damage */
+    mmx4_snapshot_fixed(s,0x43503458u); /* X4PC, independent personal menus */
     mmx4_coop_bosses_snapshot(s);
     mmx4_coop_balance_snapshot(s);
     mmx4_snapshot_fixed(s,split_views);mmx4_snapshot_preference(s,hud_side_by_side);

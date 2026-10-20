@@ -82,7 +82,11 @@ int main(int argc, char** argv) {
        manager.feature_enabled("mmx4.cheat.black-zero","black-zero"))
         return fail("elective character cheats must default off");
       if(manager.feature_option_value("mmx4.coop","coop","separate_etanks")!="false")
-          return fail("separate E-tanks must default off");
+          return fail("legacy individual-pausing E-tank preference must default off");
+      if(manager.feature_option_value("mmx4.coop","coop","simultaneous_menus")!="true")
+          return fail("independent simultaneous menus must default on");
+      if(!manager.set_feature_option("mmx4.coop","coop","simultaneous_menus","false",&error))return fail(error);
+      if(!manager.set_feature_option("mmx4.coop","coop","simultaneous_menus","true",&error))return fail(error);
       if(!manager.set_feature_option("mmx4.coop","coop","separate_etanks","true",&error))return fail(error);
       if(!manager.set_feature_option("mmx4.coop","coop","separate_etanks","false",&error))return fail(error);
       if(manager.feature_option_value("mmx4.coop","coop","ultimate_armor_x")!="false" ||
