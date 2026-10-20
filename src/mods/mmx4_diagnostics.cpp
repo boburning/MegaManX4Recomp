@@ -72,7 +72,7 @@ void json_string(std::ostream& out,const char *value) {
 }
 void option_metadata(std::ostream& out) {
     static const char *keys[]={"local_cameras","cameras","hud_layout","boss_doors",
-        "boss_scaling","boss_cooldowns","separate_etanks","both_story_bosses",
+        "boss_scaling","boss_cooldowns","simultaneous_menus","separate_etanks","both_story_bosses",
         "ultimate_armor_x","black_zero"};
     out<<'{';bool first=true;
     for(const char *key:keys) {
@@ -82,7 +82,12 @@ void option_metadata(std::ostream& out) {
         else if(!strcmp(value,"true") || !strcmp(value,"false"))out<<value;
         else json_string(out,value);
     }
-    out<<'}';
+    char menus[16]{},tanks[16]{};
+    bool paired=!psx_mod_option_value("mmx4.coop","coop","simultaneous_menus",menus,sizeof menus) || strcmp(menus,"false");
+    bool separate=psx_mod_option_value("mmx4.coop","coop","separate_etanks",tanks,sizeof tanks) && !strcmp(tanks,"true");
+    if(!first)out<<',';
+    bool effective=mod_runtime_snapshot_package_active("mmx4.coop") && (paired || separate);
+    out<<"\"separate_etanks_effective\": "<<(effective?"true":"false")<<'}';
 }
 
 #ifndef MMX4_DIAGNOSTIC_TEST

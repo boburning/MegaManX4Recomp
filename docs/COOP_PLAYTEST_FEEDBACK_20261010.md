@@ -1,6 +1,6 @@
 # October 10 co-op feedback
 
-Current status, October19: **208 numbered items; 166 checked and 42 unchecked.**
+Current status, October20: **209 numbered items; 167 checked and 42 unchecked.**
 Five checked fixes are qualified for [Playtest32](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.32).
 Capsule dialogue154 and scaling cooldowns152/153 are qualified for
 [Playtest33](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.33).
@@ -246,6 +246,7 @@ Owner approved items1-18 after all ten unique clips were reviewed, then added it
 | 206 | [x] | Both cameras lock in Magma Dragoon's refight, resembling Mushroom's arena | Reproduced both initiating owners in the exact Playtest41 replay and controlled native admissions. Preserve the target bounds written after the shared intro ends: update saved views still in that arena without replacing their origins, current limits or native easing. Fixed local8:3 checks let both views pan during the active fight, with either player initiating and both healthy. Published in Playtest42. [Evidence](COOP_FEEDBACK42.md). `beads-eio.9.203` |
 | 207 | [x] | Slash Beast can be repeatedly stunned by his weakness | Fixed in c2b74fa and Playtest41. Native matched saved-state tests with X/P1 and X/P2 retain accepted damage (52 raw/26 applied), suppress four repeated stun restarts each, and recover into phase6 with264px of actual boss movement. Windows/Linux boundary checks cover both scaling methods and excluded contexts; native coverage is local8:3. [Evidence](COOP_FEEDBACK41.md). `beads-eio.9.204` |
 | 208 | [x] | P2 pause opens P1's menu; P1 must resume and P2 stays frozen | Reproduced after native two-confirmation Quit and re-entry. Clear the retired menu callback guard on stage initialization and the menu latch on ordinary gameplay entry. Fixed native local8:3 test opens Zero's menu, permits only P2 resume, blocks guest Quit and moves P2 by61.5px afterward, P1 stationary and both32HP. Combined Windows36 and Linux30 production checks pass. Published in Playtest42. [Evidence](COOP_FEEDBACK42.md). `beads-eio.9.205` |
+| 209 | [x] | Default-on independent co-op menus opened together, with either player resuming both | Both native character menus, required private E-tank contents and shared healing/input locks are implemented. Local Unified/8:3 and both LAN camera modes pass native controller management, shared confirmations, dead-owner handling and render isolation checks; offline paused snapshots and post-menu weapon fire also pass. P1 keeps campaign Quit/escape/Options authority. Not yet released. [Contract and validation limits](COOP_SIMULTANEOUS_MENUS.md). `beads-eio.9.207` |
 
 ### October18 Playtest36 recurrence and new requests
 

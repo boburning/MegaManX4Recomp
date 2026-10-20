@@ -106,6 +106,19 @@ static void baseline_env(const char *v) {
 #endif
 }
 int main(int argc,char **argv) {
+    auto original_options=coop_options;
+    coop_options.clear();coop_active=false;
+    {std::ostringstream meta;option_metadata(meta);
+     CHECK(meta.str().find("\"local_cameras\": null")!=std::string::npos);
+     CHECK(meta.str().find("\"separate_etanks_effective\": false")!=std::string::npos);}
+    coop_active=true;coop_options["simultaneous_menus"]="true";
+    coop_options["separate_etanks"]="false";
+    {std::ostringstream meta;option_metadata(meta);
+     CHECK(meta.str().find("\"separate_etanks_effective\": true")!=std::string::npos);}
+    coop_options["simultaneous_menus"]="false";
+    {std::ostringstream meta;option_metadata(meta);
+     CHECK(meta.str().find("\"separate_etanks_effective\": false")!=std::string::npos);}
+    coop_options=original_options;
     CHECK(mmx4_diagnostic_application_directory()==
           std::filesystem::canonical(std::filesystem::u8path(argv[0])).parent_path());
 #ifndef _WIN32

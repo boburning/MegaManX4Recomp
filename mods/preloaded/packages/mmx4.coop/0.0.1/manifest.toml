@@ -36,7 +36,7 @@ label = "Split (Experimental)"
 feature = "coop"
 id = "local_cameras"
 label = "Local co-op display"
-description = "Unified shares one screen. Experimental side-by-side gives each local player a 4:3 camera and HUD, together in an 8:3 view. Menus and shared story scenes use one view. Requires a fresh boot; this setting does not change online cameras."
+description = "Unified shares one screen. Experimental side-by-side gives each local player a 4:3 camera and HUD, together in an 8:3 view. Independent pause menus show both character menus side by side in either local layout. Shared story scenes use one view. Requires a fresh boot; this setting does not change online cameras."
 type = "choice"
 default = "unified"
 [[option.choice]]
@@ -88,9 +88,17 @@ when = { local_cameras = "split" }
 
 [[option]]
 feature = "coop"
+id = "simultaneous_menus"
+label = "Independent pause menus"
+description = "Either player opens both character menus. Each player manages their own weapons and E-tanks; either player resumes both. Tank use locks both menus until it finishes. Automatically requires separate E-tank contents, regardless of the setting below. W-tank energy remains shared. Local play shows both menus side by side; netplay shows your character's menu with either camera setting. On by default for every co-op mode. Requires a fresh boot; the netplay host chooses for both players."
+type = "boolean"
+default = "true"
+
+[[option]]
+feature = "coop"
 id = "separate_etanks"
-label = "Separate E-tank contents"
-description = "Give each player their own E-tank energy. Both share tanks acquired by Player 1's campaign; pickups refill the collector's tanks and each character's pause menu uses their own supply. Off shares energy as before. W-tanks stay shared. Requires a fresh boot; the netplay host chooses for both players."
+label = "Separate E-tanks with individual pausing"
+description = "Independent pause menus always require separate E-tank contents. When Independent pause menus is off, this setting chooses separate or shared energy. Both players share tanks acquired by Player 1's campaign; pickups refill the collector's own energy when contents are separate. W-tanks stay shared. Requires a fresh boot; the netplay host chooses for both players."
 type = "boolean"
 default = false
 

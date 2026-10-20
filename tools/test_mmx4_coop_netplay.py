@@ -245,6 +245,8 @@ def prepare_peer(args, case: Path, seat: int, ports: list[int], jitter: bool,
     directory.mkdir()
     executable = directory / args.exe.name
     shutil.copy2(args.exe, executable)
+    if (args.exe.parent/'bios').is_dir():
+        shutil.copytree(args.exe.parent/'bios',directory/'bios')
     for dll in args.exe.parent.glob("*.dll"):
         if dll.is_file():
             shutil.copy2(dll, directory / dll.name)
@@ -258,6 +260,7 @@ def prepare_peer(args, case: Path, seat: int, ports: list[int], jitter: bool,
         f'hud_layout = "{getattr(args, "hud_layout", "stacked")}"\n'
         f'boss_doors = "{getattr(args, "boss_doors", "either")}"\n'
         f'separate_etanks = {str(getattr(args,"separate_etanks",False)).lower()}\n'
+        f'simultaneous_menus = {str(not getattr(args,"individual_pausing",False)).lower()}\n'
         f'ultimate_armor_x = {str(getattr(args,"ultimate_armor",False)).lower()}\n'
         f'black_zero = {str(getattr(args,"black_zero",False)).lower()}\n', encoding="utf-8")
     saves = directory / "saves"

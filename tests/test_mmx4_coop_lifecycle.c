@@ -24,6 +24,7 @@ static uint8_t ram[0x200000],p2[0xE4],p1_backup[0xE4];
 static uint8_t p2_vehicle[0xB0],p1_vehicle_backup[0xB0];
 static unsigned projected,ready=1,world_calls,observed_campaign,collect_calls[2];
 static unsigned pause_commit,pause_exit,world_draws;
+static unsigned personal_model,personal_native_calls[2],personal_draws[2];
 static unsigned assessment_calls[2];
 static unsigned assessment_cull;
 static unsigned reward_calls,save_calls,observed_menu_select;
@@ -41,9 +42,12 @@ static unsigned stage_animation_frame;
 static int split_views;
 static int both_door_players;
 static int private_etanks_option;
+static int simultaneous_menus_option;
 int psx_mod_current_option_value(const char *key,char *value,uint32_t cap) {
-    assert(!strcmp(key,"separate_etanks") && cap>=6);
-    strcpy(value,private_etanks_option?"true":"false");return 1;
+    assert(cap>=6);
+    if(!strcmp(key,"simultaneous_menus"))strcpy(value,simultaneous_menus_option?"true":"false");
+    else {assert(!strcmp(key,"separate_etanks"));strcpy(value,private_etanks_option?"true":"false");}
+    return 1;
 }
 int mmx4_coop_both_door_players(void) {return both_door_players;}
 static unsigned stage_script_calls,scene_calls,observed_controls;
@@ -316,7 +320,46 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         for(unsigned at=12;at<=28;at+=16)
             psx_mod_write_word(MMX4_PLAYER+at,0x08000000u-psx_mod_read_word(MMX4_PLAYER+at));
         break;
+    case 0x8002FD70:
+        if(personal_model) {
+            psx_mod_write_byte(0x801754A4u,0);psx_mod_write_byte(0x801754A5u,2);
+            psx_mod_write_byte(0x801754B4u,psx_mod_read_byte(MMX4_PLAYER+2)?10:0);
+            psx_mod_write_byte(0x8013B818u,psx_mod_read_byte(MMX4_PLAYER+0x93));
+            mmx4_coop_call(cpu,0x800129A4u,8,0);
+        }
+        break;
+    case 0x80023D90:
+        ++personal_draws[projected];break;
     case 0x8002FCAC:
+        if(personal_model) {
+            const uint32_t menu=0x801754A0u;
+            ++personal_native_calls[projected];
+            unsigned main=psx_mod_read_byte(menu+4),sub=psx_mod_read_byte(menu+5);
+            uint16_t edge=psx_mod_read_half(0x80166C0Cu);
+            if(!main) {
+                if(!sub)psx_mod_write_byte(menu+5,1);
+                else if(sub==1)mmx4_coop_call(cpu,0x8002FD70u,menu,0);
+                else {psx_mod_write_byte(menu+4,1);psx_mod_write_byte(menu+5,psx_mod_read_byte(MMX4_PLAYER+2)?1:0);}
+            }else if(main==2) {
+                /* Commit once per hero, but the world remains shared. */
+                mmx4_coop_call(cpu,0x80031064u,menu,0);
+                psx_mod_write_byte(MMX4_PLAY+1,0);
+                psx_mod_write_byte(menu+4,0);psx_mod_write_byte(menu+5,0);
+            }else if(sub==3 || sub==4) {
+                uint32_t tank=MMX4_PLAY+(sub==3?0x5C:0x5E);
+                unsigned energy=psx_mod_read_byte(tank)&127u;
+                unsigned hp=psx_mod_read_byte(MMX4_PLAYER+0x5C)&127u;
+                if(energy && hp<psx_mod_read_byte(MMX4_PLAY+0x46)) {
+                    psx_mod_write_byte(tank,(uint8_t)(0x80u|energy-1));
+                    psx_mod_write_byte(MMX4_PLAYER+0x5C,(uint8_t)(hp+1));
+                }else psx_mod_write_byte(menu+5,1);
+            }else if(edge==0x40 && sub==1)psx_mod_write_byte(menu+5,psx_mod_read_byte(menu+0x14)==12?4:3);
+            else if(edge==0x4000)psx_mod_write_byte(menu+0x14,(uint8_t)(psx_mod_read_byte(menu+0x14)+2));
+            else if(edge==0x40)psx_mod_write_byte(MMX4_PLAYER+0x93,2);
+            if(edge&0x100)psx_mod_write_byte(menu+5,6);
+            mmx4_coop_call(cpu,0x80023D90u,0,0);
+            break;
+        }
         observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         observed_menu_select=psx_mod_read_half(0x80166C0Cu)&0x100u;
         if(pause_commit) {
@@ -333,6 +376,12 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
             mmx4_coop_call(cpu,0x80023D68u,0,0);
         }else {
             mmx4_coop_call(cpu,0x80023D68u,0,0);
+        }
+        break;
+    case 0x80031064:
+        if(personal_model) {
+            psx_mod_write_byte(MMX4_PLAYER+0xBE,1);
+            mmx4_coop_call(cpu,0x80021158u,0,0);
         }
         break;
     case 0x800C00BC:
@@ -649,8 +698,10 @@ static void reset(void) {
     door_map_queries=0;door_map_kind=0x38;
     CPUState cpu={0};memset(ram,0,sizeof ram);memset(p2,0,sizeof p2);
     memset(p2_vehicle,0,sizeof p2_vehicle);
-    fresh_game(&cpu,0);separate_etanks=0;projected=local_view=0;inputs[0]=inputs[1]=0;
+    fresh_game(&cpu,0);separate_etanks=simultaneous_menus=0;projected=local_view=0;inputs[0]=inputs[1]=0;
     world_calls=observed_campaign=pause_commit=pause_exit=world_draws=0;
+    personal_model=0;memset(personal_native_calls,0,sizeof personal_native_calls);
+    memset(personal_draws,0,sizeof personal_draws);
     memset(assessment_calls,0,sizeof assessment_calls);
     assessment_cull=0;
     stage_script_calls=scene_calls=observed_controls=p2_solid_bits=canonical_portal_solids=0;
@@ -885,7 +936,109 @@ static int personal_tank_inventory(void) {
     reset();return 0;
 }
 
+static int simultaneous_menu_ownership(void) {
+    CPUState cpu={0};
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned mode=0;mode<2;++mode)
+      for(unsigned opener=0;opener<2;++opener) {
+        reset();simultaneous_menus_option=1;private_etanks_option=0;
+        mmx4_coop_lifecycle_activate();personal_model=1;split_views=(int)mode;
+        CHECK(simultaneous_menus && separate_etanks);
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_half(PLAY+0x5A,0x1000);psx_mod_write_byte(PLAY+0x5C,0x83);
+        inputs[opener]=START;mmx4_coop_call(&cpu,0x8001FF8Cu,PLAY,0);
+        CHECK(menu_active && personal_active && personal_eligible==3);
+        inputs[0]=inputs[1]=0;
+        for(unsigned i=0;i<4;++i)mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_initialized && personal_menu[0].native[4]==1 && personal_menu[1].native[4]==1);
+        CHECK(!world_calls && !personal_draws[0] && !personal_draws[1]);
+        /* Both cursors advance independently in a single simulation frame. */
+        inputs[0]=inputs[1]=0x4000;
+        unsigned initial[2]={personal_menu[0].native[0x14],personal_menu[1].native[0x14]};
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_menu[0].native[0x14]==initial[0]+2 && personal_menu[1].native[0x14]==initial[1]+2);
+        inputs[0]=inputs[1]=0;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        unsigned x=campaign,zero=x^1u;
+        personal_menu[x].native[5]=0;personal_menu[x].native[0x14]=2;
+        inputs[x]=0x40;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK((x?p2[0x93]:psx_mod_read_byte(PLAYER+0x93))==2);
+        CHECK((zero?p2[0x93]:psx_mod_read_byte(PLAYER+0x93))==0);
+        inputs[x]=0;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        /* Healing wins over the other player's same-frame Start. */
+        personal_menu[zero].native[5]=1;personal_menu[zero].native[0x14]=10;
+        inputs[x]=START;inputs[zero]=0x40;
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_busy(zero) && personal_active && !world_calls);
+        unsigned selected=personal_menu[x].native[0x14];
+        inputs[0]=inputs[1]=START|0x4000|0x40;
+        for(unsigned i=0;i<5;++i) {
+            mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+            CHECK(personal_active && personal_menu[x].native[0x14]==selected && !world_calls);
+        }
+        CHECK(!personal_busy(zero));
+        CHECK((zero?p2[0x5C]:psx_mod_read_byte(PLAYER+0x5C))==(zero?15:19));
+        CHECK((zero?second_inventory.etanks[0]:psx_mod_read_byte(PLAY+0x5C))==0x80);
+        CHECK((x?second_inventory.etanks[0]:psx_mod_read_byte(PLAY+0x5C))==0x83);
+        /* Paused snapshots restore both cursors and the independent inventories. */
+        Mmx4SnapshotIO count={NULL,NULL,0,0,MMX4_SNAPSHOT_COUNT,1};
+        CHECK(mmx4_coop_lifecycle_snapshot(&count));uint32_t bytes=count.pos;
+        uint8_t *saved=malloc(bytes);CHECK(saved);
+        Mmx4SnapshotIO io={saved,NULL,bytes,0,MMX4_SNAPSHOT_WRITE,1};CHECK(mmx4_coop_lifecycle_snapshot(&io));
+        uint32_t digest=mmx4_coop_lifecycle_digest(1);
+        personal_menu[1].native[0x14]^=1;CHECK(digest!=mmx4_coop_lifecycle_digest(1));
+        io=(Mmx4SnapshotIO){NULL,saved,bytes,0,MMX4_SNAPSHOT_READ,1};
+        CHECK(mmx4_coop_lifecycle_snapshot(&io) && digest==mmx4_coop_lifecycle_digest(1));free(saved);
+        /* A held Start through healing does not resume. A fresh edge does. */
+        CHECK(personal_active);inputs[0]=inputs[1]=0;
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        inputs[opener^1u]=START;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(!personal_active && !menu_active && !projected && world_calls==1);
+        CHECK(psx_mod_read_byte(PLAY+0x43)==campaign && mmx4_coop_lifecycle_can_tick());
+      }
+    /* Simultaneous tank requests serialize, including the one shared W pool. */
+    for(unsigned w=0;w<2;++w) {
+        reset();simultaneous_menus=separate_etanks=personal_active=personal_initialized=menu_active=1;
+        personal_eligible=3;personal_model=1;psx_mod_write_byte(PLAY+1,2);
+        for(unsigned seat=0;seat<2;++seat) {
+            personal_menu[seat].native[4]=1;personal_menu[seat].native[5]=1;
+            personal_menu[seat].native[0x14]=(uint8_t)(w?12:10);
+            inputs[seat]=0x40;
+        }
+        mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+        CHECK(personal_busy(0) && !personal_busy(1));
+    }
+    /* Guest Quit/escape and dead-seat input cannot change campaign flow. */
+    reset();simultaneous_menus=separate_etanks=personal_active=personal_initialized=menu_active=1;
+    personal_eligible=3;personal_model=1;psx_mod_write_byte(PLAY+1,2);
+    for(unsigned seat=0;seat<2;++seat)personal_menu[seat].native[4]=1;
+    inputs[1]=SELECT;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_menu[1].native[5]!=6);
+    inputs[1]=0;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    personal_menu[1].native[0x14]=13;inputs[1]=0x40;
+    mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);CHECK(!p2[0x93]);
+    /* A campaign modal is drawn once and neither guest navigation nor a
+     * simultaneous Start can dismiss it or resume the shared world. */
+    personal_menu[0].native[5]=6;inputs[0]=START;inputs[1]=START|0x4000;
+    unsigned guest_calls=personal_native_calls[1],draws=personal_draws[0];
+    unsigned guest_cursor=personal_menu[1].native[0x14];
+    mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(personal_active && personal_native_calls[1]==guest_calls &&
+        personal_menu[1].native[0x14]==guest_cursor && personal_draws[0]==draws+1);
+    personal_menu[0].native[5]=0;inputs[0]=inputs[1]=0;
+    mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    mmx4_coop_lifecycle_view_save();personal_rendering=1;
+    mmx4_coop_lifecycle_view_restore();
+    CHECK(!personal_rendering && mmx4_coop_lifecycle_snapshot_ready());
+    personal_eligible=2;inputs[0]=START;inputs[1]=0;
+    mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);CHECK(personal_active);
+    inputs[0]=0;inputs[1]=START;mmx4_coop_call(&cpu,0x8002FCACu,MENU,0);
+    CHECK(!personal_active && !psx_mod_read_byte(PLAYER+0xBE) && p2[0xBE]==1 && world_calls==1);
+    simultaneous_menus_option=0;private_etanks_option=0;
+    reset();return 0;
+}
+
 int main(void) {
+    CHECK(!simultaneous_menu_ownership());
     CHECK(!personal_tank_inventory());
     CPUState cpu={0};reset();
     /* Hub return pads include Slash's wall-adjacent spawn. Enrollment may

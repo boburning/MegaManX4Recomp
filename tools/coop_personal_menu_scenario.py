@@ -8,6 +8,9 @@ import time
 
 
 def personal_menus(s, capture=None):
+    if getattr(s,'simultaneous_menus',True):
+        from coop_simultaneous_menu_scenario import simultaneous_menus
+        return simultaneous_menus(s,capture)
     r = s.r
     r.fixture(5, 3)
     s.load(1, 0)

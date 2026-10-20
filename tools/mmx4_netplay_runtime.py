@@ -11,6 +11,7 @@ class NetplayRuntime(Runtime):
     READ_COMMANDS = frozenset((
         'read_ram', 'mod_counters', 'get_registers', 'gpu_state', 'netplay_status',
         'phase_profile', 'vram_peek', 'fntrace_dump', 'wtrace_dump',
+        'render_pass_stats',
         'screenshot_hires', 'screenshot_wide_hires', 'host_osd_shot',
     ))
 

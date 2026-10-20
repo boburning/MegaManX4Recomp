@@ -95,6 +95,9 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1);
 int mmx4_coop_finish(CPUState *cpu,uint32_t result);
 uint16_t mmx4_coop_input(unsigned seat);
 void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat);
+/* Independent native menus share the pause/resume and tank-operation lock. */
+int mmx4_coop_lifecycle_personal_menus(void);
+int mmx4_coop_lifecycle_draw_menu(CPUState *cpu,unsigned seat);
 void mmx4_coop_combat_reset(void);
 unsigned mmx4_coop_vehicle_effect_owner(uint32_t actor);
 void mmx4_coop_combat_project_end(uint32_t vehicle_mirror);

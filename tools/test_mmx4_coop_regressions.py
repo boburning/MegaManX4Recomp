@@ -2198,6 +2198,7 @@ def main():
     parser.add_argument('--both-story-bosses',action='store_true')
     parser.add_argument('--boss-scaling',action='store_true')
     parser.add_argument('--separate-etanks',action='store_true')
+    parser.add_argument('--individual-pausing',action='store_true',help='Use the legacy one-owner menu instead of independent simultaneous menus')
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('personal_menus','local_pair','local_canvas','jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
@@ -2212,6 +2213,10 @@ def main():
             shutil.copy2(args.card_seed/name,args.output/'saves'/name)
     for name in ('assets', 'mods'):
         shutil.copytree(args.exe.parent / name, args.output / name)
+    # A build with a bundled BIOS verifies the adjacent image before honoring
+    # the CLI selection. Preserve it in isolated runs, just like the assets.
+    if (args.exe.parent/'bios').is_dir():
+        shutil.copytree(args.exe.parent/'bios',args.output/'bios')
     executable = args.output / args.exe.name
     shutil.copy2(args.exe, executable)
     for dll in args.exe.parent.glob('*.dll'):
@@ -2222,6 +2227,7 @@ def main():
         'both_story_bosses = '+str(args.both_story_bosses).lower()+'\n'
         'boss_scaling = '+str(args.boss_scaling).lower()+'\n'
         'separate_etanks = '+str(args.separate_etanks).lower()+'\n'
+        'simultaneous_menus = '+str(not args.individual_pausing).lower()+'\n'
         'boss_cooldowns = "'+args.boss_cooldowns+'"\n\n[[feature]]\n'
         'package_id = "mmx4.enhancement.widescreen"\nid = "widescreen"\nenabled = '+str(args.custom_renderer).lower()+'\n')
     config = args.game.read_text(encoding="utf-8").replace('exe = "mmx4/SLUS_005.61"',
@@ -2232,7 +2238,7 @@ def main():
            if not key.upper().startswith(('PSX_', 'RNET_', 'MMX4_DIAGNOSTIC_'))}
     env['PATH'] = r'C:\msys64\mingw64\bin;' + env.get('PATH', '')
     env['SDL_AUDIODRIVER']='dummy'
-    if any(case in args.cases for case in ('local_pair','local_canvas')):
+    if any(case in args.cases for case in ('local_pair','local_canvas','personal_menus')):
         env['PSX_RENDER_PASS_VERIFY']='1'
     argv = [str(executable), '--hidden-window' if args.hidden_window else '--headless-opengl', '--no-launcher', '--debug-port', str(args.port),
             '--game', str(args.output / 'game.toml'), '--bios', str(args.bios), '--disc', str(args.disc),
@@ -2244,6 +2250,7 @@ def main():
     scenarios.boss_scaling=args.boss_scaling
     scenarios.boss_cooldowns=args.boss_cooldowns
     scenarios.separate_etanks=args.separate_etanks
+    scenarios.simultaneous_menus=not args.individual_pausing
     report = dict(campaign=args.campaign, cases=[], argv=argv)
     with (args.output / 'runtime.log').open('wb') as log:
         process = subprocess.Popen(argv, cwd=args.output, env=env, stdout=log, stderr=log,
