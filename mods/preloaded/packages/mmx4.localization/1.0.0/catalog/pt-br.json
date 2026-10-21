@@ -1,0 +1,631 @@
+{
+  "schema": 1,
+  "language": "pt-br",
+  "entries": [
+    {
+      "id": "dialogue.x.000",
+      "original": "JUNGLE\nInfiltrate enemy-\noccupied jungle and\fJUNGLE\ndestroy the weapon\nunder construction.",
+      "translation": "SELVA\nInfiltre a selva ocupada pelo inimigo.\fSELVA\nDestrua a arma que está sendo construída.",
+      "source_sha256": "c85a6b3fc4b5c028b51df540db308f713ac7f2a43c88cdf78a91d6594ff8adb5"
+    },
+    {
+      "id": "dialogue.x.001",
+      "original": "CYBER SPACE\nA bug has corrupted\nthe network.\fCYBER SPACE\nDive into cyberspace\nand exterminate it.",
+      "translation": "CIBERESPAÇO\nUm vírus corrompeu a rede.\fCIBERESPAÇO\nEntre no ciberespaço e elimine o vírus.",
+      "source_sha256": "e5a91c8ccc823023556d335323c12b15cc79af5b2e36ffd3319fbf6329dce971"
+    },
+    {
+      "id": "dialogue.x.002",
+      "original": "AIR FORCE\nThe Repliforce ship\nhas taken off.\fAIR FORCE\nPursue and blast\nit out of the air.",
+      "translation": "FORÇA AÉREA\nA nave da Repliforce decolou.\fFORÇA AÉREA\nPersiga a nave e derrube-a.",
+      "source_sha256": "d69b63d4f320e5f5125b8414939dbfd6becee91e73e1e18446f67c7bae0bd4fe"
+    },
+    {
+      "id": "dialogue.x.003",
+      "original": "VOLCANO\nDragoon of the 14th\nunit is a traitor.\fVOLCANO\nLocate and bring him\nback to hunter H.Q.",
+      "translation": "VULCÃO\nDragoon, da unidade 14, nos traiu.\fVULCÃO\nEncontre-o e leve-o de volta ao quartel.",
+      "source_sha256": "2ad85654feedbb35c52ca9e6ae6149728911fc1e7e2bd8fd06899b1e73d075da"
+    },
+    {
+      "id": "dialogue.x.004",
+      "original": "MARINE BASE\nRepliforce decimated\nthe city and left.\fMARINE BASE\nPursue them aboard\na Land Chaser.",
+      "translation": "BASE MARINHA\nA Repliforce destruiu a cidade e fugiu.\fBASE MARINHA\nPersiga seus soldados a bordo de um Land Chaser.",
+      "source_sha256": "47312cc86fe1ff81a7ae2461cb653c18929f0aaa604a510bd2366746bfbd1e86"
+    },
+    {
+      "id": "dialogue.x.005",
+      "original": "BIO LAB.\nThe abandoned lab is\nnow operational.\fBIO LAB.\nInvestigate and\ndestroy the lab.",
+      "translation": "LABORATÓRIO\nO laboratório abandonado voltou a funcionar.\fLABORATÓRIO\nInvestigue o local e destrua o laboratório.",
+      "source_sha256": "482ca42adae6f075ee602ec09481a98d1df3cdbba70eb8bc55dd6d95b85c5b79"
+    },
+    {
+      "id": "dialogue.x.006",
+      "original": "MILITARY TRAIN\nA military train is\nmoving supplies.\fMILITARY TRAIN\nCut off Repliforce's\nsupply route.",
+      "translation": "TREM MILITAR\nUm trem militar transporta suprimentos.\fTREM MILITAR\nInterrompa a rota de suprimentos da Repliforce.",
+      "source_sha256": "f35cc658fce78299dc52759cff6bba33a3b335e98d386c7c5983d1d82406c2c8"
+    },
+    {
+      "id": "dialogue.x.007",
+      "original": "SNOW BASE\nWe've discovered a\nhidden snow base.\fSNOW BASE\nHalt production of\ntheir new weapon.",
+      "translation": "BASE NA NEVE\nDescobrimos uma base escondida na neve.\fBASE NA NEVE\nImpeça a fabricação da nova arma inimiga.",
+      "source_sha256": "3c391825d2f192a2b2ab3a3ac26df1b41499f6bb40aade4f95cf495a82981046"
+    },
+    {
+      "id": "dialogue.x.008",
+      "original": "SPIDER\nYou've labeled us\nall as Mavericks!\fSPIDER\nI won't let you\npass. Turn back now!",
+      "translation": "SPIDER\nVocês nos chamaram de Mavericks!\fSPIDER\nNão vou deixar você passar. Dê meia-volta!",
+      "source_sha256": "3d828dc069c258507c85b493c518157d0f0f6c1a646c326e659aff3e5745461e"
+    },
+    {
+      "id": "dialogue.x.009",
+      "original": "WALRUS\nThey sent a kid like\nyou after me?\fWALRUS\nI promise to end\nthis quickly...",
+      "translation": "WALRUS\nMandaram um garoto como você atrás de mim?\fWALRUS\nPrometo acabar com isso bem rápido...",
+      "source_sha256": "c6b228723839fb49576100d19843feb692e1e452ac69c6914992de561724e5d0"
+    },
+    {
+      "id": "dialogue.x.010",
+      "original": "MUSHROOM\nAre you X?\fMUSHROOM\nI'm under orders to\nterminate you.\fX\nWhat?!\nWho's orders?\fMUSHROOM\nTake a wild guess.",
+      "translation": "MUSHROOM\nVocê é X?\fMUSHROOM\nRecebi ordens para eliminar você.\fX\nO quê?! Ordens de quem?\fMUSHROOM\nTente adivinhar.",
+      "source_sha256": "6f16b43a2f11782cd8a0faafd94d90c9c502ce36baaf0f67699327a74fdb99f1"
+    },
+    {
+      "id": "dialogue.x.011",
+      "original": "DRAGOON\nX... You've arrived.\fX\nDragoon! Why did you\nbetray the H.Q.!?\fDRAGOON\nHeh... You'll have\nto defeat me first.\fX\nBut... We're allies!\fDRAGOON\n...You're so naive.\n...Listen closely.\fDRAGOON\nI let the Sky Lagoon\nfall!\fDRAGOON\nAnd I'd do it again!\nHa ha ha ha ha ha!\fX\nNo! Those were\ninnocent people!\fX\nYou're not Dragoon!\nJust a Maverick!\fDRAGOON\nYou got that right!\nPower up X!\fDRAGOON\nIt's time you showed\nme what you can do!",
+      "translation": "DRAGOON\nX... Você chegou.\fX\nDragoon! Por que traiu o quartel?!\fDRAGOON\nHe... Vai ter que me derrotar primeiro.\fX\nMas... Somos aliados!\fDRAGOON\n...Você é muito ingênuo. Escute bem.\fDRAGOON\nEu deixei Sky Lagoon cair!\fDRAGOON\nE faria de novo! Ha, ha, ha, ha!\fX\nNão! Eram pessoas inocentes!\fX\nVocê não é Dragoon! É só um Maverick!\fDRAGOON\nIsso mesmo! Prepare-se, X!\fDRAGOON\nÉ hora de mostrar do que você é capaz!",
+      "source_sha256": "968db853f8c09c4f7994107a5ca79f722e8be41fdd06a3d00e5f15ee8ac29575"
+    },
+    {
+      "id": "dialogue.x.012",
+      "original": "DRAGOON\n...You... are...\nstrong... X...\fX\nSuch a waste...\nWhy Dragoon?\fDRAGOON\n...Always... wanted\n... to fight... you.\fDRAGOON\n...Then ...he\n...appeared ...and\fX\nHe appeared? Who?!\fDRAGOON\ntold me to work for\nRepliforce. To goad\fDRAGOON\nyou into fighting...\fX\nYou did it just so\nyou could fight me?\fDRAGOON\n...was worth it...\nfor a final duel...\fX\nDragoon!!!",
+      "translation": "DRAGOON\n...Você... é... forte... X...\fX\nQue desperdício... Por quê, Dragoon?\fDRAGOON\n...Sempre... quis... enfrentar... você.\fDRAGOON\n...Então... ele... apareceu... e...\fX\nEle apareceu? Quem?!\fDRAGOON\n...Disse para entrar na Repliforce...\fDRAGOON\n...Para fazer... você lutar... comigo...\fX\nFez tudo isso só para lutar comigo?\fDRAGOON\n...Valeu a pena... por um último duelo...\fX\nDragoon!!!",
+      "source_sha256": "0f66e0b3e935f84c22362be425ea68eca9c72b856ef03c21f95052111fb54990"
+    },
+    {
+      "id": "dialogue.x.013",
+      "original": "STINGRAY\nI'm impressed that\nyou found me...\fSTINGRAY\nBut your search is\nover. Get ready X!",
+      "translation": "STINGRAY\nImpressionante. Você me encontrou...\fSTINGRAY\nMas sua busca acabou. Prepare-se, X!",
+      "source_sha256": "a3386928692a2da4c7d8226b0c66d40d0dc4a2b3e30c4136a049719f34713c22"
+    },
+    {
+      "id": "dialogue.x.014",
+      "original": "PEACOCK\nHis potential...\nis limitless?!\fPEACOCK\n...not possible.\fX\nWho are you?\nWhy are you doing\fX\nthis to me?\fPEACOCK\nI was ordered to\ntest your abilities.\fPEACOCK\nIt's quite simple.\fX\nWhat!?\fPEACOCK\nPrepare yourself!",
+      "translation": "PEACOCK\nO potencial dele... é ilimitado?!\fPEACOCK\n...Impossível.\fX\nQuem é você? Por que está me atacando?\fPEACOCK\nRecebi ordens para testar suas habilidades.\fPEACOCK\nÉ bem simples.\fX\nO quê?!\fPEACOCK\nPrepare-se!",
+      "source_sha256": "63646aad6848fdff926aaaead0f0cff206a3b88b792a030c2506a2ed80f2d7d5"
+    },
+    {
+      "id": "dialogue.x.015",
+      "original": "OWL\nHow dare you\ndestroy my unit!\fOWL\nYou'll pay for this\nwith your life!",
+      "translation": "OWL\nComo ousa destruir minha unidade?!\fOWL\nVocê vai pagar com a própria vida!",
+      "source_sha256": "f129c71359d2430a64af95362df01ac4de246d64d8c0c2f7634c8722c330e025"
+    },
+    {
+      "id": "dialogue.x.016",
+      "original": "BEAST\nChallenging my unit\nwas both foolish\fBEAST\nand reckless!\fBEAST\nYou are nothing more\nthan my prey...\fBEAST\nOne that is soon to\nbe retired!",
+      "translation": "BEAST\nDesafiar minha unidade foi uma grande...\fBEAST\n...tolice! Uma imprudência!\fBEAST\nVocê não passa de uma presa para mim...\fBEAST\nE seu fim está próximo!",
+      "source_sha256": "1f5cdc3310f9f5778b25e8b934cc351b4f013284fac28f5fb3d4b2fb9bac566a"
+    },
+    {
+      "id": "dialogue.x.017",
+      "original": "LIGHTNING WEB\nFires a spider net\ncharged with\felectricity. Can be\nused to attack,\nwall jump or double\fjump.",
+      "translation": "LIGHTNING WEB\nDispara uma teia carregada de eletricidade.\fUse-a para atacar, saltar na parede...\f...ou dar um segundo salto.",
+      "source_sha256": "7c8693761d55e1334c7a4d3a6a12c60c0dff8d6ee18d3e20b89da3fa48afd787"
+    },
+    {
+      "id": "dialogue.x.018",
+      "original": "FROST TOWER\nGenerates a huge ice\nblock that acts as a\fshield. May also be\nused to trap enemies\nbefore dissipating.",
+      "translation": "FROST TOWER\nGera um enorme bloco de gelo que serve de escudo.\fTambém pode prender inimigos antes de desaparecer.",
+      "source_sha256": "02b8f5b0ac7ba46063e6257b30cd8335da8066e046f7f0772e0ecddb802917cb"
+    },
+    {
+      "id": "dialogue.x.019",
+      "original": "SOUL BODY\nAccumulates energy\nand generates an\fillusion. Enemies\nwill sustain damage\nif struck by the\fsoul energy.\nRequires high energy\nexpenditures however\fand will eventually\ndissipate in time\nor if it sustains\fheavy damage.",
+      "translation": "SOUL BODY\nAcumula energia e cria uma ilusão.\fA energia da ilusão causa dano aos inimigos que toca.\fConsome muita energia e desaparece com o tempo...\f...ou após sofrer muito dano.",
+      "source_sha256": "fcd3cf0615215527610db153ad5466223720929e28272d0ba19c1fe6bd714f4e"
+    },
+    {
+      "id": "dialogue.x.020",
+      "original": "RISING FIRE\nShoots fire energy\nvertically.\fEffective against\nall airborne\nenemies.\fSome objects may be\nburned by this\nattack as well.",
+      "translation": "RISING FIRE\nDispara energia de fogo para cima.\fÉ eficaz contra inimigos que voam.\fTambém pode queimar certos objetos.",
+      "source_sha256": "8c7886990dbdd524982502690003f80e3041be5c404f93cea4e4eb78b6092f22"
+    },
+    {
+      "id": "dialogue.x.021",
+      "original": "GROUND HUNTER\nFires mini Stingray\ndrones that race\facross the ground.\nEffective against\nenemies on walls\fand floors.\nPush Down while\nthe Stingray \fdrones are flying\nto command them to\nfall.",
+      "translation": "GROUND HUNTER\nDispara pequenos drones que correm pelo chão.\fSão eficazes contra inimigos no chão e nas paredes.\fAperte para baixo enquanto os drones voam...\f...para fazê-los cair.",
+      "source_sha256": "74fe1961b49b887248ee1f37d5febf1f361176c44b90588fc53a89378bd32c32"
+    },
+    {
+      "id": "dialogue.x.022",
+      "original": "AIMING LASER\nMove the cursor to\nlock onto enemies.\fAttacks the enemy\nwith the aiming\nlaser.",
+      "translation": "AIMING LASER\nMova o cursor para mirar nos inimigos.\fDispare o laser contra o alvo marcado.",
+      "source_sha256": "63af9ad8db842f7ce3355c2c778780ef4ea3d5e1993e9d8e5443b08d3e7f3ce3"
+    },
+    {
+      "id": "dialogue.x.023",
+      "original": "DOUBLE CYCLONE\nFires vacuum\ncyclones left and\fright.\nMost effective when\nsurrounded by \fthe enemies and\nagainst skyborne\nenemies.",
+      "translation": "DOUBLE CYCLONE\nDispara ciclones para os dois lados.\fÉ eficaz quando há inimigos ao seu redor...\f...ou voando acima de você.",
+      "source_sha256": "c2b83394b8d3d6811abcb74de8966dc40e3fe22209ff79dfd1421fb11a416bc3"
+    },
+    {
+      "id": "dialogue.x.024",
+      "original": "TWIN SLASHER\nShoots Twin Slashers\nforward in two\fdirections.\nThis weapon has wide\nrange capabilities\fmaking it easier to\nhit enemies.",
+      "translation": "TWIN SLASHER\nDispara lâminas para a frente em duas direções.\fSeu amplo alcance facilita acertar os inimigos.",
+      "source_sha256": "eddd0bf6befa62995d1470ef399ca03432a523994df9aa371c0bf2d9389760e9"
+    },
+    {
+      "id": "dialogue.x.025",
+      "original": "DR. LIGHT\nThis battle\nshould never have\fDR. LIGHT\nhappened, X...\fDR. LIGHT\nWhy must Reploids\nfight each other?\fDR. LIGHT\nWhy do these peace\nkeepers persist in\fDR. LIGHT\nfighting each other?\fDR. LIGHT\nThis must be some\nsort of mistake...\fDR. LIGHT\nX, enter this\ncapsule.\fDR. LIGHT\nEquip with this to\ndiscover the truth.\fDR. LIGHT\nEquip with this boot\nmodule and jump\fDR. LIGHT\ntwice in the air to\nhover.\fDR. LIGHT\nYou can move either\nleft or right and\fDR. LIGHT\nwill remain airborne\nfor a few moments.\fDR. LIGHT\nIt is effective for\nnegotiating through\fDR. LIGHT\nhigher and more\ndangerous terrain.\fDR. LIGHT\nStop this tragic war\nas soon as possible,\fDR. LIGHT\nX.",
+      "translation": "DR. LIGHT\nEsta batalha nunca deveria ter acontecido, X...\fDR. LIGHT\nPor que os Reploids lutam entre si?\fDR. LIGHT\nPor que os guardiões da paz insistem...\fDR. LIGHT\n...em lutar uns contra os outros?\fDR. LIGHT\nDeve haver algum engano...\fDR. LIGHT\nX, entre nesta cápsula.\fDR. LIGHT\nEquipe esta peça e descubra a verdade.\fDR. LIGHT\nCom este módulo de pernas...\fDR. LIGHT\n...salte duas vezes no ar para flutuar.\fDR. LIGHT\nVocê pode se mover para os dois lados.\fDR. LIGHT\nFicará no ar por alguns instantes.\fDR. LIGHT\nIsso ajuda a atravessar terrenos...\fDR. LIGHT\n...mais altos e perigosos.\fDR. LIGHT\nAcabe com esta guerra trágica o quanto antes...\fDR. LIGHT\nX.",
+      "source_sha256": "7059c157bcda5cf32f554753b20e360164bff157ab4240158b5a653300820f5b"
+    },
+    {
+      "id": "dialogue.x.026",
+      "original": "DR. LIGHT\nI'm giving you a new\nhead module, X.\fDR. LIGHT\nThis module will\nimprove your\fDR. LIGHT\nspecial weapons\nabilities. It should\fDR. LIGHT\nreduce your special\nweapon energy\fDR. LIGHT\nrequirements to near\nzero.\fDR. LIGHT\nYou may now use your\nspecial weapons as\fDR. LIGHT\noften as you want.",
+      "translation": "DR. LIGHT\nVou lhe dar um novo módulo de cabeça, X.\fDR. LIGHT\nEle melhora suas armas especiais.\fDR. LIGHT\nO consumo de energia das armas...\fDR. LIGHT\n...será reduzido a quase zero.\fDR. LIGHT\nAssim, você poderá usar suas armas...\fDR. LIGHT\n...quantas vezes quiser.",
+      "source_sha256": "8494f735f924db395ad90624a0cf56c294a10313c43f9f1a517262e7b008f8b3"
+    },
+    {
+      "id": "dialogue.x.027",
+      "original": "DR. LIGHT\nEquip with this new\nbody module, X.\fDR. LIGHT\nThis body part\nabsorbs damage\fDR. LIGHT\ninflicted by enemies\nand will gradually\fDR. LIGHT\naccumulate within.\fDR. LIGHT\nWhen it is filled to\ncapacity with energy\fDR. LIGHT\nyou can execute the\ninvincible Nova\fDR. LIGHT\nStrike.\fDR. LIGHT\nHowever, a single\nuse will consume all\fDR. LIGHT\nyour energy stores,\nso use it only\fDR. LIGHT\nto pull through\ntight situations.",
+      "translation": "DR. LIGHT\nEquipe este novo módulo de corpo, X.\fDR. LIGHT\nEsta peça absorve o dano dos inimigos...\fDR. LIGHT\n...e acumula essa energia aos poucos.\fDR. LIGHT\nQuando a energia estiver no máximo...\fDR. LIGHT\n...você poderá usar o Nova Strike.\fDR. LIGHT\nÉ um ataque invencível!\fDR. LIGHT\nMas um único uso consome...\fDR. LIGHT\n...toda a energia acumulada.\fDR. LIGHT\nUse-o para sair de situações difíceis.",
+      "source_sha256": "4aadf4fe0dea848010f9acd82836b00e01779a482346a597eec11be129e50bcd"
+    },
+    {
+      "id": "dialogue.x.028",
+      "original": "DR. LIGHT\nWith this arm part,\nyou can fire the\fDR. LIGHT\nPlasma Shot which is\neffective against\fDR. LIGHT\nstronger enemies.\fDR. LIGHT\nIf the shot hits the\nopponent, plasma is\fDR. LIGHT\ngenerated which\nwill cause\fDR. LIGHT\nadditional damage\nto the enemy.\fDR. LIGHT\nThis arm module is\nchangeable.\fDR. LIGHT\nEnter this capsule\nto change parts.",
+      "translation": "DR. LIGHT\nCom esta peça de braços, você pode...\fDR. LIGHT\n...disparar o Plasma Shot, eficaz...\fDR. LIGHT\n...contra inimigos mais resistentes.\fDR. LIGHT\nAo atingir o inimigo, o disparo...\fDR. LIGHT\n...gera plasma que causa...\fDR. LIGHT\n...dano adicional ao alvo.\fDR. LIGHT\nVocê pode trocar este módulo de braços.\fDR. LIGHT\nEntre na cápsula para trocar as peças.",
+      "source_sha256": "f5d0edd37ba85209b8c2b6308647f2e7e1ca32afa0950bfd41caff529a68cbc4"
+    },
+    {
+      "id": "dialogue.x.029",
+      "original": "DR. LIGHT\nYou can charge up to\nfour blasts at\fDR. LIGHT\na time with this arm\nmodule.\fDR. LIGHT\nIt takes a while to\ncharge, but you\fDR. LIGHT\ncan fire a charged\nshot at any time you\fDR. LIGHT\nso wish with it.\fDR. LIGHT\nThis arm module is\nalso changeable.\fDR. LIGHT\nEnter this capsule\nto change parts.",
+      "translation": "DR. LIGHT\nCom este módulo, você pode carregar...\fDR. LIGHT\n...até quatro disparos de uma vez.\fDR. LIGHT\nA carga demora um pouco...\fDR. LIGHT\n...mas você pode disparar uma carga...\fDR. LIGHT\n...sempre que precisar.\fDR. LIGHT\nEste módulo de braços também pode ser trocado.\fDR. LIGHT\nEntre na cápsula para trocar as peças.",
+      "source_sha256": "0bfa14dc6a97552fd1f659c1d49ffde37fc719a61c615a026f28cac4452ed8ed"
+    },
+    {
+      "id": "dialogue.x.030",
+      "original": "HUNTER H.Q.\nMavericks have been\nfound at point 5567!\fHUNTER H.Q.\nThe Mavericks\noccupied the Sky\fHUNTER H.Q.\nLagoon using the\nmost advanced\fHUNTER H.Q.\nweapons available!\fHUNTER H.Q.\nThe army appears to\nbe the Repliforce!\fX\nRoger that.\nI'm on my way now!",
+      "translation": "QUARTEL\nMavericks no ponto 5567!\fQUARTEL\nOs Mavericks ocuparam Sky Lagoon!\fQUARTEL\nEles têm armas muito avançadas!\fQUARTEL\nO exército parece ser a Repliforce!\fX\nEntendido. Estou a caminho!",
+      "source_sha256": "93fde6bab2d9e8fb5587b7e1117f0a6b3ea022421042ef4951b036be2d0474a5"
+    },
+    {
+      "id": "dialogue.x.031",
+      "original": "X\n...Who are you?\fCOLONEL\nI'm the Colonel\nof the Repliforce.\fX\nHas the Repliforce\nbeen occupying this\fX\narea?\fCOLONEL\nWhat are you talking\nabout!? I only came\fCOLONEL\nto save my sister.\fCOLONEL\nThe army responsible\nfor all the violence\fCOLONEL\nin this region is\nnot the Repliforce!\fX\nNevertheless, I want\nyou to disarm and\fX\nfollow me back to\nthe H.Q.\fCOLONEL\nNever!\nYou're asking my\fCOLONEL\nsoldiers to drop\ntheir weapons?\fCOLONEL\nThe only time we\ndrop our weapons is\fCOLONEL\nwhen we aren't able\nto fight any longer!\fX\nBut you will be\nregarded a Maverick\fX\nand treated as such.\fCOLONEL\nDo as you will!\nThe Repliforce\fCOLONEL\nwould sooner fight\nand die than discard\fCOLONEL\nour pride!\fCOLONEL\nConsider us\nMavericks if this is\fCOLONEL\nwhat you wish!\fX\nWait! Calm down\nColonel!",
+      "translation": "X\n...Quem é você?\fCOLONEL\nSou Colonel, da Repliforce.\fX\nA Repliforce ocupou esta área?\fCOLONEL\nDo que está falando?! Só vim...\fCOLONEL\n...resgatar minha irmã.\fCOLONEL\nA Repliforce não é o exército...\fCOLONEL\n...que causou esta violência.\fX\nMesmo assim, largue as armas...\fX\n...e venha comigo ao quartel.\fCOLONEL\nJamais! Quer que meus soldados...\fCOLONEL\n...entreguem suas armas?\fCOLONEL\nSó vamos largá-las quando...\fCOLONEL\n...não pudermos mais lutar!\fX\nEntão serão declarados Mavericks...\fX\n...e tratados como tais.\fCOLONEL\nFaça como quiser! A Repliforce...\fCOLONEL\n...prefere lutar e morrer...\fCOLONEL\n...a perder sua honra!\fCOLONEL\nPode nos chamar de Mavericks!\fX\nEspere! Acalme-se, Colonel!",
+      "source_sha256": "bb834089e0ce901d9ba36caf559279a98f8c1b85c4a4f9aa314fb38a2dded29a"
+    },
+    {
+      "id": "dialogue.x.032",
+      "original": "X\n...Who are you?\fDOUBLE\nCall me Double,\nthe rookie hunter.\fDOUBLE\nMy liege, the\nRepliforce has\fDOUBLE\nbegun it's coup!\fX\n...Wait! ...Colonel,\nyou're jumping to\fX\nconclusions here!\fDOUBLE\nSir, you've been\ngiven the order to\fDOUBLE\nscramble!\fX\nRight. I'm leaving\nright now!",
+      "translation": "X\n...Quem é você?\fDOUBLE\nMeu nome é Double. Sou um novo caçador.\fDOUBLE\nSenhor! A Repliforce iniciou...\fDOUBLE\n...um golpe de estado!\fX\nEspere, Colonel! Você está...\fX\n...se precipitando!\fDOUBLE\nSenhor! Recebeu ordens de partir...\fDOUBLE\n...imediatamente!\fX\nCerto. Vou agora mesmo!",
+      "source_sha256": "7e78fc92b4c92af96d616f7ee42a313754880d40e39e726e317254a8a8ec498a"
+    },
+    {
+      "id": "dialogue.x.033",
+      "original": "DOUBLE\nSir, it's a\nmessage from\fDOUBLE\nthe Colonel!\fCOLONEL\nX! I'll wait for you\nat Memorial Hall.\fCOLONEL\nMake sure you show\nup on time!\fDOUBLE\nSir, this must\nbe a trap!\fX\n...Perhaps. But I\nwon't run this time!",
+      "translation": "DOUBLE\nSenhor! É uma mensagem...\fDOUBLE\n...de Colonel!\fCOLONEL\nX! Espero você no Memorial Hall.\fCOLONEL\nNão se atrase!\fDOUBLE\nSenhor, deve ser uma armadilha!\fX\nTalvez... Mas desta vez não vou fugir!",
+      "source_sha256": "4405a230f703a722164d43971e4a5b99c846bbe8b159c2ce3594e14b02803f3b"
+    },
+    {
+      "id": "dialogue.x.034",
+      "original": "X\nColonel! Stop this\nfoolishness now!\fCOLONEL\n...Never!\fX\nColonel, please!\nThink this over!\fCOLONEL\nThe Repliforce\nmust be independent!\fCOLONEL\nOur battle will\ndetermine this!",
+      "translation": "X\nColonel! Acabe com esta loucura!\fCOLONEL\n...Nunca!\fX\nColonel, por favor! Pense bem!\fCOLONEL\nA Repliforce deve ser independente!\fCOLONEL\nEsta batalha vai decidir tudo!",
+      "source_sha256": "416a00c377047e72609666368afe6e88d358f9b6f5df5c8f24c5148649a0157e"
+    },
+    {
+      "id": "dialogue.x.035",
+      "original": "COLONEL\nImpressive! But the\nresult won't be the\fCOLONEL\nsame next time.\nUntil then...\fX\nColonel!",
+      "translation": "COLONEL\nImpressionante! Mas da próxima vez...\fCOLONEL\n...será diferente. Até lá...\fX\nColonel!",
+      "source_sha256": "532c7c1addd21a7e57574fec7dc66e6c8f29c3707ddd18d528d1c1c7e566b7af"
+    },
+    {
+      "id": "dialogue.x.036",
+      "original": "DOUBLE\nThe Repliforce has\nbegun assembling!\fX\nWhere are they?\fDOUBLE\nThe space port! They\nplan to take off\fDOUBLE\ninto space!\fX\nHurry! We have to\nstop the Colonel!",
+      "translation": "DOUBLE\nA Repliforce está reunindo suas tropas!\fX\nOnde estão?\fDOUBLE\nNo porto espacial! Eles querem...\fDOUBLE\n...partir para o espaço!\fX\nRápido! Precisamos deter Colonel!",
+      "source_sha256": "0d55385ef3a7e7aec831e272ee8a56195c9fcc1e9ccd0c1a1ba587756b094c77"
+    },
+    {
+      "id": "dialogue.x.037",
+      "original": "X\nColonel, step back!\fCOLONEL\nI'll stop anyone who\ntries to interfere\fCOLONEL\nwith our\nindependence!\fX\nEnough of this! It's\nonly an illusion!\fCOLONEL\n...You hunters will\nnever be able to\fCOLONEL\nunderstand us!\fCOLONEL\nGet ready, X!",
+      "translation": "X\nColonel, saia da frente!\fCOLONEL\nVou deter qualquer um que tente...\fCOLONEL\n...impedir nossa independência!\fX\nChega! Isso é só uma ilusão!\fCOLONEL\n...Vocês, caçadores, jamais...\fCOLONEL\n...vão nos entender!\fCOLONEL\nPrepare-se, X!",
+      "source_sha256": "51fc43b032ada1cf4d48c934b8c5081ead908cff3b3e33e4907916e05c4d29a2"
+    },
+    {
+      "id": "dialogue.x.038",
+      "original": "DOUBLE\nRepliforce has\nflown off into\fDOUBLE\nspace...\fX\n...Double, watch the\nship for me. I'll\fX\ngo after them!\fDOUBLE\nSir! Reconsider what\nyou're doing, it's\fDOUBLE\nfar too dangerous!\fX\nWe don't have any\nother option! I'm\fX\nleaving you in\ncharge here, Double!",
+      "translation": "DOUBLE\nA Repliforce partiu...\fDOUBLE\n...para o espaço.\fX\nDouble, cuide da nave. Vou atrás deles!\fDOUBLE\nSenhor! Pense bem! É...\fDOUBLE\n...perigoso demais!\fX\nNão temos outra escolha!\fX\nVocê fica no comando, Double!",
+      "source_sha256": "3bc34c06efd18f161f31cce474e6e54feea9bfe9b99340ed19b7cca7c2921cd3"
+    },
+    {
+      "id": "dialogue.x.039",
+      "original": "X\nDouble! What...\nWhy are you here!?\fDOUBLE\n...Hee hee hee.\nHa ha ha ha ha ha!\fDOUBLE\nThe Mavericks,\nHunters and\fDOUBLE\nRepliforce...\nIdiots, all of them.\fDOUBLE\nThey're making my\njob too easy!\fX\n...W... What are you\ntalking about?\fX\nDouble, what are you\nsaying?!\fDOUBLE\nThink it over in\nheaven! Die, X!",
+      "translation": "X\nDouble! O quê...? Por que está aqui?!\fDOUBLE\n...He, he, he. Ha, ha, ha!\fDOUBLE\nOs Mavericks, os caçadores...\fDOUBLE\n...e a Repliforce. São todos idiotas!\fDOUBLE\nFacilitam tanto o meu trabalho!\fX\n...O q-que está dizendo?\fX\nDo que está falando, Double?!\fDOUBLE\nPense nisso no outro mundo! Morra, X!",
+      "source_sha256": "cea1981d9cb4f9f654956a2877d11d4b28f06d9628a2c16c3f6f6412e0f2470b"
+    },
+    {
+      "id": "dialogue.x.040",
+      "original": "X\nDouble!\fDOUBLE\n...Damn! ...How\ncould I lose to a\fDOUBLE\nweakling like you...\fX\nDouble, tell me!\nWhy did you do this?\fDOUBLE\n...Hee hee hee.\nHa ha ha! You're so\fDOUBLE\nnaive, X!\fDOUBLE\nI was sent as a spy\nfrom the very\fDOUBLE\nbeginning to keep\nan eye on you!\fX\n...Double! I... I\ntrusted you!\fDOUBLE\nHa ha ha ha!\nThat naiveness may\fDOUBLE\nbe your fatal flaw!\fDOUBLE\nGood bye, X!\nSee you in the\fDOUBLE\nafter life!\fX\nDouble!!",
+      "translation": "X\nDouble!\fDOUBLE\n...Droga! Como pude perder...\fDOUBLE\n...para um fracote como você?\fX\nDiga, Double! Por que fez isso?\fDOUBLE\n...He, he, he. Ha, ha, ha!\fDOUBLE\nVocê é tão ingênuo, X!\fDOUBLE\nDesde o começo, fui enviado...\fDOUBLE\n...para espionar você!\fX\nDouble! Eu... confiava em você!\fDOUBLE\nHa, ha, ha! Essa ingenuidade...\fDOUBLE\n...pode ser sua ruína!\fDOUBLE\nAdeus, X! Nos vemos...\fDOUBLE\n...na outra vida!\fX\nDouble!!",
+      "source_sha256": "7b1fdf492e9df271aa4fdbb33a3d12ef91ee0c898c213adb18fcda08a57cb5f6"
+    },
+    {
+      "id": "dialogue.x.041",
+      "original": "X\nGeneral! What are\nyou planning to do?\fGENERAL\n...We're going to\nbuild a nation for\fGENRAL\nthe Reploids. That's\nour ultimate goal.\fGENERAL\nWe'll fight anyone\nwho tries to\fGENERAL\ninterfere with our\nindependence.\fX\nThere must be\nalternatives to this\fX\nmindless fighting!\fGENERAL\n...We were called\nMavericks without\fGENERAL\njustifiable reason.\fGENERAL\nWhat other choice\ndid we have than to\fGENERAL\nfight?\fX\n...But...\fGENERAL\nIt's too late now!\nGet ready, X!",
+      "translation": "X\nGeneral! O que pretende fazer?\fGENERAL\nVamos construir uma nação...\fGENERAL\n...para os Reploids. É nosso objetivo.\fGENERAL\nLutaremos contra quem tentar...\fGENERAL\n...impedir nossa independência.\fX\nDeve haver outra solução...\fX\n...além de lutar assim!\fGENERAL\nNos chamaram de Mavericks sem...\fGENERAL\n...nenhum motivo justo.\fGENERAL\nQue outra escolha tínhamos...\fGENERAL\n...a não ser lutar?\fX\n...Mas...\fGENERAL\nJá é tarde demais! Prepare-se, X!",
+      "source_sha256": "abd8cb84e6fd9f77b6a49c3fd800231e73609e982099c0322dae41bc739fe175"
+    },
+    {
+      "id": "dialogue.x.042",
+      "original": "X\n.. what?\nWhat happened!?\fGENERAL\n...It can't be...\nThis weapon must be\fGENERAL\nmalfunctioning...\fX\nGeneral! What do you\nmean?\fGENERAL\nSomeone else is\ncontrolling it!\fGENERAL\n...You must hurry X.\nThe earth is...\fGENERAL\nin danger!\fX\nAlright. I'll stop\nthe weapon myself!",
+      "translation": "X\nO quê...? O que aconteceu?!\fGENERAL\n...Não pode ser. Esta arma...\fGENERAL\n...deve estar com defeito.\fX\nGeneral! O que quer dizer?\fGENERAL\nOutra pessoa está controlando a arma!\fGENERAL\nDepressa, X! A Terra...\fGENERAL\n...está em perigo!\fX\nCerto! Eu mesmo vou deter essa arma!",
+      "source_sha256": "4517888af967c391802e9c43cfe2a650de90466ca3b8902deb6730196181cd8a"
+    },
+    {
+      "id": "dialogue.x.043",
+      "original": "SIGMA\nThis is amusing...\nIt really is X...\fX\nYou're... Sigma!\fSIGMA\nHee hee hee. My plan\nto keep Repliforce\fSIGMA\nand the Maverick\nHunters at each\fSIGMA\nothers' throats\nworked perfectly!\fSIGMA\n...Double did a good\njob as a spy!\fX\nWhy you...!\fSIGMA\nHee hee hee.\nRepliforce are the\fSIGMA\nfools this time!\fSIGMA\nNow all that's left\nis to destroy Earth\fSIGMA\nwith the very weapon\nthey made.\fX\nNo! I'll never\nlet you do that!\fSIGMA\nTry hard X. Your\nlife depends on it!",
+      "translation": "SIGMA\nQue divertido... Muito divertido, X.\fX\nVocê é... Sigma!\fSIGMA\nHe, he. Meu plano para colocar...\fSIGMA\n...a Repliforce contra os caçadores...\fSIGMA\n...funcionou perfeitamente!\fSIGMA\nDouble foi um excelente espião!\fX\nSeu...!\fSIGMA\nHe, he, he. Desta vez, a Repliforce...\fSIGMA\n...fez papel de boba.\fSIGMA\nSó falta destruir a Terra...\fSIGMA\n...com a arma que eles criaram.\fX\nNão! Nunca vou deixar você fazer isso!\fSIGMA\nLute, X! Sua vida depende disso!",
+      "source_sha256": "2cca8d1b253050ed93051612d7e2b458dc69a5e3c680da90348100023d1e273a"
+    },
+    {
+      "id": "dialogue.x.044",
+      "original": "SIGMA\n...Hee hee hee.\fX\nWhat's so funny?\fSIGMA\nThis weapon is aimed\nstraight at earth\fSIGMA\nalready...\fSIGMA\nNo one can stop it\nnow!\fX\nDamn!\fSIGMA\nHa ha ha ha ha!\nGood bye, X!",
+      "translation": "SIGMA\n...He, he, he.\fX\nQual é a graça?\fSIGMA\nEsta arma já está apontada...\fSIGMA\n...diretamente para a Terra.\fSIGMA\nNinguém pode detê-la!\fX\nDroga!\fSIGMA\nHa, ha, ha! Adeus, X!",
+      "source_sha256": "903ce1275411399b9d3d22ea977117acc04a95c6286e4454b592088ca3c3ded1"
+    },
+    {
+      "id": "dialogue.x.045",
+      "original": "X\nGeneral!\fGENERAL\n...The weapon can\nbe stopped with my\fGENERAL\nbody.\fX\nBut then you'll...\fGENERAL\n...Many of my men\nhave died. As their\fGENERAL\nleader, I must\nleave with them...\fGENERAL\nX, please forgive\nour foolishness...\fX\nGeneral!",
+      "translation": "X\nGeneral!\fGENERAL\nPosso deter a arma...\fGENERAL\n...com meu corpo.\fX\nMas então você...\fGENERAL\nMuitos dos meus homens morreram...\fGENERAL\n...e, como líder, devo acompanhá-los.\fGENERAL\nX, perdoe nossa insensatez...\fX\nGeneral!",
+      "source_sha256": "de66145caa53bb177dd913c0401de5da1df62bef8c9cfeccc626ea1312512fda"
+    },
+    {
+      "id": "dialogue.x.046",
+      "original": "X\nYou're Dragoon from\nthe 14th unit!\fDRAGOON\nThis isn't good, X!\fDRAGOON\nThat Maverick just\ndestroyed the power\fDRAGOON\nreactor!\fX\nWhat?! Then the Sky\nLagoon will...\fX\ncome crashing into\nthe ground!\fDRAGOON\nIt's too late, X!\fDRAGOON\nIt's time I made my\nescape.\fDRAGOON\nI suggest you do the\nsame... Don't do\fDRAGOON\nanything reckless on\nthe way out, okay?",
+      "translation": "X\nVocê é Dragoon, da unidade 14!\fDRAGOON\nA situação é grave, X!\fDRAGOON\nAquele Maverick acabou de destruir...\fDRAGOON\n...o reator de energia!\fX\nO quê?! Então Sky Lagoon...\fX\n...vai cair no chão!\fDRAGOON\nÉ tarde demais, X!\fDRAGOON\nPreciso fugir.\fDRAGOON\nSugiro que faça o mesmo...\fDRAGOON\n...e não cometa nenhuma imprudência!",
+      "source_sha256": "d83368d19d71e72e35c983d2658f084d5e92c00905fd66e00b8a1076849f27a2"
+    },
+    {
+      "id": "dialogue.x.047",
+      "original": "X\nThe city below will\nsoon become a sea of\fX\nflames.\fX\nMany people will\nperish...\fX\nI have no choice but\nto escape from here\fX\nand head to the city\nbelow!",
+      "translation": "X\nA cidade logo será...\fX\n...um mar de chamas!\fX\nMuitas pessoas vão morrer...\fX\nPreciso sair daqui...\fX\n...e ir para a cidade!",
+      "source_sha256": "a16e3664346dc9e0bee27793e5f10ed079dbae5375de898c0c5df3512d18ac1a"
+    },
+    {
+      "id": "dialogue.x.048",
+      "original": "X\nWhat the ...!\fX\nSomething's got to\ngive. Otherwise the\fX\nentire Repliforce\nwill be considered\fX\nto be Mavericks!",
+      "translation": "X\nO que está acontecendo?!\fX\nPrecisamos fazer algo, ou então...\fX\n...toda a Repliforce será declarada...\fX\n...Maverick.",
+      "source_sha256": "c4bd8d4d94ac8d255d36d12bf83296434265cc85e7c13dbbfbdf8b8aef94774b"
+    },
+    {
+      "id": "dialogue.x.049",
+      "original": "SIGMA\nHee hee hee. You\nare very good, X!\fSIGMA\nBut not for long.\nYou won't be able to\fSIGMA\nevade this attack!",
+      "translation": "SIGMA\nHe, he, he! Você é muito bom, X!\fSIGMA\nMas não vai conseguir escapar...\fSIGMA\n...deste ataque!",
+      "source_sha256": "d47b2f0fbd2507db2c94f528ab521f9019e0c8d80c74f034d708337f6d94bc96"
+    },
+    {
+      "id": "dialogue.x.050",
+      "original": "SIGMA\nHa ha ha ha ha! Feel\nmy incredible power!\fSIGMA\nDrown in the empty\nvastness of space!",
+      "translation": "SIGMA\nHa, ha, ha! Sinta meu incrível poder!\fSIGMA\nDesapareça no vazio do espaço!",
+      "source_sha256": "280aef7919e4a10dab4c5e231818f87e2cf8b2feeb94f6c0aa2ee20eb03f9816"
+    },
+    {
+      "id": "dialogue.x.051",
+      "original": "COLONEL\n...Impressive... But\n... it's too late!\fX\nWhat?\fCOLONEL\nThe Repliforce...\nalready left for\fCOLONEL\nspace!\fCOLONEL\n...I'm beaten...\nbut the Repliforce\fCOLONEL\nwill never perish!\fCOLONEL\n...The Reploids'\nnation will be born\fCOLONEL\nin the vastness of\nspace!\fX\nColonel!!!",
+      "translation": "COLONEL\nImpressionante... Mas é tarde!\fX\nO quê?\fCOLONEL\nA Repliforce já partiu...\fCOLONEL\n...para o espaço!\fCOLONEL\nEu perdi, mas a Repliforce...\fCOLONEL\n...jamais desaparecerá!\fCOLONEL\nA nação dos Reploids nascerá...\fCOLONEL\n...na imensidão do espaço.\fX\nColonel!!!",
+      "source_sha256": "3ef843e8a2450a4a94593c8cef5402c63eabd1c5295203fd7c3f07a27ce06271"
+    },
+    {
+      "id": "dialogue.x.052",
+      "original": "X\n...Wha?!\nThe city has been\fX\ncompletely\ndestroyed.\fX\nThey were innocent\npeople...  I won't\fX\nforget this!",
+      "translation": "X\nO quê?! A cidade foi...\fX\n...completamente destruída.\fX\nEram pessoas inocentes...\fX\nNunca vou esquecer isso!",
+      "source_sha256": "5ce1ebe8f1b136c56ce4702d2a9b403575d18a0de7064a6bdf969433f862ae7d"
+    },
+    {
+      "id": "dialogue.x.053",
+      "original": "DR. LIGHT\n...X, you've finally\narrived...\fDR. LIGHT\nThis capsule\ncontains the sealed\fDR. LIGHT\nsecret parts for\nthe Ultimate Armor.\fDR. LIGHT\nWhen you execute\nthe Nova Strike, the\fDR. LIGHT\nwings will open and\nyou can execute the\fDR. LIGHT\ninvincible body\ncrash attack.\fDR. LIGHT\n...However, this\narmor is not\fDR. LIGHT\ncompleted yet and\nyour safety is not\fDR. LIGHT\nassured. If this\nis acceptable to\fDR. LIGHT\nyou, enter now...",
+      "translation": "DR. LIGHT\n...X, você finalmente chegou...\fDR. LIGHT\nEsta cápsula contém...\fDR. LIGHT\n...as peças da Ultimate Armor.\fDR. LIGHT\nAo executar o Nova Strike...\fDR. LIGHT\n...as asas se abrirão, permitindo...\fDR. LIGHT\n...uma investida invencível.\fDR. LIGHT\nNo entanto, esta armadura...\fDR. LIGHT\n...ainda não está completa.\fDR. LIGHT\nNão posso garantir sua segurança.\fDR. LIGHT\nSe aceitar o risco, entre agora...",
+      "source_sha256": "0822dcfbdbcdbdef57e60ff96b93505ed2edd02c818ce60a35f4b28f99576d6d"
+    },
+    {
+      "id": "dialogue.x.054",
+      "original": "{glyph:38}",
+      "translation": "",
+      "source_sha256": "3ee61c13c00be8ed627baf784445afe23bbe813fe1a23ffc47863f1d2f4d2fbb"
+    },
+    {
+      "id": "dialogue.zero.000",
+      "original": "JUNGLE\nInfiltrate enemy-\noccupied jungle and\fJUNGLE\ndestroy the weapon\nunder construction.",
+      "translation": "SELVA\nInfiltre a selva ocupada pelo inimigo.\fSELVA\nDestrua a arma que está sendo construída.",
+      "source_sha256": "c85a6b3fc4b5c028b51df540db308f713ac7f2a43c88cdf78a91d6594ff8adb5"
+    },
+    {
+      "id": "dialogue.zero.001",
+      "original": "CYBER SPACE\nA bug has corrupted\nthe network.\fCYBER SPACE\nDive into cyberspace\nand exterminate it.",
+      "translation": "CIBERESPAÇO\nUm vírus corrompeu a rede.\fCIBERESPAÇO\nEntre no ciberespaço e elimine o vírus.",
+      "source_sha256": "e5a91c8ccc823023556d335323c12b15cc79af5b2e36ffd3319fbf6329dce971"
+    },
+    {
+      "id": "dialogue.zero.002",
+      "original": "AIR FORCE\nThe Repliforce ship\nhas taken off.\fAIR FORCE\nPursue and blast\nit out of the air.",
+      "translation": "FORÇA AÉREA\nA nave da Repliforce decolou.\fFORÇA AÉREA\nPersiga a nave e derrube-a.",
+      "source_sha256": "d69b63d4f320e5f5125b8414939dbfd6becee91e73e1e18446f67c7bae0bd4fe"
+    },
+    {
+      "id": "dialogue.zero.003",
+      "original": "VOLCANO\nDragoon of the 14th\nunit is a traitor.\fVOLCANO\nLocate and bring him\nback to hunter H.Q.",
+      "translation": "VULCÃO\nDragoon, da unidade 14, nos traiu.\fVULCÃO\nEncontre-o e leve-o de volta ao quartel.",
+      "source_sha256": "2ad85654feedbb35c52ca9e6ae6149728911fc1e7e2bd8fd06899b1e73d075da"
+    },
+    {
+      "id": "dialogue.zero.004",
+      "original": "MARINE BASE\nRepliforce decimated\nthe city and left.\fMARINE BASE\nPursue them aboard\na Land Chaser.",
+      "translation": "BASE MARINHA\nA Repliforce destruiu a cidade e fugiu.\fBASE MARINHA\nPersiga seus soldados a bordo de um Land Chaser.",
+      "source_sha256": "47312cc86fe1ff81a7ae2461cb653c18929f0aaa604a510bd2366746bfbd1e86"
+    },
+    {
+      "id": "dialogue.zero.005",
+      "original": "BIO LAB.\nThe abandoned lab is\nnow operational.\fBIO LAB.\nInvestigate and\ndestroy the lab.",
+      "translation": "LABORATÓRIO\nO laboratório abandonado voltou a funcionar.\fLABORATÓRIO\nInvestigue o local e destrua o laboratório.",
+      "source_sha256": "482ca42adae6f075ee602ec09481a98d1df3cdbba70eb8bc55dd6d95b85c5b79"
+    },
+    {
+      "id": "dialogue.zero.006",
+      "original": "MILITARY TRAIN\nA military train is\nmoving supplies.\fMILITARY TRAIN\nCut off Repliforce's\nsupply route.",
+      "translation": "TREM MILITAR\nUm trem militar transporta suprimentos.\fTREM MILITAR\nInterrompa a rota de suprimentos da Repliforce.",
+      "source_sha256": "f35cc658fce78299dc52759cff6bba33a3b335e98d386c7c5983d1d82406c2c8"
+    },
+    {
+      "id": "dialogue.zero.007",
+      "original": "SNOW BASE\nWe've discovered a\nhidden snow base.\fSNOW BASE\nHalt production of\ntheir new weapon.",
+      "translation": "BASE NA NEVE\nDescobrimos uma base escondida na neve.\fBASE NA NEVE\nImpeça a fabricação da nova arma inimiga.",
+      "source_sha256": "3c391825d2f192a2b2ab3a3ac26df1b41499f6bb40aade4f95cf495a82981046"
+    },
+    {
+      "id": "dialogue.zero.008",
+      "original": "SPIDER\nAh... Zero. I've\nbeen expecting you.\fZERO\nSpider! You work\nfor Repliforce?!\fSPIDER\nYes... I lead a\nrenegade unit now.\fZERO\nThere's still time,\ncall off the coup!\fSPIDER\nNo. I know where my\nloyalties lie.",
+      "translation": "SPIDER\nAh... Zero. Eu estava esperando.\fZERO\nSpider! Está com a Repliforce?\fSPIDER\nSim... Agora lidero uma unidade rebelde.\fZERO\nAinda dá tempo! Impeça o golpe!\fSPIDER\nNão. Sei muito bem a quem sou leal.",
+      "source_sha256": "5d59c4cbda5f351a14baecaacdf625e50c94a07796512f66a6e9d4677045707c"
+    },
+    {
+      "id": "dialogue.zero.009",
+      "original": "WALRUS\nWhat's that blonde\nkid up to?!\fWALRUS\nI don't have time\nfor you junior!\fZERO\nHey! Shut up and\nfight already!\fWALRUS\nOh... That does it,\nyou're goin' down!",
+      "translation": "WALRUS\nO que esse garoto loiro quer?!\fWALRUS\nNão tenho tempo para você, moleque!\fZERO\nEi! Cale a boca e lute de uma vez!\fWALRUS\nAgora sim! Vou esmagar você!",
+      "source_sha256": "6376bbd41776069f36ffa6713d174939e19bc40a3a13f2493d3098a32ca06561"
+    },
+    {
+      "id": "dialogue.zero.010",
+      "original": "MUSHROOM\nYou made it this\nfar. I'm impressed!\fMUSHROOM\nYou interested in a\nreal challenge?\fZERO\nWho's your\ncommanding officer?\fMUSHROOM\nNever mind that,\nit's time to fight!",
+      "translation": "MUSHROOM\nVocê chegou longe! Impressionante!\fMUSHROOM\nQuer um desafio de verdade?\fZERO\nQuem é seu superior?\fMUSHROOM\nIsso não importa! É hora de lutar!",
+      "source_sha256": "3263d9f522f7e6988eff29c4b5e290029e53aa863674fa78dc97fbb96b9ec6ba"
+    },
+    {
+      "id": "dialogue.zero.011",
+      "original": "DRAGOON\nZero... It's\nreally you!\fZERO\nWhy did you\nbetray us?!\fDRAGOON\n.........\fZERO\nAnswer me, Dragoon!\fDRAGOON\nI have no answer\nfor you my friend.\fZERO\nDragoon!",
+      "translation": "DRAGOON\nZero... É você mesmo!\fZERO\nPor que nos traiu?!\fDRAGOON\n.........\fZERO\nResponda, Dragoon!\fDRAGOON\nNão tenho uma resposta, amigo.\fZERO\nDragoon!",
+      "source_sha256": "3ea3d47fdc45f42cbf779929c6fac9f119a1934314efd657667d9ebd037159df"
+    },
+    {
+      "id": "dialogue.zero.012",
+      "original": "DRAGOON\n...I ...wanted ...to\ndefeat... you...\fDRAGOON\n...Then ..he\n...appeared...\fZERO\nHe? Who!?\fDRAGOON\n...He ...told me...\nhe'd give me power.\fDRAGOON\nonly if I worked...\nfor Repliforce...\fZERO\n...What!?\fDRAGOON\nI couldn't...\nrefuse the offer...\fDRAGOON\nSorry Zero...\fZERO\n...Dragoon!!!",
+      "translation": "DRAGOON\n...Eu queria... derrotar você...\fDRAGOON\n...Então... ele... apareceu...\fZERO\nEle? Quem?!\fDRAGOON\n...Disse... que me daria poder...\fDRAGOON\n...Se eu entrasse... na Repliforce...\fZERO\n...O quê?!\fDRAGOON\nNão pude... recusar a oferta...\fDRAGOON\nMe perdoe, Zero...\fZERO\n...Dragoon!!!",
+      "source_sha256": "b86f1b8db35d7da9e51ff4687c1178a9629c22d7495694675262e0dd4fac67f4"
+    },
+    {
+      "id": "dialogue.zero.013",
+      "original": "STINGRAY\nArgh! He's still\nafter me!\fSTINGRAY\nEnough already.\nWe settle this now!",
+      "translation": "STINGRAY\nArgh! Ainda está me seguindo!\fSTINGRAY\nJá chega! Vamos resolver isso aqui!",
+      "source_sha256": "d30482df2bf4297c385f6679806787280e4e6925493c2835aecf53256d19b9be"
+    },
+    {
+      "id": "dialogue.zero.014",
+      "original": "PEACOCK\nI'm impressed you\nmade it this far!\fPEACOCK\nBut you can't beat\nme! Get ready!",
+      "translation": "PEACOCK\nImpressionante você ter chegado aqui!\fPEACOCK\nMas não pode me vencer! Prepare-se!",
+      "source_sha256": "9279712963166688b3d9e9391f014573078ff1cae577d7bafe4c812fd5ed8577"
+    },
+    {
+      "id": "dialogue.zero.015",
+      "original": "OWL\nWhy did you judge\nus as Mavericks!?\fZERO\nWait!\nStop the coup!\fOWL\nNo. We're justified\nin doing this!",
+      "translation": "OWL\nPor que nos declararam Mavericks?!\fZERO\nEspere! Acabe com o golpe de estado!\fOWL\nNão! Temos nossos motivos!",
+      "source_sha256": "6b0baef85483e8b25cf749c8ac8af7c5d31bf002ed0ef672a0b41dd71e71d57f"
+    },
+    {
+      "id": "dialogue.zero.016",
+      "original": "BEAST\nYou dared to attack\nmy unit?!\fBEAST\nI'm gonna enjoy\nfighting you!",
+      "translation": "BEAST\nOusa atacar minha unidade?!\fBEAST\nVou adorar esta luta!",
+      "source_sha256": "dc1fed7925cbc8cb9fb4ff03f3984f0b67e52e83034220ed9144ce29700e4d60"
+    },
+    {
+      "id": "dialogue.zero.017",
+      "original": "RAIJINGEKI\nS.M. button on\nthe ground.\fLightning attack.\nEffective against\ndistant enemies.",
+      "translation": "RAIJINGEKI\nAperte o botão S.M. no chão.\fUm ataque elétrico eficaz contra inimigos distantes.",
+      "source_sha256": "d8768d64ac4de09d964352cc3ab2da920b7d25cc3326be7aa8923c27d89401ca"
+    },
+    {
+      "id": "dialogue.zero.018",
+      "original": "HYOURETSUZAN\nDown + S.M. button\nwhile jumping.\fA dive attack.\nEffective against\nsurface enemies.",
+      "translation": "HYOURETSUZAN\nBaixo + botão S.M. durante um salto.\fUm ataque em mergulho eficaz contra inimigos no chão.",
+      "source_sha256": "96ff42f88d493ba2d74eceffc6ba3378f2cb1705b34d05314e930c251eed3341"
+    },
+    {
+      "id": "dialogue.zero.019",
+      "original": "KUUENBU\nWith the correct\ntiming, higher and\ffurther jumps are\npossible while\nairborne.\fKuuenzan may be\nactivated while\nattacking in \fthe air.",
+      "translation": "KUUENBU\nCom o ritmo certo, você pode saltar...\f...mais alto e mais longe no ar.\fAtive Kuuenzan ao atacar durante um salto.",
+      "source_sha256": "2c71451248a335388e878f59171f782f8fb6e276024a54ede7fda33ffecebc1f"
+    },
+    {
+      "id": "dialogue.zero.020",
+      "original": "RYUENJEIN\nUp + S.M. button on\nthe ground.\fA powerful attack\nthat burns enemies\nwith flames.\fSome objects may be\nburned with this\ntechnique.",
+      "translation": "RYUENJEIN\nCima + botão S.M. no chão.\fUm ataque poderoso que queima os inimigos.\fTambém pode queimar certos objetos.",
+      "source_sha256": "03d7553da15a9360fa53bbd311c49aff1f38e5e6ed4583a8258fa322160087ef"
+    },
+    {
+      "id": "dialogue.zero.021",
+      "original": "HIENKYAKU\nDash button while\njumping. May be\fexecuted in the air.",
+      "translation": "HIENKYAKU\nAperte o botão de arrancada no ar.\fPermite dar uma arrancada durante o salto.",
+      "source_sha256": "b118235de90b54db49f60a7aaa6a6befd42585b52c80a70c71f7199e8ba1df4f"
+    },
+    {
+      "id": "dialogue.zero.022",
+      "original": "RAKUHOUHA\nGiga attack button\non the ground.\fThe ultimate special\nattack that channels\nall stored\fenergy into one\nblast. Use this\nmove selectively as\fit consumes energy.",
+      "translation": "RAKUHOUHA\nAperte o botão Giga no chão.\fUm ataque especial que concentra toda sua energia...\f...em uma única descarga.\fConsome energia. Use com cuidado!",
+      "source_sha256": "de3cb5d7f2f62bd77bb38dbb229ca0cd6a40faed1ca75137c0bb72aafa158311"
+    },
+    {
+      "id": "dialogue.zero.023",
+      "original": "TENKUUHA\nEnhanced Z Saber!\nYou can cut enemy\fenergy shots with\nyour saber.",
+      "translation": "TENKUUHA\nMelhora o Z Saber! Você pode cortar...\f...os disparos de energia inimigos com o sabre.",
+      "source_sha256": "cde9018c06176e39ed451f3542e7ff2446fa81061b1dc463a02dbc23318e148b"
+    },
+    {
+      "id": "dialogue.zero.024",
+      "original": "SIPPUUGA\nS.M. button while\ndashing. You can\fexecute a powerful\ndash blade attack.\nApproach your enemy\fwith Sippuuga and\nperform a combo!",
+      "translation": "SIPPUUGA\nAperte o botão S.M. durante uma arrancada.\fExecuta uma poderosa estocada em movimento.\fAproxime-se com Sippuuga e emende um combo!",
+      "source_sha256": "3a92d992799953ce6cac028a3d291d5876281866c996fb7368bccb97f7343150"
+    },
+    {
+      "id": "dialogue.zero.025",
+      "original": "HUNTER H.Q.\nMavericks emerged\nat the point 5567.\fHUNTER H.Q.\nThey've occupied\nSky Lagoon!\fHUNTER H.Q.\nThis looks like\nRepliforce's doing!\fZERO\nRepliforce? ...OK.\nI'm on my way.",
+      "translation": "QUARTEL\nMavericks no ponto 5567.\fQUARTEL\nEles ocuparam Sky Lagoon!\fQUARTEL\nParece ser obra da Repliforce!\fZERO\nRepliforce? ...Certo. Estou a caminho.",
+      "source_sha256": "ac319f667be0db307aba8295de27c0c47a90376a35235b2762ab400b577939da"
+    },
+    {
+      "id": "dialogue.zero.026",
+      "original": "COLONEL\nZero! \nLong time no see!\fZERO\nColonel... What\nare you doing here?\fCOLONEL\nI've come to save\nmy sister Iris.\fCOLONEL\nI only hope she's\nokay...\fZERO\nShe's fine! I just\nrescued her.\fCOLONEL\nOh? Thanks Zero!\nI owe you one...\fZERO\n...Colonel. I have\na question for you.\fZERO\n...Did your unit\nattack this place?\fCOLONEL\nWhat are you\ntalking about?\fCOLONEL\nRepliforce came\nhere for help.\fCOLONEL\nWe weren't involved\nin the attack!\fZERO\nThey suspect you've\nbecome a Maverick.\fCOLONEL\nWhat!?\fZERO\nDisarm and come\nwith me to the H.Q.\fCOLONEL\nI'm afraid I can't.\nSoldiers never\fCOLONEL\ndrop their weapons!\fCOLONEL\nI won't do it, not\neven for you Zero!\fZERO\nThen they'll think\nyou're a Maverick!\fCOLONEL\nSo be it!\nThe Repliforce\fCOLONEL\nprefers war over\ndishonor and shame!\fCOLONEL\nGood bye, Zero!\fZERO\nWait! Colonel!\nListen to me!",
+      "translation": "COLONEL\nZero! Quanto tempo!\fZERO\nColonel... O que faz aqui?\fCOLONEL\nVim resgatar minha irmã Iris.\fCOLONEL\nEspero que ela esteja bem...\fZERO\nEla está bem! Acabei de resgatá-la.\fCOLONEL\nObrigado, Zero! Fico lhe devendo uma.\fZERO\nColonel... Preciso perguntar uma coisa.\fZERO\nSua unidade atacou este lugar?\fCOLONEL\nDo que está falando?\fCOLONEL\nA Repliforce veio prestar socorro.\fCOLONEL\nNão participamos do ataque!\fZERO\nSuspeitam que você seja um Maverick.\fCOLONEL\nO quê?!\fZERO\nLargue as armas e venha ao quartel.\fCOLONEL\nNão posso. Um soldado jamais...\fCOLONEL\n...entrega suas armas!\fCOLONEL\nNem por você, Zero!\fZERO\nEntão vão declarar você um Maverick!\fCOLONEL\nQue seja! A Repliforce...\fCOLONEL\n...prefere a guerra à desonra!\fCOLONEL\nAdeus, Zero!\fZERO\nEspere, Colonel! Escute!",
+      "source_sha256": "560979bc47be6038e3cf14422c353f84443ce52d13c7427919de8cb364841924"
+    },
+    {
+      "id": "dialogue.zero.027",
+      "original": "ZERO\nIris! ...What are\nyou doing here?\fIRIS\nMy brother Colonel\nstarted the coup!\fZERO\nI know...\fIRIS\nPlease don't fight\nagainst him!\fIRIS\nThis must be some\nkind of mistake!\fZERO\nThey've occupied\nseveral\fZERO\ncities already.\fZERO\nAs a hunter, I must\nstop them!\fIRIS\nZero...\fZERO\nI must go now!",
+      "translation": "ZERO\nIris! O que faz aqui?\fIRIS\nMeu irmão Colonel iniciou o golpe!\fZERO\nEu sei...\fIRIS\nPor favor, não lute contra ele!\fIRIS\nDeve haver algum engano!\fZERO\nEles já ocuparam várias...\fZERO\n...cidades.\fZERO\nComo caçador, preciso detê-los!\fIRIS\nZero...\fZERO\nPreciso ir!",
+      "source_sha256": "6bc5293f3677de60c9e1d205a31b71fd6b85e3f88ef5bd4dd73526d720a8b001"
+    },
+    {
+      "id": "dialogue.zero.028",
+      "original": "IRIS\nI've got a message\nfrom Repliforce...\fCOLONEL\nZero! I'll be at the\nMemorial Hall!\fCOLONEL\nBe there!\fIRIS\nDon't go Zero!\nDon't fight him!\fZERO\nThis is a matter of\npersonal pride now.\fZERO\nThere's no avoiding\nthis... I must go.",
+      "translation": "IRIS\nTenho uma mensagem da Repliforce...\fCOLONEL\nZero! Espero você no Memorial Hall!\fCOLONEL\nNão falte!\fIRIS\nNão vá, Zero! Não lute contra ele!\fZERO\nAgora é uma questão de honra.\fZERO\nNão posso evitar... Preciso ir.",
+      "source_sha256": "8e81dfdb2acb7f6899262f59cf180b17b912a18dd8ce0747477028250eb7ad17"
+    },
+    {
+      "id": "dialogue.zero.029",
+      "original": "IRIS\nRepliforce is at\nthe space harbor...\fZERO\nI have to go.\fIRIS\nNo! ...Please wait\nZero!\fIRIS\nI don't want to see\nyou two fight...\fZERO\nSomeone has to stop\nyour brother.\fZERO\nI'm leaving...",
+      "translation": "IRIS\nA Repliforce está no porto espacial...\fZERO\nPreciso ir.\fIRIS\nNão! Por favor, espere, Zero!\fIRIS\nNão quero ver vocês lutarem...\fZERO\nAlguém precisa deter seu irmão.\fZERO\nEstou indo...",
+      "source_sha256": "324f1a8d5385e0cd817601d09fc2e8470d68053bfad5e08a81825cbfeb130c64"
+    },
+    {
+      "id": "dialogue.zero.030",
+      "original": "ZERO\nI don't want to\nfight. Step back.\fCOLONEL\nI'm sorry. I can't\nlet you through...\fZERO\nIris will be sad if\nshe loses you...\fCOLONEL\nDon't be so\npresumptuous Zero!\fCOLONEL\nSave it until after\nyou've defeated me!",
+      "translation": "ZERO\nNão quero lutar. Saia da frente.\fCOLONEL\nSinto muito. Não posso deixar você passar.\fZERO\nIris vai sofrer se perder você...\fCOLONEL\nNão seja tão arrogante, Zero!\fCOLONEL\nDiga isso depois de me vencer!",
+      "source_sha256": "3e3c07eecd9cdfc0ddce119afb0599dc39b3beb90f08f97acd79dc3c2cc6109b"
+    },
+    {
+      "id": "dialogue.zero.031",
+      "original": "HUNTER H.Q.\nThey've left for\nouter space!\fHUNTER H.Q.\nScramble all\nMaverick Hunters!\fZERO\nIris? Where are\nyou? Iris!\fZERO\nShe left with them?\nNo!!\fHUNTER H.Q.\nMaverick Hunters!\nScramble!\fZERO\nI'm on my way!\fZERO\nDon't do this to me\nIris...",
+      "translation": "QUARTEL\nEles partiram para o espaço!\fQUARTEL\nMobilizem todos os caçadores!\fZERO\nIris? Onde está você? Iris!\fZERO\nEla foi com eles? Não!!\fQUARTEL\nCaçadores! Aos seus postos!\fZERO\nEstou a caminho!\fZERO\nNão faça isso comigo, Iris...",
+      "source_sha256": "69748cb91ca59d9674d76dc4b99d0dc6c135fcb5489175c06e40ba57606bbfbc"
+    },
+    {
+      "id": "dialogue.zero.032",
+      "original": "ZERO\nIris!\fIRIS\nSo you fought with\nmy brother...\fZERO\nI'm sorry...\fIRIS\nThen it's over.\nEverything...\fZERO\nWait Iris!\nListen to me!\fIRIS\nGood bye Zero...\fZERO\nIris!",
+      "translation": "ZERO\nIris!\fIRIS\nEntão você lutou contra meu irmão...\fZERO\nSinto muito...\fIRIS\nEntão acabou. Tudo...\fZERO\nEspere, Iris! Escute!\fIRIS\nAdeus, Zero...\fZERO\nIris!",
+      "source_sha256": "f9e6b69df69633576964eabc0712fd23bec7222ac63167e9afc184790baeb59f"
+    },
+    {
+      "id": "dialogue.zero.033",
+      "original": "ZERO\nGeneral! Many died\nbecause of you!\fZERO\nThose lives are on\nyour conscience!\fGENERAL\nIndependence always\nhas a high price...\fZERO\nWhat about Iris?!\nDid you forget her?\fGENERAL\nI have no regrets.\nCome on, Zero!",
+      "translation": "ZERO\nGeneral! Muitos morreram por sua culpa!\fZERO\nEssas vidas pesam na sua consciência!\fGENERAL\nA independência tem um preço alto...\fZERO\nE a Iris?! Esqueceu dela?!\fGENERAL\nNão me arrependo. Venha, Zero!",
+      "source_sha256": "68ad4d0c0ed86b01992c85c83d270785fa03d37e42e31c1adda43d88e89f22a7"
+    },
+    {
+      "id": "dialogue.zero.034",
+      "original": "ZERO\nWhat is this!?\nWhat happened!?\fGENERAL\nNo! This weapon\ncan't be working...\fZERO\nGeneral! What's\nwrong?\fGENERAL\nSomeone else is\ncontrolling it!\fZERO\nThen... Earth's\nin grave danger!\fZERO\nIt must be stopped!\nI'll handle this...",
+      "translation": "ZERO\nO que é isso?! O que aconteceu?!\fGENERAL\nNão! Esta arma não deveria funcionar...\fZERO\nGeneral! O que houve?\fGENERAL\nOutra pessoa está controlando a arma!\fZERO\nA Terra corre um grande perigo!\fZERO\nPrecisamos detê-la! Eu cuido disso...",
+      "source_sha256": "d5c1f47ffddc3cc7aa9275b850064f0c5109ada87291268d14dd519d47b66af7"
+    },
+    {
+      "id": "dialogue.zero.035",
+      "original": "SIGMA\nHee hee hee.\nGood work, Zero!\fZERO\nYou're... Sigma!\n...So it was you!\fSIGMA\nHee hee hee. Yes!\nSimply brilliant!\fSIGMA\nYou even defeated\nColonel and Iris!\fZERO\n...You made me\ndo it!\fSIGMA\nNo. You wanted to\ndestroy them!\fSIGMA\nAllow me to remind\nyou that I was once\fSIGMA\nthe leader of the\nMaverick Hunters...",
+      "translation": "SIGMA\nHe, he, he. Muito bem, Zero!\fZERO\nVocê é... Sigma! Foi tudo obra sua!\fSIGMA\nHe, he, he! Sim! Brilhante!\fSIGMA\nVocê derrotou Colonel e Iris!\fZERO\n...Você me obrigou a fazer isso!\fSIGMA\nNão. Você queria destruí-los!\fSIGMA\nDeixe-me lembrar que eu fui...\fSIGMA\n...o líder dos caçadores...",
+      "source_sha256": "46cb89854fa572f3fde07ad08e9cad7790cde63fea95b7d6260144b7c99f86f0"
+    },
+    {
+      "id": "dialogue.zero.036",
+      "original": "SIGMA\nZero! You were\na Maverick?!\fZERO\nWhat's your point?!\fZERO\nAre you that\nsurprised?\fSIGMA\nAh... Zero! You're\nmost impressive!\fZERO\nSigma... I will\ndefeat you!",
+      "translation": "SIGMA\nZero?! Você era um Maverick?!\fZERO\nO que quer dizer?!\fZERO\nEstá tão surpreso assim?\fSIGMA\nAh, Zero! Você é impressionante!\fZERO\nSigma... Vou derrotar você!",
+      "source_sha256": "ba659e88c014da67228de438aee7822321e8c8d83ad7522cc629d617817b3787"
+    },
+    {
+      "id": "dialogue.zero.037",
+      "original": "SIGMA\n...Hee hee hee.\fZERO\nWhat's so funny?\fSIGMA\nThis weapon is\naimed at Earth...\fSIGMA\nNo one can\nstop it...\fZERO\nNo!\fSIGMA\nHa ha ha ha ha!!\nGood bye, Zero!",
+      "translation": "SIGMA\n...He, he, he.\fZERO\nQual é a graça?\fSIGMA\nEsta arma está apontada para a Terra...\fSIGMA\nNinguém pode detê-la...\fZERO\nNão!\fSIGMA\nHa, ha, ha! Adeus, Zero!",
+      "source_sha256": "3ec17fd650ace19f8ece671f2e38744060e6cc323b7847a35b12b9e8b2b5ddf4"
+    },
+    {
+      "id": "dialogue.zero.038",
+      "original": "ZERO\nGeneral!\fGENERAL\n...Zero...\nI was... wrong.\fGENERAL\nSigma... He blinded\nme to the truth...\fZERO\nIt's okay... Rest.\fGENERAL\n...With my body I\ncan stop the weapon.\fZERO\nBut then you'll...\fGENERAL\nIt's over for this\nsoldier. Farewell!\fZERO\nGeneral!!!",
+      "translation": "ZERO\nGeneral!\fGENERAL\nZero... Eu estava... errado.\fGENERAL\nSigma... Não me deixou ver a verdade...\fZERO\nTudo bem... Descanse.\fGENERAL\nMeu corpo pode deter a arma.\fZERO\nMas então você...\fGENERAL\nEste soldado chegou ao fim. Adeus!\fZERO\nGeneral!!!",
+      "source_sha256": "ca4b10764caa1cd5f9cbac3b251f6ebaf5fe7e334c8aab0c7e7dbdb8576e2671"
+    },
+    {
+      "id": "dialogue.zero.039",
+      "original": "ZERO\nDragoon!?\fZERO\nYou're in the 14th\nunit. Why...?\fDRAGOON\nThis doesn't look\ngood, Zero!\fDRAGOON\nThat Maverick took\nout the power!\fZERO\nWhat! Then the Sky\nLagoon will...\fZERO\ncome crashing into\nthe ground!\fDRAGOON\nYes... And destroy\nthe entire city.\fZERO\nWe have to do\nsomething!\fDRAGOON\nIt's too late.\nI must escape now.\fDRAGOON\nYou'd best do the\nsame Zero...",
+      "translation": "ZERO\nDragoon?!\fZERO\nVocê é da unidade 14. Por quê...?\fDRAGOON\nA situação é grave, Zero!\fDRAGOON\nAquele Maverick cortou a energia!\fZERO\nO quê?! Então Sky Lagoon...\fZERO\n...vai cair no chão!\fDRAGOON\nSim... E destruir toda a cidade.\fZERO\nPrecisamos fazer algo!\fDRAGOON\nÉ tarde demais. Preciso fugir.\fDRAGOON\nÉ melhor fazer o mesmo, Zero...",
+      "source_sha256": "ec916098fdbc3a0350a1e0f5c703e8822d6b85fb78c9d69f0dbd7e377b9e6067"
+    },
+    {
+      "id": "dialogue.zero.040",
+      "original": "ZERO\nDamn! If the Sky\nLagoon falls...\fZERO\nit will be\ndisastrous!\fZERO\nThere's no time...\nI'm going down!",
+      "translation": "ZERO\nDroga! Se Sky Lagoon cair...\fZERO\n...será um desastre!\fZERO\nNão há tempo! Vou descer!",
+      "source_sha256": "a60efd591cec94d10de41e234ecf1b10c8f8528950cc8b2914b9a16acb8fb90c"
+    },
+    {
+      "id": "dialogue.zero.041",
+      "original": "ZERO\nIris! What are you\ndoing here?\fZERO\nAre you OK!?\fIRIS\nZero... Did you\ncome to save me?\fZERO\nYes. Hang on!\fIRIS\nA huge Maverick\nappeared and...\fZERO\nStay here Iris.\nI'll handle it!",
+      "translation": "ZERO\nIris! O que faz aqui?\fZERO\nVocê está bem?!\fIRIS\nZero... Veio me salvar?\fZERO\nSim. Aguente firme!\fIRIS\nUm enorme Maverick apareceu e...\fZERO\nFique aqui, Iris! Eu cuido dele!",
+      "source_sha256": "a4acf5cb596ac5e1058faa8004ff755ebda9416be5d805760297487299a20af9"
+    },
+    {
+      "id": "dialogue.zero.042",
+      "original": "ZERO\nIs this really one\nof Repliforce's?\fZERO\nI don't have a\nmoment to spare!\fZERO\nI have to defeat\nhim or else...",
+      "translation": "ZERO\nSerá mesmo da Repliforce?\fZERO\nNão tenho um segundo a perder!\fZERO\nPreciso derrotá-lo, ou então...!",
+      "source_sha256": "cff7acbf1529d793f3c6a548aecb1b4b9a6c225c5af0ba2b1903e7e38049c0e0"
+    },
+    {
+      "id": "dialogue.zero.043",
+      "original": "ZERO\nDamn! This isn't\ngood Colonel!\fZERO\nThey may decide the\nentire Repliforce\fZERO\nis a group of\nMavericks!",
+      "translation": "ZERO\nDroga! Isso é grave, Colonel!\fZERO\nPodem declarar toda a Repliforce...\fZERO\n...um grupo de Mavericks!",
+      "source_sha256": "e6e6f9abc217a48c457578d113119d5d42d49f354d1eb9d82c1f2de2b4669137"
+    },
+    {
+      "id": "dialogue.zero.044",
+      "original": "SIGMA\nI've been waiting\nfor you Zero!\fSIGMA\nIt's time for us\nto settle this!",
+      "translation": "SIGMA\nEu estava esperando você, Zero!\fSIGMA\nÉ hora de acertar nossas contas!",
+      "source_sha256": "9b790ee46eae6bf9ba276c5f285bdf00f967e60617bfd98bfa2642e57c12b350"
+    },
+    {
+      "id": "dialogue.zero.045",
+      "original": "SIGMA\nHa ha ha! You're\nfinished Zero!\fSIGMA\nIris is waiting\nfor you!",
+      "translation": "SIGMA\nHa, ha, ha! Você está acabado, Zero!\fSIGMA\nIris está esperando por você!",
+      "source_sha256": "e184be869f0221a1f5103d60a934f14bcda04fa2ef71b5a6d0090d9c289e9d4d"
+    },
+    {
+      "id": "dialogue.zero.046",
+      "original": "COLONEL\n...Impressive Zero!\nBut it's too late!\fZERO\nWhat!?\fCOLONEL\nRepliforce has left\nfor the space!\fCOLONEL\nEven if I perish,\nRepliforce lives.\fZERO\n...Colonel.\fCOLONEL\n...Zero. Tell Iris\fCOLONEL\nthat her brother\ndied happily!\fCOLONEL\n...Good bye Zero!\fZERO\nColonel!!!",
+      "translation": "COLONEL\nImpressionante, Zero! Mas é tarde!\fZERO\nO quê?!\fCOLONEL\nA Repliforce partiu para o espaço!\fCOLONEL\nMesmo que eu morra, ela continuará.\fZERO\n...Colonel.\fCOLONEL\n...Zero. Diga à Iris...\fCOLONEL\n...que seu irmão morreu feliz.\fCOLONEL\n...Adeus, Zero!\fZERO\nColonel!!!",
+      "source_sha256": "3bc0ff07a59461e3b13be12bd6a3b0f561a9ea003fb98c29ca11a50067741f25"
+    },
+    {
+      "id": "dialogue.zero.047",
+      "original": "ZERO\nThe carnage...\nIt's... horrible...\fZERO\nThose Mavericks\nwill pay for this!",
+      "translation": "ZERO\nEste massacre... É... horrível...\fZERO\nEsses Mavericks vão pagar por isso!",
+      "source_sha256": "a34c17bafcae80f6d403aacb57a14b08772c646157f9915f46f9d2e77c94469a"
+    },
+    {
+      "id": "dialogue.zero.048",
+      "original": "{glyph:38}",
+      "translation": "",
+      "source_sha256": "3ee61c13c00be8ed627baf784445afe23bbe813fe1a23ffc47863f1d2f4d2fbb"
+    }
+  ],
+  "description": "Brazilian Portuguese dialogue draft. Stable campaign/message IDs, readable English originals and native font glyphs are preserved."
+}

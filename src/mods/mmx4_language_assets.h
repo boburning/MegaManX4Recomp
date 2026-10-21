@@ -14,6 +14,31 @@ inline void put32(std::vector<uint8_t>& v,size_t p,uint32_t w) {
     for(unsigned i=0;i<4;++i)v[p+i]=uint8_t(w>>(8*i));
 }
 struct Member {uint32_t type;std::vector<uint8_t> data;};
+inline uint16_t u16(const uint8_t* p) {return uint16_t(p[0]|uint16_t(p[1])<<8);}
+inline std::vector<std::vector<uint8_t>> sprite_frames(const std::vector<uint8_t>& data) {
+    if(data.size()<4)throw std::runtime_error("Missing native sprite table");
+    const unsigned count=u16(data.data()+2);
+    if(!count || count*4>data.size())throw std::runtime_error("Invalid native sprite count");
+    std::vector<std::vector<uint8_t>> frames;
+    for(unsigned i=0;i<count;++i) {
+        const unsigned size=u16(data.data()+i*4)*4,at=u16(data.data()+i*4+2)*4;
+        if(at<count*4 || at>data.size() || size>data.size()-at)throw std::runtime_error("Native sprite outside table");
+        frames.emplace_back(data.begin()+at,data.begin()+at+size);
+    }
+    return frames;
+}
+inline std::vector<uint8_t> sprite_table(const std::vector<std::vector<uint8_t>>& frames) {
+    std::vector<uint8_t> data(frames.size()*4);
+    for(size_t i=0;i<frames.size();++i) {
+        if(frames[i].size()%4 || data.size()/4>65535 || frames[i].size()/4>65535)
+            throw std::runtime_error("Native sprite table overflow");
+        const unsigned count=unsigned(frames[i].size()/4),at=unsigned(data.size()/4);
+        data[i*4]=uint8_t(count);data[i*4+1]=uint8_t(count>>8);
+        data[i*4+2]=uint8_t(at);data[i*4+3]=uint8_t(at>>8);
+        data.insert(data.end(),frames[i].begin(),frames[i].end());
+    }
+    return data;
+}
 inline std::vector<Member> unpack(const std::vector<uint8_t>& data) {
     if(data.size()<2048 || data.size()%2048 || u32(data.data()+4)!=data.size())
         throw std::runtime_error("Unexpected X4 ARC layout");

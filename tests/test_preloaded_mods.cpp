@@ -86,8 +86,13 @@ int main(int argc, char** argv) {
             return fail("Japanese media switches must default off independently");
     if(!manager.set_feature_enabled("mmx4.localization","translation",true,&error))return fail(error);
     const auto spanish=manager.resolve(kGameId,"",kDiscSha256);
-    if(!spanish.ok || spanish.resources.size()!=1 || !spanish.resources[0].bytes || spanish.resources[0].id!="catalog")
-        return fail("bundled Spanish catalog must resolve verified bytes without a Japanese disc");
+    if(!spanish.ok || spanish.resources.size()!=2 || !spanish.resources[0].bytes || !spanish.resources[1].bytes)
+        return fail("both bundled catalogs must resolve verified bytes without a Japanese disc");
+    if(manager.feature_option_value("mmx4.localization","translation","language")!="es" ||
+       !manager.set_feature_option("mmx4.localization","translation","language","pt-br",&error))return fail(error);
+    const auto portuguese=manager.resolve(kGameId,"",kDiscSha256);
+    if(!portuguese.ok || portuguese.fingerprint==spanish.fingerprint)
+        return fail("language selection must participate in the session identity");
     if(!manager.set_feature_enabled("mmx4.localization","translation",false,&error) ||
        !manager.set_feature_enabled("mmx4.localization","japanese-media",true,&error))return fail(error);
     if(manager.resolve(kGameId,"",kDiscSha256).ok)return fail("Japanese media requires an owner-provided donor");

@@ -18,11 +18,12 @@ using Call=void(*)(void);
 static auto& activation() {static std::map<std::string,Call> c;return c;}
 static auto& resetters() {static std::map<std::string,Call> c;return c;}
 static auto& ticks() {static std::map<std::string,Call> c;return c;}
+static auto& entries() {static std::map<std::string,PSXModFunctionEntryCallback> c;return c;}
 static std::shared_ptr<const std::vector<uint8_t>> donor_bytes;
 static std::vector<uint8_t> catalog,ram(2*1024*1024),exe;
 static std::map<uint32_t,uint8_t> aperture;
 static std::map<std::string,std::vector<uint8_t>> replacements;
-static std::string catalog_path;
+static std::string catalog_path,language="es";
 static PS1::ISOReader original;
 static unsigned options,appended;static uint32_t next_lba,next_guest;
 static void check(bool ok,const std::string& text) {if(!ok)throw std::runtime_error(text);}
@@ -31,16 +32,18 @@ int psx_mod_register_activation_plugin(const char* id,Call cb) {activation()[id]
 int psx_mod_register_session_reset_plugin(const char* id,Call cb) {resetters()[id]=cb;return 1;}
 int psx_mod_register_vblank_plugin(const char* id,Call cb) {ticks()[id]=cb;return 1;}
 int psx_mod_register_savestate_plugin(const char*,Call) {return 1;}
-int psx_mod_register_function_entry_plugin(const char*,uint32_t,PSXModFunctionEntryCallback) {return 1;}
+int psx_mod_register_function_entry_plugin(const char* id,uint32_t,PSXModFunctionEntryCallback cb) {entries()[id]=cb;return 1;}
+int psx_mod_game_started() {return 1;}
 void psx_mod_counter_add(const char*,uint32_t) {}
 void psx_fatal_halt(const char* why) {throw std::runtime_error(why);}
 int psx_mod_option_value(const char*,const char*,const char* id,char* out,uint32_t n) {
+    if(!std::strcmp(id,"language")) {std::snprintf(out,n,"%s",language.c_str());return 1;}
     unsigned bit=!std::strcmp(id,"fmvs")?1:!std::strcmp(id,"voices")?2:4;
     std::snprintf(out,n,"%s",options&bit?"true":"false");return 1;
 }
 int psx_mod_current_resource_path(const char*,char* out,uint32_t n) {std::snprintf(out,n,"%s",catalog_path.c_str());return 1;}
 int psx_mod_current_resource_bytes(const char* id,const uint8_t** out,uint64_t* size) {
-    if(!std::strcmp(id,"catalog")) {*out=catalog.data();*size=catalog.size();return 1;}
+    if(!std::strcmp(id,language=="pt-br"?"catalog-pt-br":"catalog")) {*out=catalog.data();*size=catalog.size();return 1;}
     *out=donor_bytes->data();*size=donor_bytes->size();return 1;
 }
 int psx_mod_read_disc_file(const char* path,void* out,uint32_t capacity,uint32_t* size) {
@@ -93,7 +96,8 @@ int main(int argc,char** argv) {
         check(aligned_bank.size()%4==0 && messages(aligned_bank)==short_records,"edited native message banks retain word alignment");
         auto bad=built;bad[4]^=1;bool refused=false;
         try{unpack(bad);}catch(...){refused=true;}check(refused,"malformed ARC rejected");
-        if(argc!=4) {std::cout<<"PASS: language archive contracts\n";return 0;}
+        if(argc!=4 && argc!=5) {std::cout<<"PASS: language archive contracts\n";return 0;}
+        if(argc==5)language=argv[4];
         check(original.Open(argv[1]),"open owner US disc");catalog_path=argv[3];
         std::ifstream input(catalog_path,std::ios::binary);catalog={std::istreambuf_iterator<char>(input),{}};
         std::string error;
@@ -108,6 +112,7 @@ int main(int argc,char** argv) {
         auto us_title=unpack(read_file("ARC/ST0E_U0.ARC"));
         std::vector<uint8_t> jp_title_bytes;check(donor.read("ARC/ST0E_00.ARC",jp_title_bytes),"Japanese title scene");
         auto jp_title=unpack(jp_title_bytes);
+        std::vector<uint8_t> jp_exe;check(donor.read("SLPS_009.02",jp_exe),"Japanese loading palette source");
         exe=read_file("SLUS_005.61");
         const std::array<std::string,3> names{"ARC/PL00_U.ARC","ARC/PL01_U.ARC","ARC/PL02_U.ARC"};
         std::array<std::vector<std::vector<uint8_t>>,3> source_records;
@@ -118,13 +123,30 @@ int main(int argc,char** argv) {
             std::fill(ram.begin(),ram.end(),0);std::copy(exe.begin()+0x800,exe.end(),ram.begin()+0x10000);
             if(options&7)activation().at("mmx4.japanese-media")();
             if(options&8)activation().at("mmx4.translation")();
+            const auto not_entered=ram;
+            for(const auto& cb:ticks())cb.second();
+            check(ram==not_entered,"VBlank during a partially loaded EXE never publishes language tables");
+            for(const auto& cb:entries())cb.second(nullptr,0x800dae8c);
             for(const auto& cb:ticks())cb.second();
             check(appended==((options&1)?11u:0u)+((options&2)?6u:0u),"independent FMV/voice selection");
             auto load=unpack(read_file("ARC/LOAD_U.ARC"));
             check(member(load,0x10008)==((options&4)?member(jp,0x10008):us_logo),"independent Rockman title artwork");
             auto title=unpack(read_file("ARC/ST0E_U0.ARC"));
-            for(uint32_t type:{0x10002u,0x12u,0xdu,0x10000u,0u,1u,0xbu})
+            for(uint32_t type:{0x10002u,0xdu,0x10000u,0u,1u,0xbu})
                 check(member(title,type)==member((options&4)?jp_title:us_title,type),"main title scene art and layout are independent");
+            if(options&4) {
+                for(unsigned i=0;i<16;++i)
+                    check(psx_mod_read_word(0x800f16a0+i*4)==u32(jp_exe.data()+0xe2030+i*4),"Japanese loading texture has its matching wordmark and X4 palettes");
+                check(psx_mod_read_word(0x800f21a0)==0x0c0b1312 && psx_mod_read_word(0x800f21a4)==0x09110700,
+                    "native title spawns wordmark after X/4 so the full Rockman word stays visible");
+                const auto frames=sprite_frames(member(title,0x12)),jp_frames=sprite_frames(member(jp_title,0x12));
+                check(frames.size()==35,"US executable can access all 35 title frames");
+                for(unsigned i=0;i<31;++i)if(i!=28)check(frames[i]==jp_frames[i],"Japanese title animation frame preserved");
+                for(size_t q=0;q<frames[28].size();q+=4)
+                    check(int(int8_t(frames[28][q+2]))==int(int8_t(jp_frames[28][q+2]))-42,"4 rotates around US native anchor");
+                for(unsigned i=31;i<35;++i)check(frames[i].size()==4,"US-only frame is a bounded transparent quad");
+                check(!replacements.count("ARC/MOJIPAT.ARC"),"common US menu/portrait sprite tables stay untouched");
+            } else check(member(title,0x12)==member(us_title,0x12),"stock title sprite table untouched");
             check(member(title,0x20000)==member((options&2)?jp_title:us_title,0x20000),"title audio belongs to voices option");
             const auto& font=member(load,0x10001);
             check((font==us_font)==!(options&8),"only translation changes native font atlas");
@@ -140,7 +162,7 @@ int main(int argc,char** argv) {
             const auto before=ram;for(const auto& cb:ticks())cb.second();check(ram==before,"idempotent language tables");
             std::cout<<"PASS: owner-disc combination "<<options<<" streams="<<appended<<" archives="<<replacements.size()<<'\n';
         }
-        std::cout<<"PASS: all 16 native asset combinations; actual guest playback remains a separate check\n";
+        std::cout<<"PASS: all 16 "<<language<<" native asset combinations; actual guest playback remains a separate check\n";
         return 0;
     }catch(const std::exception& e) {std::cerr<<"FAIL: "<<e.what()<<'\n';return 1;}
 }

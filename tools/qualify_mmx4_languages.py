@@ -24,6 +24,10 @@ def main():
     parser.add_argument('--jp-disc',type=Path)
     parser.add_argument('--japanese',nargs='*',choices=('fmvs','voices','title-screen'),default=[])
     parser.add_argument('--catalog',type=Path,help='Package an edited catalog, exercising the community authoring path')
+    parser.add_argument('--language',choices=('es','pt-br'),default='es')
+    parser.add_argument('--resolution',choices=('native','1080p'),default='native')
+    parser.add_argument('--window-width',type=int,default=640)
+    parser.add_argument('--original-loader',action='store_true',help='Qualify loading artwork on the original CD path')
     parser.add_argument('--campaign',type=int,choices=(0,1),default=0)
     parser.add_argument('--coop',action='store_true')
     args=parser.parse_args()
@@ -37,11 +41,14 @@ def main():
         if (source.parent/name).exists():shutil.copytree(source.parent/name,qa/name)
     for dll in source.parent.glob('*.dll'):shutil.copy2(dll,qa/dll.name)
     state='format_version = 2\n'
+    if args.original_loader:
+        state+='[[feature]]\npackage_id = "mmx4.enhancement.resident-loading"\nid = "resident-loading"\nenabled = false\n'
     if args.japanese:
         state+='[[feature]]\npackage_id = "mmx4.localization"\nid = "japanese-media"\nenabled = true\n[feature.values]\n'
         state+=''.join(f'{key} = {str(key in args.japanese).lower()}\n' for key in ('fmvs','voices','title-screen'))
         state+='[feature.resources]\njapanese-disc = '+json.dumps(args.jp_disc.resolve().as_posix())+'\n'
     state+='[[feature]]\npackage_id = "mmx4.localization"\nid = "translation"\nenabled = true\n'
+    state+='[feature.values]\nlanguage = '+json.dumps(args.language)+'\n'
     if args.coop:
         state+='[[feature]]\npackage_id = "mmx4.coop"\nid = "coop"\nenabled = true\n[feature.values]\ncameras = "unified"\nlocal_cameras = "unified"\n'
     (qa/'mods/state.toml').write_text(state,encoding='utf-8')
@@ -49,10 +56,10 @@ def main():
         archive=qa/'community-translation.psxmod';build(args.catalog,archive)
         with zipfile.ZipFile(archive) as package:
             package.extractall(qa/'mods/installed/mmx4.localization/1.0.0')
-    (qa/'settings.toml').write_text('[video]\nfullscreen = false\ninternal_resolution = "native"\nwindow_width = 640\n[audio]\nvolume = 0\n')
+    (qa/'settings.toml').write_text(f'[video]\nfullscreen = false\ninternal_resolution = "{args.resolution}"\nwindow_width = {args.window_width}\n[audio]\nvolume = 0\n')
     cfg=args.game.resolve().read_text(encoding='utf-8')
     game_exe=args.game.resolve().parent/'mmx4/SLUS_005.61'
-    for section,key,value in [('game','exe',game_exe.as_posix()),('video','internal_resolution','native'),
+    for section,key,value in [('game','exe',game_exe.as_posix()),('video','internal_resolution',args.resolution),
             ('runtime','memcard_dir',(qa/'cards').as_posix()),('runtime','overlay_autocompile_cmd','')]:
         cfg=change_config(cfg,section,key,value)
     (qa/'game.toml').write_text(cfg,encoding='utf-8')
@@ -69,7 +76,8 @@ def main():
             '--disc',str(args.disc.resolve()),'--memcard-dir',str(qa/'cards'),'--debug-port',str(port)],cwd=qa,env=env,
             stdout=log,stderr=log,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     (qa/'owned.json').write_text(json.dumps(dict(pid=process.pid,port=port)))
-    r=Runtime(port);report=dict(campaign=args.campaign,coop=args.coop,japanese=args.japanese,status='running')
+    r=Runtime(port);report=dict(campaign=args.campaign,coop=args.coop,japanese=args.japanese,language=args.language,
+        original_loader=args.original_loader,resolution=args.resolution,status='running')
     try:
         deadline=time.monotonic()+60
         while True:
@@ -85,7 +93,39 @@ def main():
         while r.read(0x80173c70,2)!=bytes([6,1]):
             assert time.monotonic()<deadline,'Title not reached'
             r.input(0xfff7);time.sleep(.12);r.release();time.sleep(.6)
-        time.sleep(2);r.request('screenshot_file',path=str(qa/'title.png'))
+        # Front state 6/1 starts the logo's entrance animation, not its end.
+        # Let that real animation finish before accepting the idle title.
+        time.sleep(7);r.screenshot(qa/'title.png')
+        report['resident_at_title']=r.request('resident_status')
+        report['title_perf']=r.request('frame_perf')
+        # Capture the actual menu-to-character-select transition, including
+        # the loading-logo animation. Inputs and native state stay authoritative.
+        started=time.monotonic();r.input(0xfff7);time.sleep(.12);r.release()
+        report['start_transition']=[]
+        for i in range(40):
+            now=time.monotonic();play=r.read(0x801721c0,2);front=r.read(0x80173c70,2)
+            report['start_transition'].append(dict(seconds=now-started,play=play.hex(),front=front.hex()))
+            try:r.screenshot(qa/f'start-{i:02}.png')
+            except RuntimeError as error:
+                if 'display disabled' not in str(error):raise
+            time.sleep(.1)
+        report['resident_after_start']=r.request('resident_status')
+        report['resident_events_after_start']=r.request('resident_events')
+        report['start_perf']=r.request('frame_perf')
+        if not args.original_loader:
+            packs=report['resident_at_title']['packs']
+            assert packs and not packs[0]['error'],'Effective language assets failed resident preparation'
+            assert all(e['served'] for e in report['resident_events_after_start']['entries']), 'A blocking archive fell back to CD during Game Start'
+        # Confirm the character through native input, retaining the subsequent
+        # loading logo as well as the first movie/story transition.
+        if args.campaign:r.input(0xffdf);time.sleep(.18);r.release();time.sleep(.3)
+        r.input(0xbfff);time.sleep(.12);r.release()
+        for i in range(45):
+            try:r.screenshot(qa/f'loading-{i:02}.png')
+            except RuntimeError as error:
+                if '24bpp' in str(error):r.request('screenshot_file',path=str(qa/f'loading-{i:02}.png'))
+                elif 'display disabled' not in str(error):raise
+            time.sleep(.03)
         deadline=time.monotonic()+140;captures=0;iteration=0
         while True:
             play=r.read(0x801721c0,0x20)
@@ -93,12 +133,12 @@ def main():
             assert time.monotonic()<deadline,'Gameplay not reached'
             if (play[0x1c] or play[:2]==bytes([3,9])) and captures<8:
                 time.sleep(4.5)
-                r.request('screenshot_file',path=str(qa/f'dialogue-{captures}.png'));captures+=1
+                r.screenshot(qa/f'dialogue-{captures}.png');captures+=1
                 report.setdefault('dialogue_cd',[]).append(r.request('cdrom_state'))
                 print('Captured native dialogue',captures,flush=True)
             buttons=0xfff7 if iteration%2==0 else 0xbfff
             r.input(buttons & (0xffdf if args.campaign else 0xffff));time.sleep(.2);r.release();time.sleep(.5);iteration+=1
-        time.sleep(2);r.request('screenshot_file',path=str(qa/'intro.png'))
+        time.sleep(2);r.screenshot(qa/'intro.png')
         if args.coop:
             bodies=r.wait_playable(30,advance_dialogue=True)
             report['characters']=[p[2] for p in bodies]

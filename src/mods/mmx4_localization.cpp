@@ -25,7 +25,7 @@ std::vector<Patch> patches;
 std::vector<std::pair<uint32_t,std::vector<uint8_t>>> guest_blobs;
 std::map<unsigned,std::vector<Member>> archives;
 std::map<unsigned,std::vector<uint8_t>> archive_headers;
-bool applied=false;
+bool applied=false,exe_entered=false;
 
 void fail(const std::string& message) {psx_fatal_halt(("X4 language mod: "+message).c_str());}
 std::string sha(const std::vector<uint8_t>& data) {
@@ -55,21 +55,23 @@ std::vector<Member>& archive(unsigned index) {
     archive_headers[index]={data.begin(),data.begin()+2048};
     return archives.emplace(index,unpack(data)).first->second;
 }
-void mount_archive(unsigned index) {
-    auto& members=archive(index);
-    auto data=pack(members,archive_headers.at(index));uint32_t lba=0;
+void mount_file(unsigned index,const std::vector<uint8_t>& data) {
+    uint32_t lba=0;
     if(!psx_mod_replace_disc_file(MMX4Files[index].path,data.data(),uint32_t(data.size()),&lba))
         throw std::runtime_error("Cannot mount derived X4 language archive");
     const auto& c=MMX4FileContracts[index];const uint32_t table=0x800f0e18+index*12;
     patch(table,c.lba,lba);patch(table+4,c.size,uint32_t(data.size()));patch(table+8,c.first,u32(data.data()));
 }
+void mount_archive(unsigned index) {
+    mount_file(index,pack(archive(index),archive_headers.at(index)));
+}
 unsigned index_for(const char* name) {
     for(unsigned i=0;i<std::size(MMX4Files);++i)if(!std::strcmp(name,MMX4Files[i].path))return i;
     throw std::runtime_error("Missing native X4 archive contract");
 }
-void reset() {patches.clear();guest_blobs.clear();archives.clear();archive_headers.clear();applied=false;}
+void reset() {patches.clear();guest_blobs.clear();archives.clear();archive_headers.clear();applied=false;exe_entered=false;}
 void publish() {
-    if(applied || patches.empty())return;
+    if(!exe_entered || applied || patches.empty())return;
     // Wait for the EXE. Validate the whole transaction before its first write.
     if(psx_mod_read_word(0x800f0e18)!=MMX4FileContracts[0].lba)return;
     for(const auto& p:patches)
@@ -84,8 +86,8 @@ void publish() {
         for(size_t i=0;i<blob.second.size();++i)psx_mod_write_byte(blob.first+uint32_t(i),blob.second[i]);
     applied=true;psx_mod_counter_add("mmx4.language.tables_published",1);
 }
-void entry(CPUState*,uint32_t) {publish();}
-void restored() {applied=false;publish();}
+void entry(CPUState*,uint32_t) {exe_entered=true;publish();}
+void restored() {applied=false;exe_entered=psx_mod_game_started()!=0;publish();}
 
 std::string donor_name(const std::string& us,const ModMode2Disc& donor) {
     uint32_t lba=0,size=0;
@@ -138,7 +140,21 @@ void media_activate() {
         ModMode2Disc donor(bytes,size);
         if(enabled("fmvs"))for(const auto& s:movies)stream(donor,bytes,s);
         if(enabled("title-screen")) {
+            // US spawns the wordmark before its separate X/4 objects. JP's
+            // word extends across X and must be drawn in front. Reorder only
+            // these native object IDs; their coordinates/handlers stay native.
+            patch(0x800f21a0,0x0b001312,0x0c0b1312);
+            patch(0x800f21a4,0x0911070c,0x09110700);
             std::vector<uint8_t> source;
+            if(!donor.read("SLPS_009.02",source) || source.size()<0xe2070)
+                throw std::runtime_error("Japanese loading-logo palettes are missing");
+            // These two 16-colour CLUTs live in the EXE, not in LOAD.ARC or
+            // MOJIPAT. A texture-only swap displays the wrong indexed colours.
+            constexpr uint32_t palette[]={0xf8830000,0xfd48fcc4,0xfe31fdcd,0xfaf7fab5,
+                0xa8c7f79c,0xd252b94a,0xc8a5bc41,0xd928ad08,0x805f0000,0x85de811f,
+                0x96fe869e,0xfbbed7bf,0xb94aa8c7,0xcc62d274,0xe8f3d8ab,0xb21991de};
+            for(unsigned i=0;i<std::size(palette);++i)
+                patch(0x800f16a0+i*4,palette[i],u32(source.data()+0xe2030+i*4));
             if(!donor.read("ARC/LOAD.ARC",source))throw std::runtime_error("Japanese title atlas is missing");
             auto jp=unpack(source);const unsigned index=index_for("ARC/LOAD_U.ARC");
             auto& logo=member(archive(index),0x10008);
@@ -155,6 +171,25 @@ void media_activate() {
                 for(auto& m:target) {
                     if(m.type>>16==2 || m.type==4 || m.type==6 || m.type==7 || m.type==8)continue;
                     m.data=member(scene,m.type);
+                }
+                if(!std::strcmp(us_name,"ARC/ST0E_U0.ARC")) {
+                    auto frames=sprite_frames(member(target,0x12));
+                    if(frames.size()!=31)throw std::runtime_error("Japanese title frame contract changed");
+                    // US animates the 4 around its own centre; JP stores it
+                    // beside X. Remove that baked-in 42-pixel displacement.
+                    for(size_t q=0;q<frames[28].size();q+=4)
+                        frames[28][q+2]=uint8_t(int(int8_t(frames[28][q+2]))-42);
+                    // US-only outline/shimmer frames must never index into
+                    // Japanese quad data as if it were a frame header.
+                    const auto& tex=member(target,0x10002);std::vector<uint8_t> blank;
+                    for(unsigned t=0;t<256 && blank.empty();++t) {
+                        bool empty=true;
+                        for(unsigned y=0;y<16;++y)for(unsigned x=0;x<8;++x)
+                            empty=empty && !tex[((t>>4)*16+y)*128+(t&15)*8+x];
+                        if(empty)blank={0,uint8_t(t),0,0};
+                    }
+                    if(blank.empty())throw std::runtime_error("Japanese title has no transparent sprite cell");
+                    frames.resize(35,blank);member(target,0x12)=sprite_table(frames);
                 }
                 mount_archive(file);
             }
@@ -217,23 +252,29 @@ NativeGlyphMap glyph_map() {
 }
 void translate_activate() {
     try {
-        char path[4096]{};
-        if(!psx_mod_current_resource_path("catalog",path,sizeof path))throw std::runtime_error("Select a translation JSON catalog");
+        char language[32]{};
+        if(!psx_mod_option_value(Package,"translation","language",language,sizeof language))std::strcpy(language,"es");
+        const char* resource=!std::strcmp(language,"pt-br")?"catalog-pt-br":"catalog";
         // The selected catalog is verified by the plan; consume its immutable
         // bytes so later file edits cannot change a committed session.
         const uint8_t* data=nullptr;uint64_t size=0;
-        if(!psx_mod_current_resource_bytes("catalog",&data,&size) || size>8*1024*1024)
+        if(!psx_mod_current_resource_bytes(resource,&data,&size) || size>8*1024*1024)
             throw std::runtime_error("Translation catalog is not a verified resource");
         NativeTextCatalog catalog;std::string error;
-        if(!catalog.load(std::string(reinterpret_cast<const char*>(data),size),"",error))throw std::runtime_error(error);
+        if(!catalog.load(std::string(reinterpret_cast<const char*>(data),size),language,error))throw std::runtime_error(error);
         auto glyphs=glyph_map();
         const unsigned load=index_for("ARC/LOAD_U.ARC");
         NativeFontAtlas font;font.packed=member(archive(load),0x10001);
-        const std::u32string accents=U"áéíóúüñÁÉÍÓÚÜÑ¿¡";
-        const std::string bases="aeiouunAEIOUUN?!";
+        const std::u32string accents=U"áéíóúüñÁÉÍÓÚÜÑ¿¡àâêôãõçÀÂÊÔÃÕÇ";
+        const std::string bases="aeiouunAEIOUUN?!aaeoaocAAEOAOC";
         for(size_t i=0;i<accents.size();++i) {
-            const uint16_t cell=uint16_t(0xe0+i);
-            const auto mark=i>=14?NativeGlyphMark::Inverted:
+            const uint16_t cell=uint16_t(i<16?0xe0+i:0xd0+i-16);
+            const unsigned pt=i>=16?(i-16)%7:99;
+            const auto mark=pt==0?NativeGlyphMark::Grave:
+                (pt==1 || pt==2 || pt==3)?NativeGlyphMark::Circumflex:
+                (pt==4 || pt==5)?NativeGlyphMark::Tilde:
+                pt==6?NativeGlyphMark::Cedilla:
+                (i==14 || i==15)?NativeGlyphMark::Inverted:
                 (i==6 || i==13)?NativeGlyphMark::Tilde:
                 (i==5 || i==12)?NativeGlyphMark::Diaeresis:NativeGlyphMark::Acute;
             if(!native_font_compose(font,glyphs.at(uint8_t(bases[i])),cell,mark,error,i==2?6:0))throw std::runtime_error(error);
@@ -246,7 +287,7 @@ void translate_activate() {
             bool changed=false;
             for(const auto& record:records)for(size_t p=0;p<record.size();p+=2) {
                 const unsigned c=(record[p]|unsigned(record[p+1])<<8)&0x1ff;
-                if(c>=0xe0 && c<=0xef)throw std::runtime_error("Native message uses a reserved accent cell");
+                if(c>=0xd0 && c<=0xef)throw std::runtime_error("Native message uses a reserved accent cell");
             }
             for(size_t i=0;i<records.size();++i) {
                 char id[96];std::snprintf(id,sizeof id,"dialogue.%s.%03u",character==1?"zero":"x",unsigned(i));
@@ -264,7 +305,7 @@ void translate_activate() {
             if(changed) {member(archive(index),0x15)=message_bank(records);mount_archive(index);}
         }
         member(archive(load),0x10001)=std::move(font.packed);mount_archive(load);
-        std::fprintf(stderr,"mmx4.language: Text translation prepared %u native bank records; 16 native-font accent cells\n",translated);
+        std::fprintf(stderr,"mmx4.language: %s translation prepared %u native bank records; 30 native-font accent cells\n",language,translated);
     } catch(const std::exception& e) {fail(e.what());}
 }
 }

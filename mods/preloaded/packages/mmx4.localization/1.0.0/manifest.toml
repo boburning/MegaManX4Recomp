@@ -3,7 +3,7 @@ id = "mmx4.localization"
 version = "1.0.0"
 name = "Languages and Japanese Media"
 author = "mstan"
-description = "Mix Japanese movies, voices and Rockman title art with a native-font text translation. Spanish dialogue is included."
+description = "Mix Japanese movies, voices and Rockman title art with Spanish or Brazilian Portuguese dialogue in the original font."
 resolver = "declarative"
 save_compatibility = "isolated"
 
@@ -63,10 +63,25 @@ order = -100
 [[feature]]
 id = "translation"
 name = "Text Translation"
-description = "Translate X and Zero's dialogue using the original game font. Spanish dialogue is included. Install a community translation package to use another catalog. Requires a fresh boot."
+description = "Translate X and Zero's dialogue using the original game font. Includes Spanish and Brazilian Portuguese drafts. Requires a fresh boot."
 group = "Languages"
 channel = "experimental"
 default_enabled = false
+
+[[option]]
+feature = "translation"
+id = "language"
+label = "Language"
+type = "choice"
+default = "es"
+
+[[option.choice]]
+value = "es"
+label = "Español"
+
+[[option.choice]]
+value = "pt-br"
+label = "Português brasileiro"
 
 [[resource]]
 feature = "translation"
@@ -76,10 +91,23 @@ description = "Plain UTF-8 JSON with stable message IDs, original text and trans
 file_patterns = "*.json"
 file_description = "Translation JSON catalog"
 format = "file"
+hidden = true
 default = "catalog/es.json"
 required = true
 size = 62224
 sha256 = "42a1897ac46d31eb42198c6af0c60149dc92f7a0304dd39f2301e93620a07fcc"
+
+[[resource]]
+feature = "translation"
+id = "catalog-pt-br"
+label = "Brazilian Portuguese catalog"
+description = "Plain UTF-8 JSON with stable message IDs, original text and translated text."
+format = "file"
+hidden = true
+default = "catalog/pt-br.json"
+required = true
+size = 61672
+sha256 = "bd6a7efd314d15de8b34fef44b62f58309bb96c58545af4afe467fc024414702"
 
 [[plugin]]
 feature = "translation"

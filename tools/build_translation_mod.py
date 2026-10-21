@@ -14,14 +14,14 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = ROOT / 'mods/preloaded/packages/mmx4.localization/1.0.0'
-SUPPORTED = set('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/↓↑←→+-,.!?"\' áéíóúüñÁÉÍÓÚÜÑ¿¡\n\f')
+SUPPORTED = set('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/↓↑←→+-,.!?"\' áéíóúüñÁÉÍÓÚÜÑ¿¡àâêôãõçÀÂÊÔÃÕÇ\n\f')
 
 
 def validate(data):
     if not isinstance(data, dict) or data.get('schema') != 1:
         raise ValueError('Expected translation schema 1')
     if not isinstance(data.get('language'), str) or not re.fullmatch(r'[a-z][a-z0-9-]{0,15}', data['language']):
-        raise ValueError('A stable language code is required, for example es or es-mx')
+        raise ValueError('A stable language code is required, for example es or pt-br')
     if not isinstance(data.get('entries'), list):
         raise ValueError('entries must be an array')
     ids = set()
@@ -57,18 +57,31 @@ def build(catalog, output):
     count = validate(data)
     manifest = (PACKAGE / 'manifest.toml').read_text(encoding='utf-8')
     # Only the catalog resource changes. The native donor stays independent.
-    before, separator, tail = manifest.partition('id = "catalog"')
+    locale=data['language']
+    slot='pt-br' if locale=='pt-br' else 'es'
+    resource='catalog-pt-br' if locale=='pt-br' else 'catalog'
+    before, separator, tail = manifest.partition(f'id = "{resource}"')
     if not separator:
         raise ValueError('Bundled language package is missing its catalog resource')
     tail = re.sub(r'(?m)^size = \d+$', f'size = {len(raw)}', tail, count=1)
     tail = re.sub(r'(?m)^sha256 = "[0-9a-f]{64}"$', f'sha256 = "{hashlib.sha256(raw).hexdigest()}"', tail, count=1)
     manifest = before + separator + tail
+    # The installed package retains both selector choices. Update the selected
+    # catalog and keep the other bundled resource with its verified identity.
+    default=re.compile(r'(?ms)(\[\[option\]\]\nfeature = "translation"\nid = "language".*?^default = )"[^"]+"')
+    manifest=default.sub(lambda m:m[1]+json.dumps(locale),manifest,count=1)
+    if locale not in ('es','pt-br'):
+        label=data.get('language_name',locale)
+        if not isinstance(label,str) or not label.strip():raise ValueError('language_name must be readable text')
+        manifest=manifest.replace('value = "es"\nlabel = "Español"',
+            f'value = {json.dumps(locale)}\nlabel = {json.dumps(label,ensure_ascii=False)}',1)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
         raise ValueError(f'Output already exists: {output}')
     with zipfile.ZipFile(output, 'x', compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr('manifest.toml', manifest.encode('utf-8'))
-        archive.writestr('catalog/es.json', raw)
+        for language in ('es','pt-br'):
+            archive.writestr(f'catalog/{language}.json',raw if language==slot else (PACKAGE/f'catalog/{language}.json').read_bytes())
     return count, len(data['entries'])
 
 

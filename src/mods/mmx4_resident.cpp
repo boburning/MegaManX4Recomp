@@ -17,6 +17,24 @@ const PSXResidentPack* pack = nullptr;
 PSXResidentMode2Sector sector;
 bool pumping = false;
 uint32_t sector_lba = 0;
+uint32_t little(const uint8_t* p) {return uint32_t(p[0])|uint32_t(p[1])<<8|uint32_t(p[2])<<16|uint32_t(p[3])<<24;}
+int validate(PSXResidentSink*,uint32_t file,const uint8_t* data,uint32_t size,int stock,void*) {
+    if(stock)return 1;
+    if(file>=138 || size<16 || size>4*1024*1024)return 0;
+    const auto& c=MMX4FileContracts[file];
+    // Language mods derive packed ARC members. Raw file destinations retain
+    // their stock contract; unknown raw replacements use the original loader.
+    if(!c.packed)return 0;
+    const unsigned count=little(data),bytes=little(data+4);
+    if(!count || count>255 || bytes!=size)return 0;
+    uint32_t at=2048;
+    for(unsigned i=0;i<count;++i) {
+        const uint32_t member=little(data+12+i*8);
+        if(!member || member>1024*1024 || at>size || member>size-at)return 0;
+        at=(at+member+2047)&~2047u;
+    }
+    return at==size;
+}
 uint32_t word(uint32_t a) { return psx_mod_read_word(a); }
 void call(CPUState* cpu,uint32_t pc,uint32_t a0=0,uint32_t a1=0) {
     psx_mod_call_guest(cpu,pc,0x8000FD00,a0,a1,0,0);
@@ -66,8 +84,9 @@ int start(CPUState* cpu,uint32_t pc) {
     uint32_t size=0,padded=0;
     const auto* data=psx_resident_file(pack,file,&size,&padded);
     if (!data || c.packed!=packed || word(Packed)!=unsigned(packed) ||
-        lba!=psx_resident_file_lba(pack,file) || lba!=c.lba || size!=c.size || bytes!=size ||
-        word(Table+file*12)!=lba || word(Table+file*12+4)!=size || word(Table+file*12+8)!=c.first ||
+        size<4 || lba!=psx_resident_file_lba(pack,file) || bytes!=size ||
+        word(Table+file*12)!=lba || word(Table+file*12+4)!=size ||
+        word(Table+file*12+8)!=little(data) ||
         (!packed && !ram(word(0x80137CC4),(size+3)&~3u)) ||
         cdrom_data_read_active() || cdrom_fmv_stream_pending() ||
         !psx_resident_guest_ranges_match(MMX4LoaderRanges,4,MMX4LoaderSha)) {
@@ -100,15 +119,21 @@ int start(CPUState* cpu,uint32_t pc) {
     psx_mod_counter_add("mmx4.resident.requests",1);
     cpu->gpr[2]=1; return 1;
 }
-void activate() {
+void reset() {pack=nullptr;pumping=false;}
+void prepare(CPUState*,uint32_t) {
+    if(pack)return;
     PSXResidentSpec spec{}; spec.struct_size=sizeof spec;
-    spec.title="MegaManX4Recomp"; spec.format="slus00561-arc-sectors-v1";
-    spec.files=MMX4Files;spec.file_count=138;spec.policy=PSX_RESIDENT_REQUIRE_STOCK;
+    spec.title="MegaManX4Recomp"; spec.format="slus00561-effective-arc-sectors-v2";
+    // Activation of all optional language plugins has finished by EXE entry.
+    // Snapshot their effective extents, rather than an earlier stock view.
+    spec.files=MMX4Files;spec.file_count=138;spec.policy=PSX_RESIDENT_ALLOW_MODIFIED;
+    spec.max_file_bytes=4*1024*1024;spec.derive=validate;
     pack=psx_resident_prepare(&spec); pumping=false;
 }
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_resident) {
-    psx_mod_register_activation_plugin(Plugin,activate);
+    psx_mod_register_session_reset_plugin(Plugin,reset);
+    psx_mod_register_function_entry_plugin(Plugin,0x800DAE8C,prepare);
     psx_mod_register_function_filter_plugin(Plugin,0x80013968,start);
     psx_mod_register_function_filter_plugin(Plugin,0x80013DA8,start);
     psx_mod_register_function_filter_plugin(Plugin,0x800E5D40,ready);
