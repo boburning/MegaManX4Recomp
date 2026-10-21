@@ -1,9 +1,9 @@
 format_version = 7
 id = "mmx4.coop"
 version = "0.0.1"
-name = "X + Zero Co-op (Playtest)"
+name = "X + Zero Co-op (Public Beta)"
 author = "mstan"
-description = "Early simultaneous X and Zero playtest. Unified is the default; independent Split views are experimental."
+description = "Simultaneous X and Zero public beta. Unified is the default; independent Split views are experimental."
 resolver = "declarative"
 save_compatibility = "isolated"
 
@@ -31,6 +31,14 @@ label = "Unified"
 [[option.choice]]
 value = "split"
 label = "Split (Experimental)"
+
+[[option]]
+feature = "coop"
+id = "diagnostic_recording"
+label = "Netplay diagnostic recording"
+description = "Off by default. The host can enable input display and diagnostic traces on both peers for a bug report. Includes starting game saves; recordings are stored locally under saves/diagnostics. For local play, use Playtest Diagnostics. Requires a fresh boot."
+type = "boolean"
+default = false
 
 [[option]]
 feature = "coop"

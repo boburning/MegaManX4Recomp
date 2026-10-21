@@ -204,7 +204,26 @@ int main(int argc,char **argv) {
     projected_context=false;
     // Netplay traces must identify their mode, rather than masquerading as
     // independently playable offline recordings.
-    online=true;activate();inputs(&cpu,0x80012328u);recording.flush();
+    online=true;activate();
+    const uint8_t network_baseline[]={0x50,0x53,0x54};
+    auto network_folder_count=std::distance(std::filesystem::directory_iterator(
+        std::filesystem::path(application_root)/"saves/diagnostics"),
+        std::filesystem::directory_iterator{});
+    // The netplay profile must not start recording, including initial sync
+    // loads, until the host explicitly enables the shared option.
+    for(const char* value:{"false","true-ish"}) {
+        coop_options["diagnostic_recording"]=value;
+        CHECK(!coop_inputs(&cpu,0x80012328u));
+        state_loaded(network_baseline,sizeof network_baseline);
+        CHECK(!started && !recording.is_open() && sequence==0);
+    }
+    coop_options.erase("diagnostic_recording");
+    CHECK(!coop_inputs(&cpu,0x80012328u));
+    CHECK(std::distance(std::filesystem::directory_iterator(
+        std::filesystem::path(application_root)/"saves/diagnostics"),
+        std::filesystem::directory_iterator{})==network_folder_count);
+    coop_options["diagnostic_recording"]="true";
+    CHECK(coop_inputs(&cpu,0x80012328u));recording.flush();
     bool network_metadata=false;
     for(const auto& entry:std::filesystem::directory_iterator(std::filesystem::path(application_root)/"saves/diagnostics")) {
         std::ifstream meta(entry.path()/"session.json");

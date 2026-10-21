@@ -1,5 +1,6 @@
 MegaManX4Recomp - Mega Man X4, recompiled
 ==========================================
+1.0.0 Stable Public Beta
 
 WHAT YOU NEED
   Your own Mega Man X4 (USA, SLUS-00561) disc image. A .cue + .bin pair is
@@ -19,7 +20,7 @@ FIRST RUN
      Multiplier defaults to normal 1x damage.
   4. Press Play. Your choices are remembered for next time.
 
-CO-OP PLAYTEST
+CO-OP PUBLIC BETA
   In Mods, enable X + Zero Co-op for local play. OpenGL is required, and
   enabling co-op takes effect on a fresh boot. The X + Zero Co-op netplay
   profile enables it for both peers; use the same release on both computers.
@@ -53,9 +54,11 @@ CO-OP PLAYTEST
   controller/keyboard bindings. F8 opens rewind when Rewind is enabled.
   These features are unavailable during a netplay match.
 
-  Playtest Diagnostics defaults on. It shows both players' accepted buttons
-  and REC while recording. If copied older settings turned it off, re-enable
-  Mods -> Playtest Diagnostics -> Input Display and Recording before testing.
+  Diagnostic recording is optional and defaults off. For local play, enable
+  Mods -> Playtest Diagnostics -> Input Display and Recording. For netplay,
+  the host enables X + Zero Co-op -> Netplay diagnostic recording for both
+  peers before starting a match. Existing explicit preferences are preserved.
+  It shows both players' accepted buttons and REC while recording.
   It records each run under saves/diagnostics, including starting memory
   cards and mod choices. Keep the session folder for reproducing a report;
   offline input replay needs the matching build and settings.
@@ -77,6 +80,16 @@ CO-OP PLAYTEST
   speed, and retries, vehicle stages, and chained scenes need more playtesting.
   Report the release version, stage/area, camera mode, and which player led.
 
+OPTIONAL LANGUAGES
+  In Mods -> Text Translation, choose Spanish or Brazilian Portuguese.
+  Dialogue uses the game's original font. Translations are drafts awaiting
+  native-speaker review; voices and artwork are not translated.
+
+  For Japanese media, supply your own Rockman X4 (Japan, SLPS-00902) disc
+  under Mods -> Japanese Media. Choose Japanese FMVs, Japanese voices
+  and the Rockman X4 title screen independently. No Japanese disc is bundled.
+  See docs/LOCALIZATION.md for supported images, setup and current limits.
+
 WHERE THINGS LIVE
   saves/     memory cards
   cache/     native code cache, created locally for eligible uncovered code
@@ -90,7 +103,7 @@ PRIVACY NOTE
   overlay_captures.json and cache shards produced while playing contain code
   converted from your disc. Do not redistribute your own capture data.
 
-EARLY RELEASE
+PUBLIC BETA
   Reported co-op regressions and a two-boss native memory-card save/cold-load
   loop have passed bounded checks. Complete campaign coverage is still being
   expanded. Please report an unknown-dispatch halt with where it occurred.

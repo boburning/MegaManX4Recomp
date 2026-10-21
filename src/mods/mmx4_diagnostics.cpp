@@ -291,11 +291,17 @@ void begin() {
         psx_mod_counter_add("mmx4.diagnostics.recording-failed",1);
     }
 }
+bool netplay_recording_enabled() {
+    char value[8];
+    return psx_mod_netplay_is_active() &&
+        psx_mod_option_value("mmx4.coop","coop","diagnostic_recording",value,sizeof value) &&
+        !strcmp(value,"true");
+}
 void state_loaded(const uint8_t *image,uint32_t size) {
     /* Co-op also registers this observer for the fixed netplay profile.
      * Offline co-op alone must not start recording when Diagnostics is off:
      * its native input hook is absent, producing only unplayable C rows. */
-    if(!psx_mod_netplay_is_active() &&
+    if(psx_mod_netplay_is_active() ? !netplay_recording_enabled() :
        !mod_runtime_snapshot_package_active("mmx4.diagnostics"))return;
     if(!replay_path.empty()) {
         // PSX_LOAD_SLOT restores a segment's baseline before its first input.
@@ -429,7 +435,7 @@ void activate() {
     host_osd_set_diagnostics(nullptr,nullptr);
 }
 int coop_inputs(CPUState *cpu,uint32_t address) {
-    return psx_mod_netplay_is_active()?inputs(cpu,address):0;
+    return netplay_recording_enabled()?inputs(cpu,address):0;
 }
 uint32_t diagnostic_snapshot_bytes() {return 1;}
 int diagnostic_snapshot_write(uint8_t *out,uint32_t len) {

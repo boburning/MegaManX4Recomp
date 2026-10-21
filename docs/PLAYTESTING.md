@@ -1,6 +1,6 @@
 # Playing and reporting co-op
 
-Use the [current playtest release](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.30)
+Use the same [release](https://github.com/mstan/MegaManX4Recomp/releases)
 on both computers. The launcher and netplay UI are included on Windows and Linux.
 
 ## Local co-op
@@ -16,9 +16,10 @@ partner waits for the team's retry, and P2 cannot quit the campaign.
 
 Unified cameras are the local default; Local co-op display also offers experimental
 side by side 8:3. HUD layout can be Stacked or Side by side.
-Each player's Start/Options binding opens their character's native pause menu:
-X's weapons or Zero's techniques, regardless of P1's campaign. The opener controls
-and resumes that menu; gameplay pauses for both players. Only P1 can quit the campaign.
+With Independent pause menus enabled (the default), either player's Start/Options
+binding opens both heroes' native menus. Each player manages their own weapons,
+techniques and E-tank energy; either player resumes after healing finishes.
+Gameplay pauses for both players. Only P1 can quit the campaign.
 
 ## Netplay
 
@@ -81,15 +82,16 @@ Offline save-state controls use your configured PlayStation button bindings:
 Save states and rewind are unavailable during a netplay match. Use states made
 with the same release. HUD layout and native character-code choices can change;
 mods that change memory layout or an ongoing co-op/boss protocol still need to
-match. Loading a state or rewinding starts a
+match. With diagnostic recording enabled, loading a state or rewinding starts a
 new diagnostic session with a `baseline.pst` file.
 
 ## Send a useful bug report
 
-1. Leave **Playtest Diagnostics → Input Display and Recording** enabled. The
+1. Enable **Mods → Playtest Diagnostics → Input Display and Recording** before
+   local play. For netplay, the host enables **X + Zero Co-op → Netplay diagnostic
+   recording** for both peers before starting the match. Both default off. The
    input display shows P1/P2's accepted buttons and **REC** while recording.
-   It defaults on in fresh installs. If you copied older settings that turned
-   it off, enable it again in **Mods** before testing.
+   Existing explicit recording preferences are preserved when updating.
 2. Reproduce the problem and note the stage, which player led, and the
    approximate video timestamp. New recordings identify the release and
    effective play/camera mode automatically; include those manually for older

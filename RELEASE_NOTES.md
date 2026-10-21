@@ -1,4 +1,20 @@
-# Mega Man X4 Recompiled - v0.1.1-coop-playtest.43
+# Mega Man X4 Recompiled - 1.0.0 Stable Public Beta
+
+- Optional Japanese disc media: choose Japanese FMVs, voices and the Rockman X4 title screen independently using your own Japanese disc.
+- Spanish and Brazilian Portuguese dialogue catalogs, rendered with the original game's font and native glyph styling. Both translations remain drafts awaiting native-speaker review; translated audio and artwork are outside their current scope.
+- Corrected the clipped Japanese title, loading-logo colors and unnecessary disc loading during Game Start with language mods enabled.
+- Diagnostic recording remains available and is **off by default**. Enable **Playtest Diagnostics → Input Display and Recording** for local play, or **X + Zero Co-op → Netplay diagnostic recording** as host for both netplay peers. Existing explicit preferences are preserved.
+
+Unified remains the default co-op camera; independent Split and local 8:3 remain
+experimental. Both netplay peers must use the same release. Campaign memory-card
+saves carry forward; older emulator save states may be incompatible.
+Public packages disable development cheats and omit CD Speed and Fast Loading mods.
+
+This is a public beta with bounded validation. Full campaign coverage, native-speaker
+translation review and unresolved reports on the [known-issues checklist](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+remain open. [Language setup, evidence and limits](docs/LOCALIZATION.md).
+
+## Previous v0.1.1-coop-playtest.43
 
 **Two heroes, two pause menus.**
 

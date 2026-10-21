@@ -73,12 +73,27 @@ int main(int argc, char** argv) {
 
     const auto default_plan = manager.resolve(kGameId, "", kDiscSha256);
     if (!default_plan.ok || !default_plan.writes.empty() ||
-        default_plan.plugins.size() != 4) {
+        default_plan.plugins.size() != 3) {
         return fail("normal-damage override was not enabled by default");
     }
     bool diagnostics_default=false;
     for(const auto& plugin:default_plan.plugins)diagnostics_default|=plugin.id=="mmx4.diagnostics";
-    if(!diagnostics_default)return fail("input diagnostics was not enabled by default");
+    if(diagnostics_default || manager.feature_enabled("mmx4.diagnostics","inputs"))
+        return fail("input diagnostics must default off");
+    if(manager.feature_option_value("mmx4.coop","coop","diagnostic_recording")!="false")
+        return fail("netplay diagnostic recording must default off");
+    // Recording stays selectable, and an explicit preference survives reload.
+    if(!manager.set_feature_enabled("mmx4.diagnostics","inputs",true,&error) ||
+       !manager.save_state(&error))return fail(error);
+    PSXRecompV4::ModPackageManager restored(root);
+    if(!restored.scan(&error) || !restored.load_state(&error) ||
+       !restored.feature_enabled("mmx4.diagnostics","inputs"))
+        return fail("explicit diagnostic preference did not survive reload");
+    const auto recording_plan=restored.resolve(kGameId,"",kDiscSha256);
+    bool recording_plugin=false;
+    for(const auto& plugin:recording_plan.plugins)recording_plugin|=plugin.id=="mmx4.diagnostics";
+    if(!recording_plan.ok || !recording_plugin)return fail("optional diagnostics did not resolve");
+    if(!manager.set_feature_enabled("mmx4.diagnostics","inputs",false,&error))return fail(error);
     for(const char* feature:{"japanese-media","translation"})
         if(manager.feature_enabled("mmx4.localization",feature))return fail("language mods must default off");
     for(const char* option:{"fmvs","voices","title-screen"})
@@ -120,7 +135,7 @@ int main(int argc, char** argv) {
         if(!manager.set_feature_enabled(feature.first,feature.second,true,&error))return fail(error);
     }
     const auto both_cheats=manager.resolve(kGameId,"",kDiscSha256);
-    if(!both_cheats.ok || !both_cheats.writes.empty() || both_cheats.plugins.size()!=6)
+    if(!both_cheats.ok || !both_cheats.writes.empty() || both_cheats.plugins.size()!=5)
         return fail("both independent character cheat plugins must resolve together");
     for(const auto& feature:std::vector<std::pair<const char*,const char*>>{
         {"mmx4.cheat.ultimate-armor","ultimate-armor"},{"mmx4.cheat.black-zero","black-zero"}}) {
@@ -139,7 +154,7 @@ int main(int argc, char** argv) {
     }
     const auto damage_plan = manager.resolve(kGameId, "", kDiscSha256);
     if (!damage_plan.ok || !damage_plan.writes.empty() ||
-        damage_plan.plugins.size() != 4 ||
+        damage_plan.plugins.size() != 3 ||
         manager.feature_option_value(
             "mmx4.cheat.damage-multiplier", "damage-multiplier",
             "multiplier") != "37") {
@@ -161,7 +176,7 @@ int main(int argc, char** argv) {
     }
     const auto widescreen_plan = manager.resolve(kGameId, "", kDiscSha256);
     if (!widescreen_plan.ok || !widescreen_plan.writes.empty() ||
-        widescreen_plan.plugins.size() != 3) {
+        widescreen_plan.plugins.size() != 2) {
         return fail("widescreen plugin resolution was incorrect");
     }
 

@@ -7,10 +7,10 @@
 
 **X and Zero. Together.**
 
-Mega Man X4 on Windows and Linux, with **two-player co-op in alpha**.
+Mega Man X4 on Windows and Linux. **1.0.0 Stable Public Beta**, with two-player co-op.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Download Playtest 43](https://github.com/mstan/MegaManX4Recomp/releases/tag/v0.1.1-coop-playtest.43)** · [What's new](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Downloads](https://github.com/mstan/MegaManX4Recomp/releases)** · [What's new in 1.0.0](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -65,22 +65,30 @@ the original loading routines. Music and cutscenes retain their normal timing.
 </p>
 
 Offline co-op also supports **save states (F7)** and **rewind (F8)** when enabled.
-The Mods page includes widescreen, character codes and an input display with
-automatic playtest recordings. [Controls, saves and reporting guide →](docs/PLAYTESTING.md)
+The Mods page includes widescreen, character codes and optional input display
+and diagnostic recording, **off by default**. [Controls, saves and reporting guide →](docs/PLAYTESTING.md)
+
+Optional language mods offer **Spanish** and **Brazilian Portuguese** dialogue
+using the game's own font. Supply your Japanese Rockman X4 disc to choose
+Japanese movies, voices and the title screen independently. Translations are
+drafts awaiting native-speaker review. [Language setup and scope →](docs/LOCALIZATION.md)
 
 <details>
 <summary>See the co-op settings</summary>
 <p><img src="docs/images/coop-options.png" width="800" alt="Co-op settings in the shipped launcher"></p>
 </details>
 
-## Help improve the alpha
+## Help improve the public beta
 
 Expect bugs; independent cameras can still slow down. Online sign-in/startup
 reports remain under investigation.
 [Check the burndown](docs/COOP_PLAYTEST_FEEDBACK_20261010.md) or
 [report a bug](https://github.com/mstan/MegaManX4Recomp/issues).
 
-Keep **Playtest Diagnostics** enabled, reproduce the problem, quit normally,
+To record a bug, enable **Playtest Diagnostics → Input Display and Recording**
+before local play. For netplay, the host enables **X + Zero Co-op → Netplay
+diagnostic recording** for both peers. Both recording options default off.
+Reproduce the problem, quit normally,
 and zip `saves/diagnostics` beside the executable or AppImage. Include a video
 and the release version; for netplay, collect both computers' logs. These
 recordings include starting game saves. [Details →](docs/PLAYTESTING.md#send-a-useful-bug-report)
