@@ -2147,6 +2147,9 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
     uint32_t actor=cpu->gpr[4];unsigned owner=0;
     unsigned train=address==0x800D8648u || address==0x800D9218u;
     unsigned refight_portal=address==0x800C7164u;
+    unsigned sigma_entrance=address==0x800D2A38u;
+    if(sigma_entrance && (psx_mod_local_view_scope() ||
+       psx_mod_read_byte(PLAY+12)!=12 || psx_mod_read_byte(PLAY+13)))return 0;
     if(refight_portal && (psx_mod_local_view_scope() ||
        psx_mod_read_byte(PLAY+12)!=12 || psx_mod_read_byte(PLAY+13) ||
        !door_pool_actor(actor) || psx_mod_read_byte(actor+1)!=27))return 0;
@@ -2155,7 +2158,8 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
         memset(record,0,sizeof *record);record=NULL;
     }
     if(record)owner=record->owner;
-    else if((address==0x800D0374u || address==0x800D1248u || address==0x800D1284u) && script_active)
+    else if((address==0x800D0374u || address==0x800D1248u || address==0x800D1284u ||
+             sigma_entrance) && script_active)
         owner=script_owner;
     else if(!mmx4_coop_alive(0) && mmx4_coop_alive(1))owner=1;
     else if(train && script_active)owner=script_owner;
@@ -2639,6 +2643,11 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop_lifecycle) {
      * Keep C1390's intact obstacle/contact update outside this projection. */
     psx_mod_register_function_filter_plugin(ID,0x800C165Cu,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800C169Cu,scene_actor);
+    /* Final Weapon's pre-Sigma NPC waits at D2420 for PLAYER.x>=2321.
+     * Keep its complete D2A38 controller (camera wait, text and release)
+     * with the surviving entrant; redirecting only 36AE4 cannot admit P2
+     * while the native predicate still sees P1's corpse at the arrival. */
+    psx_mod_register_function_filter_plugin(ID,0x800D2A38u,scene_actor);
     psx_mod_register_function_filter_plugin(ID,0x800CE894u,cyber_assessment);
     /* Act1 Dragoon first issues action15, then waits for PLAYER+C0=FF.
      * A P2-led door can withdraw P1 before this actor runs. Keep its native

@@ -523,6 +523,20 @@ uint32_t mmx4_coop_call(CPUState *cpu,uint32_t address,uint32_t a0,uint32_t a1) 
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         psx_mod_write_word(a0+0x18,psx_mod_read_word(MMX4_PLAYER+8));
         break;
+    case 0x800D2A38:
+        ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
+        /* Native D2420 reads the entrant before issuing its scene command.
+         * A later callback must read that same body's completion marker. */
+        if(!psx_mod_read_byte(a0+6)) {
+            if((int16_t)psx_mod_read_half(MMX4_PLAYER+10)>=2321) {
+                psx_mod_write_byte(a0+6,1);
+                mmx4_coop_call(cpu,0x80036AE4u,0x14,0x40);
+            }
+        }else if(psx_mod_read_byte(MMX4_PLAYER+0xC0)==0xFF) {
+            mmx4_coop_call(cpu,0x80036B18u,0,0);
+            psx_mod_write_byte(a0+4,3);
+        }
+        break;
     case 0x800C2BE0:
         ++scene_calls;observed_campaign=psx_mod_read_byte(MMX4_PLAY+0x43);
         if(psx_mod_read_byte(a0+0x72)&8u) {
@@ -2600,6 +2614,37 @@ int main(void) {
     psx_mod_write_byte(survivor_lift+6,0);psx_mod_write_byte(MMX4_PLAY+12,1);
     CHECK(!mmx4_coop_lifecycle_lift_start(&cpu,0x800C3880u));
     CHECK(!psx_mod_read_byte(survivor_lift+6));
+
+    /* Sigma's corridor admission and later scene completion belong to the
+     * living entrant, preserving the corpse and the campaign identity. */
+    for(unsigned campaign=0;campaign<2;++campaign) {
+        reset();psx_mod_write_byte(PLAY+12,12);psx_mod_write_byte(PLAY+0x43,campaign);
+        psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+4,1);
+        psx_mod_write_byte(PLAYER+4,3);psx_mod_write_byte(PLAYER+0x5C,0);
+        psx_mod_write_word(PLAYER+8,1840u<<16);put32(p2+8,2356u<<16);
+        cpu.gpr[4]=actor;scene_calls=0;
+        mmx4_coop_call(&cpu,0x800D2A38u,actor,0);
+        CHECK(scene_calls==1 && script_active && script_owner==1 && p2[0xC0]==1);
+        CHECK(!psx_mod_read_byte(PLAYER+0xC0) && !psx_mod_read_byte(PLAYER+0x5C));
+        CHECK(psx_mod_read_word(PLAYER+8)==1840u<<16 && observed_campaign==campaign);
+        CHECK(psx_mod_read_byte(PLAY+0x43)==campaign && !projected);
+        p2[0xC0]=0xFF;cpu.gpr[4]=actor;
+        mmx4_coop_call(&cpu,0x800D2A38u,actor,0);
+        CHECK(!script_active && !p2[0xC0] && !projected);
+        CHECK(psx_mod_read_byte(PLAYER+4)==3 && !psx_mod_read_byte(PLAYER+0x5C));
+    }
+    reset();psx_mod_write_byte(PLAY+12,12);psx_mod_write_byte(actor,1);
+    psx_mod_write_byte(actor+4,1);put32(p2+8,2356u<<16);cpu.gpr[4]=actor;
+    mmx4_coop_call(&cpu,0x800D2A38u,actor,0);
+    CHECK(!script_active); /* A living P1 retains the original admission. */
+    psx_mod_write_word(PLAYER+8,2321u<<16);cpu.gpr[4]=actor;
+    mmx4_coop_call(&cpu,0x800D2A38u,actor,0);CHECK(script_active && !script_owner);
+    reset();cpu.gpr[4]=actor;
+    CHECK(!scene_actor(&cpu,0x800D2A38u)); /* Other stages stay native. */
+    psx_mod_write_byte(PLAY+12,12);psx_mod_write_byte(PLAY+13,1);
+    CHECK(!scene_actor(&cpu,0x800D2A38u)); /* Later Sigma sections stay native. */
+    psx_mod_write_byte(PLAY+13,0);local_view=1;
+    CHECK(!scene_actor(&cpu,0x800D2A38u));local_view=0;
 
     /* P2 may trigger a native portal first. Its scene sees the original
      * campaign, while only P2 receives native body/action writes. */
