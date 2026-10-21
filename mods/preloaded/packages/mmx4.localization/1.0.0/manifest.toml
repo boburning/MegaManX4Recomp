@@ -1,0 +1,87 @@
+format_version = 9
+id = "mmx4.localization"
+version = "1.0.0"
+name = "Languages and Japanese Media"
+author = "mstan"
+description = "Mix Japanese movies, voices and Rockman title art with a native-font text translation. Spanish dialogue is included."
+resolver = "declarative"
+save_compatibility = "isolated"
+
+[[target]]
+game_id = "SLUS-00561"
+disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
+
+[[feature]]
+id = "japanese-media"
+name = "Japanese Media"
+description = "Select your Japanese Rockman X4 disc, then choose which media to use. Text translation is independent. Requires a fresh boot."
+group = "Languages"
+channel = "experimental"
+default_enabled = false
+
+[[option]]
+feature = "japanese-media"
+id = "fmvs"
+label = "Japanese FMVs"
+description = "Use the Japanese opening and story movies, including their original audio."
+type = "boolean"
+default = false
+
+[[option]]
+feature = "japanese-media"
+id = "voices"
+label = "Japanese voices"
+description = "Use Japanese gameplay voices and streamed dialogue."
+type = "boolean"
+default = false
+
+[[option]]
+feature = "japanese-media"
+id = "title-screen"
+label = "Rockman X title screen"
+description = "Use the original Japanese Rockman X4 logo."
+type = "boolean"
+default = false
+
+[[resource]]
+feature = "japanese-media"
+id = "japanese-disc"
+label = "Japanese Rockman X4 disc"
+description = "SLPS-00902. Select CUE/BIN, CHD, or a raw 2352-byte ISO."
+file_patterns = "*.cue;*.bin;*.chd;*.iso"
+file_description = "Japanese Rockman X4 disc"
+format = "psx-mode2"
+required = true
+size = 589683488
+sha256 = "829185314c9040d74f66c5babdb08a6fa58239d299afae11fd396f4c243874d7"
+
+[[plugin]]
+feature = "japanese-media"
+id = "mmx4.japanese-media"
+order = -100
+
+[[feature]]
+id = "translation"
+name = "Text Translation"
+description = "Translate X and Zero's dialogue using the original game font. Spanish dialogue is included. Install a community translation package to use another catalog. Requires a fresh boot."
+group = "Languages"
+channel = "experimental"
+default_enabled = false
+
+[[resource]]
+feature = "translation"
+id = "catalog"
+label = "Translation catalog"
+description = "Plain UTF-8 JSON with stable message IDs, original text and translated text."
+file_patterns = "*.json"
+file_description = "Translation JSON catalog"
+format = "file"
+default = "catalog/es.json"
+required = true
+size = 62224
+sha256 = "42a1897ac46d31eb42198c6af0c60149dc92f7a0304dd39f2301e93620a07fcc"
+
+[[plugin]]
+feature = "translation"
+id = "mmx4.translation"
+order = 100

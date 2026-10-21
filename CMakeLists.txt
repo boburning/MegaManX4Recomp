@@ -82,6 +82,7 @@ psxrecomp_add_implementation(psx-runtime
 # their source contract in the profile handshake so different spike builds
 # cannot join under the same fixed development version.
 set(MMX4_COOP_CONTRACT_FILES
+    src/mods/mmx4_localization.cpp src/mods/mmx4_language_assets.h
     game.toml src/mods/mmx4_coop_plugin.c src/mods/mmx4_coop_lifecycle.c
     src/mods/mmx4_coop_combat.c src/mods/mmx4_coop_assets.c src/mods/mmx4_coop_audio.c
     src/mods/mmx4_coop_internal.h src/mods/mmx4_coop_assets.h
@@ -146,6 +147,18 @@ add_custom_command(TARGET psx-runtime POST_BUILD
     VERBATIM)
 
 if(BUILD_TESTING)
+    add_executable(mmx4_localization_assets_test
+        tests/test_localization_assets.cpp src/mods/mmx4_localization.cpp
+        "${PSXRECOMP_V4_ROOT}/runtime/src/native_text.cpp"
+        "${PSXRECOMP_V4_ROOT}/runtime/third_party/json11/json11.cpp"
+        "${PSXRECOMP_V4_ROOT}/runtime/src/mod_media.cpp"
+        "${PSXRECOMP_V4_ROOT}/runtime/src/iso_reader.cpp"
+        "${PSXRECOMP_V4_ROOT}/runtime/src/cue_sheet.cpp"
+        "${PSXRECOMP_V4_ROOT}/runtime/src/psx_sha256.c")
+    target_include_directories(mmx4_localization_assets_test PRIVATE
+        src/mods "${PSXRECOMP_V4_ROOT}/runtime/include" "${PSXRECOMP_V4_ROOT}/recompiler/include")
+    target_link_libraries(mmx4_localization_assets_test PRIVATE chdr-static)
+    add_test(NAME mmx4_localization_assets_test COMMAND mmx4_localization_assets_test)
     add_executable(mmx4_startup_log_test tests/test_mmx4_startup_log.cpp src/mods/mmx4_startup_log.cpp)
     target_compile_definitions(mmx4_startup_log_test PRIVATE MMX4_STARTUP_LOG_TEST=1)
     target_include_directories(mmx4_startup_log_test PRIVATE src/mods "${PSXRECOMP_V4_ROOT}/runtime/include")
@@ -226,6 +239,9 @@ if(BUILD_TESTING)
     add_test(NAME mmx4_coop_background_test COMMAND mmx4_coop_background_test)
     find_package(Python3 3.11 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
+        add_test(NAME mmx4_translation_mod_test
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_translation_mod.py")
         add_test(NAME mmx4_diagnostic_replay_prepare_test
             COMMAND "${Python3_EXECUTABLE}"
                     "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_replay_mmx4_diagnostics.py")

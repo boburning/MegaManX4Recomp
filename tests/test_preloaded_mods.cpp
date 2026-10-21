@@ -50,14 +50,15 @@ int main(int argc, char** argv) {
             return fail("manifest parse failed: " + error);
         }
     }
-    if (manifest_count != 7) return fail("expected seven package manifests");
+    if (manifest_count != 8) return fail("expected eight package manifests");
 
     PSXRecompV4::mod_clear_plugins_for_tests();
     for (const char* id : {
              "mmx4.damage-multiplier",
              "mmx4.resident-loading",
              "mmx4.widescreen", "mmx4.coop", "mmx4.diagnostics",
-             "mmx4.ultimate_armor", "mmx4.black_zero"}) {
+             "mmx4.ultimate_armor", "mmx4.black_zero",
+             "mmx4.japanese-media", "mmx4.translation"}) {
         if (!PSXRecompV4::mod_register_activation_plugin(id, no_op_plugin)) {
             return fail(std::string("could not register test plugin ") + id);
         }
@@ -67,8 +68,8 @@ int main(int argc, char** argv) {
     std::string error;
     if (!manager.scan(&error)) return fail("catalog scan failed: " + error);
     if (!manager.load_state(&error)) return fail("default state failed: " + error);
-    if (manager.packages().size() != 7)
-        return fail("expected seven package families");
+    if (manager.packages().size() != 8)
+        return fail("expected eight package families");
 
     const auto default_plan = manager.resolve(kGameId, "", kDiscSha256);
     if (!default_plan.ok || !default_plan.writes.empty() ||
@@ -78,6 +79,19 @@ int main(int argc, char** argv) {
     bool diagnostics_default=false;
     for(const auto& plugin:default_plan.plugins)diagnostics_default|=plugin.id=="mmx4.diagnostics";
     if(!diagnostics_default)return fail("input diagnostics was not enabled by default");
+    for(const char* feature:{"japanese-media","translation"})
+        if(manager.feature_enabled("mmx4.localization",feature))return fail("language mods must default off");
+    for(const char* option:{"fmvs","voices","title-screen"})
+        if(manager.feature_option_value("mmx4.localization","japanese-media",option)!="false")
+            return fail("Japanese media switches must default off independently");
+    if(!manager.set_feature_enabled("mmx4.localization","translation",true,&error))return fail(error);
+    const auto spanish=manager.resolve(kGameId,"",kDiscSha256);
+    if(!spanish.ok || spanish.resources.size()!=1 || !spanish.resources[0].bytes || spanish.resources[0].id!="catalog")
+        return fail("bundled Spanish catalog must resolve verified bytes without a Japanese disc");
+    if(!manager.set_feature_enabled("mmx4.localization","translation",false,&error) ||
+       !manager.set_feature_enabled("mmx4.localization","japanese-media",true,&error))return fail(error);
+    if(manager.resolve(kGameId,"",kDiscSha256).ok)return fail("Japanese media requires an owner-provided donor");
+    if(!manager.set_feature_enabled("mmx4.localization","japanese-media",false,&error))return fail(error);
     if(manager.feature_enabled("mmx4.cheat.ultimate-armor","ultimate-armor") ||
        manager.feature_enabled("mmx4.cheat.black-zero","black-zero"))
         return fail("elective character cheats must default off");
