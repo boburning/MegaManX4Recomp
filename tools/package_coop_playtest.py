@@ -35,6 +35,7 @@ def main():
                              (args.build_dir, args.binary_dir, args.output_dir))
     cache = (build / "CMakeCache.txt").read_text()
     for setting in ("CMAKE_BUILD_TYPE:STRING=Release", "PSX_DEBUG_TOOLS:BOOL=OFF",
+                    "MMX4_COOP_NETPLAY_DEBUG:BOOL=OFF",
                     "PSX_STATIC_RUNTIME:BOOL=ON", "PSX_EXECUTION_PROFILE:STRING=ENHANCED"):
         if setting not in cache.splitlines():
             raise RuntimeError(f"Production build requires {setting}")
@@ -42,6 +43,16 @@ def main():
     stamp = (binary / "psx_game_version.txt").read_text().strip().removeprefix("v")
     if stamp != version:
         raise RuntimeError(f"Binary version {stamp} differs from release {version}")
+    # CMake stages the catalog at configure time. A manifest edited during a
+    # build can otherwise pass source tests while shipping its older defaults.
+    title_catalog = ROOT / "mods/preloaded/packages"
+    for authored in title_catalog.rglob("*"):
+        if not authored.is_file():
+            continue
+        relative = authored.relative_to(title_catalog)
+        staged = binary / "mods/bundled" / relative
+        if not staged.is_file() or sha256(staged) != sha256(authored):
+            raise RuntimeError(f"Bundled mod file is stale: {relative}. Reconfigure and rebuild before packaging.")
     if output.exists():
         raise RuntimeError(f"Use a new output directory: {output}")
     if not output.is_relative_to(ROOT):
