@@ -7,10 +7,10 @@
 
 **X and Zero. Together.**
 
-Mega Man X4 on Windows and Linux. **1.0.1 Stable Public Beta**, with two-player co-op.
+Mega Man X4 on Windows and Linux. **1.0.2 Stable Public Beta**, with two-player co-op.
 Bring a friend through X's or Zero's campaign, on one computer or over netplay.
 
-**[Downloads](https://github.com/mstan/MegaManX4Recomp/releases)** · [What's new in 1.0.1](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
+**[Downloads](https://github.com/mstan/MegaManX4Recomp/releases)** · [What's new in 1.0.2](RELEASE_NOTES.md) · [Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md)
 
 <p align="center">
   <img src="docs/images/coop-jungle.png" width="640" alt="X and Zero together at the Jungle waterfall, with vertically stacked lifebars">
@@ -50,7 +50,7 @@ The netplay host chooses the shared options.
 
 ## Start playing
 
-1. Download the **Windows ZIP** and extract it, or make the **Linux AppImage** executable and run it. Linux requires x86_64 and glibc 2.38 or newer.
+1. Download the **Windows ZIP** and extract it. The **1.0.2 Linux AppImage is pending**; earlier AppImages require x86_64 and glibc 2.38 or newer.
 2. Select your own **Mega Man X4 USA (SLUS-00561)** disc image. Choose the `.cue` from a `.cue` + `.bin` set. OpenBIOS is included; a separate BIOS dump is optional.
 3. For **local co-op**, enable **Mods → X + Zero Co-op**, assign Player 1 and Player 2 in **Controls**, and choose **Local co-op display** for Unified or side by side 8:3, then press **Play**. For **netplay**, press **Netplay** and host or join using **X + Zero Co-op**. Both peers need the same release.
 
