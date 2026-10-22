@@ -1,6 +1,13 @@
 #include "mmx4_coop_views.h"
 #include <string.h>
 
+int mmx4_coop_view_prefetch_allowed(unsigned stage,unsigned section,
+    unsigned category,unsigned kind,int minimum_x) {
+    /* Extra-view scans must not allocate Jet before the physical arena.
+     * Native admission only distinguishes nonzero C4; zero also occurs
+     * before entry. Leave the record unvisited so later scans can retry. */
+    return !(stage==5 && section==1 && category==0 && kind==56 && minimum_x<17024);
+}
 uint8_t mmx4_coop_ride_draw_priority(uint8_t native,unsigned owner) {
     /* Native 80024260 has eight buckets per layer, not sixteen. Ride Chaser
      * wind/rider/bike/exhaust use 0/2/4/6. Reserve four ordered buckets per

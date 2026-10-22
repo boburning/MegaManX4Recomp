@@ -40,4 +40,6 @@ void mmx4_coop_view_visit_update(Mmx4CoopViewVisits *visits,unsigned index,
     int inside,int live);
 int mmx4_coop_view_spawn_allowed(const Mmx4CoopViewVisits *visits,
     unsigned index,int inside,int live);
+int mmx4_coop_view_prefetch_allowed(unsigned stage,unsigned section,
+    unsigned category,unsigned kind,int minimum_x);
 #endif

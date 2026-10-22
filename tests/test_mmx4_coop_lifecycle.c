@@ -1151,6 +1151,53 @@ static int simultaneous_menu_ownership(void) {
     reset();return 0;
 }
 
+static int marine_chaser_dismount(void) {
+    CPUState cpu={0};
+    for(unsigned campaign=0;campaign<2;++campaign)for(unsigned split=0;split<2;++split) {
+        reset();split_views=split;
+        psx_mod_write_byte(PLAY+12,5);psx_mod_write_byte(PLAY+13,1);
+        psx_mod_write_byte(PLAY+0x43,(uint8_t)campaign);
+        psx_mod_write_byte(PLAYER+2,(uint8_t)campaign);p2[2]=(uint8_t)(campaign^1u);
+        psx_mod_write_byte(MMX4_VEHICLE,1);p2_vehicle[0]=1;
+        psx_mod_write_byte(MMX4_VEHICLE+4,2);p2_vehicle[4]=2;
+        psx_mod_write_word(PLAYER+12,120u<<16);put32(p2+12,119u<<16);
+        p2[0xC5]=255;
+        cpu.gpr[31]=0x8003BA84u;
+        mmx4_coop_call(&cpu,0x80036AE4u,0x17,0x40);
+        CHECK(psx_mod_read_byte(PLAYER+0xC0)==1);
+        CHECK(!script_active && !warp_pending && !warp_phase);
+        CHECK(mmx4_coop_lifecycle_can_tick() && !mmx4_coop_lifecycle_hidden(1));
+        CHECK(p2[0xC5]==255 && body_word(p2,12)==119u<<16);
+        /* P2's own vehicle must now eject its rider, rather than being hidden
+         * and carried to P1's later on-foot position. */
+        p2[0xC5]=0;mmx4_coop_enter_second();
+        mmx4_coop_call(&cpu,0x80036AE4u,0x17,0x40);mmx4_coop_leave_second();
+        CHECK(p2[0xC0]==1 && !script_active && !warp_pending);
+        cpu.gpr[31]=0x8003BAC4u;
+        psx_mod_write_byte(MMX4_VEHICLE+4,3);
+        mmx4_coop_call(&cpu,0x80036B18u,MMX4_VEHICLE,0);
+        CHECK(!psx_mod_read_byte(PLAYER+0xC0) && p2[0xC0]==1);
+        p2_vehicle[4]=3;mmx4_coop_enter_second();
+        mmx4_coop_call(&cpu,0x80036B18u,MMX4_VEHICLE,0);mmx4_coop_leave_second();
+        CHECK(!p2[0xC0] && !script_active && !warp_pending && !warp_phase);
+        CHECK(psx_mod_read_byte(PLAY+0x43)==campaign && !projected);
+    }
+    /* Other scene commands and vehicle contexts keep their shared carry. */
+    for(unsigned excluded=0;excluded<6;++excluded) {
+        reset();psx_mod_write_byte(PLAY+12,5);psx_mod_write_byte(PLAY+13,1);
+        psx_mod_write_byte(MMX4_VEHICLE,1);psx_mod_write_byte(MMX4_VEHICLE+4,2);
+        cpu.gpr[31]=0x8003BA84u;
+        if(excluded==0)psx_mod_write_byte(PLAY+12,6);
+        if(excluded==1)psx_mod_write_byte(PLAY+13,0);
+        if(excluded==2)psx_mod_write_byte(MMX4_VEHICLE+1,1);
+        if(excluded==3)psx_mod_write_byte(MMX4_VEHICLE,0);
+        if(excluded==4)cpu.gpr[31]=0x800C1678u;
+        mmx4_coop_call(&cpu,0x80036AE4u,excluded==5?0x15:0x17,0x40);
+        CHECK(script_active && warp_pending);
+    }
+    return 0;
+}
+
 int main(void) {
     CHECK(!simultaneous_menu_exit());
     CHECK(!simultaneous_menu_ownership());
@@ -3298,5 +3345,6 @@ int main(void) {
       }
     CHECK(!colonel_palette_refreshes(&cpu));
     CHECK(!survivor_palette_animation(&cpu));
+    CHECK(!marine_chaser_dismount());
     puts("co-op lifecycle ownership checks passed");return 0;
 }

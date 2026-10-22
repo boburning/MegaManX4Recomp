@@ -11,6 +11,17 @@ import struct
 import time
 
 
+def capture_pair(runtime, path):
+    """Capture the composed presentation, including both local Split panes."""
+    sequence = runtime.request('present_shot_seq')['seq']
+    runtime.request('present_shot', path=str(path))
+    deadline = time.monotonic() + 10
+    while runtime.request('present_shot_seq')['seq'] == sequence:
+        if time.monotonic() >= deadline:
+            raise TimeoutError('Composed capture did not complete')
+        time.sleep(.02)
+
+
 class Runtime:
     def __init__(self, port=14525):
         self.port = port
