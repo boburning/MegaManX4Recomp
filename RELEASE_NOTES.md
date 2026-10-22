@@ -1,4 +1,22 @@
-# Mega Man X4 Recompiled - 1.0.1 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.2 Stable Public Beta
+
+- Fixed Player 2 falling to their death when both players dismount at the end of Marine Base's bike section. Both heroes now complete their original dismounts and land normally.
+- Fixed Jet Stingray spawning too early in widened co-op views and disappearing before the fight. Supplemental placement waits for the actual boss arena.
+- Fixed Split Mushroom's lift camera drifting when Player 2 jumps high, which made platform events appear late in their view.
+- Rechecked the existing fixes for the opening-stage part 2 object dropping when Player 2 leads, and Mushroom's rainbow copies after Player 1 dies, with both character rosters.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats.
+
+**Windows x64 ZIP. The 1.0.2 Linux AppImage is pending. Both netplay peers must update.**
+Native memory-card saves carry forward; emulator save states are specific to their build.
+
+Local native checks cover the dismount, actual boss-door transition and active Jet
+fight, bounded lift high-jump windows, falling object and rainbow-copy patterns.
+All 38 Windows production checks pass. Full Mushroom ceiling-panel clearance,
+fresh online gameplay and Linux gameplay are not newly qualified by this release.
+[Evidence and limits](docs/COOP_MARINE_MUSHROOM_RELEASE_GATE.md).
+[Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v1.0.1 Stable Public Beta
 
 - Fixed the surviving Player 2 entering the yellow teleporter but failing to trigger Sigma's entrance scene after Player 1 dies.
 - The original campaign dialogue and normal transfer into the next area are preserved. Both death orders and the both-living control pass in both campaigns with local Split/Both doors; the P2-survivor route also passes with Unified/Either doors in X's campaign.

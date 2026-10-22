@@ -2,7 +2,7 @@
 
 October 22, 2026. Next-release gate: `beads-eio.9.213`. The owner requires
 both report groups below to be resolved before another public release.
-The published 1.0.1 archive/tag is unchanged; this work does not publish a release.
+The published 1.0.1 archive/tag is preserved. These fixes ship in 1.0.2.
 
 ## Marine Base bike exit (211)
 
@@ -123,12 +123,12 @@ observation frames are not a successful full-ascent test.
 | Mushroom palettes 203 | Both rosters pass P1-dead-before-admission native copy patterns with all 128 working bytes matching their original source and colored trails visible. Existing 1.0.1 fix confirmed. |
 | Production | Windows Release builds with developer tools and synchronized debug commands OFF; all 38 CTests pass. The final expanded moving-edge allocation regression also passes. Python helpers compile and the diff passes whitespace checks. |
 
-These report groups are qualified for the next release. Full Mushroom
+These report groups ship in v1.0.2 Stable Public Beta. Full Mushroom
 ceiling-panel clearance is not claimed: native rise checks stop before the
 authentic overhead crush, and native top-release behavior has composed boundary
 coverage. No new online or Linux gameplay qualification is claimed. The
 framework/UI pins, native memory cards and recording defaults are unchanged.
-Publication/version selection remains a separate step; 1.0.1 remains public.
+Release tracking: `beads-eio.9.214`. The v1.0.1 tag and download are preserved.
 
 Private evidence: `G:/Temp/Codex/psxrecomp/mmx4-marine-dismount-20261021/`.
 Reusable native cases: `marine_dismount`, `intro_first_drop`,
