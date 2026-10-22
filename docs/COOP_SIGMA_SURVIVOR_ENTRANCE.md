@@ -119,4 +119,5 @@ fixture. An earlier dialogue driver also demanded idle action while pulsing
 Jump; its native forward transfer is recorded, but that driver's result is
 not counted as a pass.
 
-The published v1.0.0 tag and download are unchanged by this source fix.
+This fix ships in v1.0.1 Stable Public Beta. The v1.0.0 tag and download remain
+unchanged. Release tracking: `beads-eio.9.211`.

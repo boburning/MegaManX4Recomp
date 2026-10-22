@@ -1,4 +1,19 @@
-# Mega Man X4 Recompiled - 1.0.0 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.1 Stable Public Beta
+
+- Fixed the surviving Player 2 entering the yellow teleporter but failing to trigger Sigma's entrance scene after Player 1 dies.
+- The original campaign dialogue and normal transfer into the next area are preserved. Both death orders and the both-living control pass in both campaigns with local Split/Both doors; the P2-survivor route also passes with Unified/Either doors in X's campaign.
+- Diagnostic recording remains optional and **off by default**.
+
+This release includes the Windows x64 ZIP. A Linux AppImage is pending.
+Both netplay peers must update. Native memory-card saves carry forward;
+emulator save states are specific to their build.
+
+The bounded qualification covers the yellow pad, entrance scene, forward
+transfer and restored controls. It does not clear every older Sigma
+death/Continue report or establish a full Sigma victory.
+[Evidence and limits](docs/COOP_SIGMA_SURVIVOR_ENTRANCE.md).
+
+## Previous v1.0.0 Stable Public Beta
 
 - Optional Japanese disc media: choose Japanese FMVs, voices and the Rockman X4 title screen independently using your own Japanese disc.
 - Spanish and Brazilian Portuguese dialogue catalogs, rendered with the original game's font and native glyph styling. Both translations remain drafts awaiting native-speaker review; translated audio and artwork are outside their current scope.
