@@ -17,6 +17,22 @@ from test_mmx4_coop_doors import snapshot
 
 
 class Scenarios:
+    def mushroom_lift_high_jump(self):
+        from coop_mushroom_lift_scenario import mushroom_lift_high_jump
+        return mushroom_lift_high_jump(self)
+
+    def intro_first_drop(self):
+        from coop_mushroom_followup_scenarios import intro_first_drop
+        return intro_first_drop(self)
+
+    def mushroom_survivor_colors(self):
+        from coop_mushroom_followup_scenarios import mushroom_survivor_colors
+        return mushroom_survivor_colors(self)
+
+    def marine_dismount(self):
+        from coop_marine_dismount_scenario import marine_dismount
+        return marine_dismount(self)
+
     def sigma_entry(self):
         from coop_sigma_entry_scenario import sigma_entry
         return sigma_entry(self)
@@ -2208,7 +2224,7 @@ def main():
     parser.add_argument('--individual-pausing',action='store_true',help='Use the legacy one-owner menu instead of independent simultaneous menus')
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
     parser.add_argument('--cases', nargs='+', choices=('personal_menus','local_pair','local_canvas','jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
-                        'sigma_entry','spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
+                        'mushroom_lift_high_jump','intro_first_drop','mushroom_survivor_colors','marine_dismount','sigma_entry','spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit','intro_platform_leader','teleport_fall','balance_saved_control','balance_saved_slashes','frost_shaft'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
     for name in ('exe', 'bios', 'disc', 'game', 'output'):

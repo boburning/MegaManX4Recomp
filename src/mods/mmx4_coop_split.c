@@ -667,6 +667,36 @@ void mmx4_coop_split_flip_cameras(void) {
         psx_mod_write_byte(camera+0x4C,1);
     }
 }
+static void mushroom_lift_scroll(const uint8_t canonical[CAMERA_BYTES]) {
+    if(psx_mod_read_byte(MMX4_PLAY+12)!=3 || psx_mod_read_byte(MMX4_PLAY+13)!=1)return;
+    static const unsigned horizontal[]={0x1C,0x1E,0x24,0x26};
+    for(unsigned i=0;i<4;++i) {
+        unsigned at=horizontal[i];
+        if(psx_mod_read_half(CAMERA+at)!=(uint16_t)(canonical[at]|
+            (uint16_t)canonical[at+1]<<8))return;
+    }
+    for(unsigned slot=0;slot<32;++slot) {
+        uint32_t actor=0x80165A30u+slot*0x8Cu;
+        if(!psx_mod_read_byte(actor) || psx_mod_read_byte(actor+1)!=14 ||
+           psx_mod_read_byte(actor+4)!=1 || psx_mod_read_byte(actor+5)!=1)continue;
+        /* C3BA4 owns one forced ascent, including its camera-dependent top
+         * events. Personal high jumps otherwise change a private camera's
+         * current limits and accumulate >100px of drift from that world
+         * scroll. Retain the shared vertical rail after native player follow,
+         * before deriving parallax. Horizontal views and rider physics remain
+         * independent. Native phase2 releases this rail at the lift's top. */
+        psx_mod_write_word(CAMERA+12,byte_word(canonical,12));
+        psx_mod_write_word(CAMERA+24,byte_word(canonical,24));
+        static const unsigned vertical[]={0x20,0x22,0x28,0x2A};
+        for(unsigned i=0;i<4;++i) {
+            unsigned at=vertical[i];
+            psx_mod_write_half(CAMERA+at,(uint16_t)(canonical[at]|
+                (uint16_t)canonical[at+1]<<8));
+        }
+        psx_mod_counter_add("mmx4.coop.split-lift-scroll",1);
+        return;
+    }
+}
 void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     if(!available())return;
     initialize_cameras();
@@ -700,6 +730,7 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
     copy_camera(CAMERA,shadow);
     if(other)mmx4_coop_enter_second();
     mmx4_coop_call(cpu,0x80027850u,0,0);
+    mushroom_lift_scroll(canonical);
     mmx4_coop_call(cpu,0x80027D40u,0,0);
     mmx4_coop_call(cpu,0x800281E8u,0,0);
     copy_camera(shadow,CAMERA);
@@ -901,6 +932,12 @@ static int placement_allocate(CPUState *cpu,uint32_t address) {
     if(!available() || cpu->gpr[31]!=0x8002916Cu ||
        !placement_index(cpu->gpr[19],&index))return 0;
     uint32_t record=cpu->gpr[19];unsigned category=psx_mod_read_byte(record+3u);
+    if(supplemental && !mmx4_coop_view_prefetch_allowed(
+       psx_mod_read_byte(MMX4_PLAY+12),psx_mod_read_byte(MMX4_PLAY+13),
+       category,psx_mod_read_byte(record+1),psx_mod_read_half(CAMERA+0x26))) {
+        psx_mod_counter_add("mmx4.coop.jet-prefetch-waits",1);
+        return mmx4_coop_finish(cpu,0);
+    }
     unsigned refight_portal=category==4u && psx_mod_read_byte(record+1u)==27u &&
         psx_mod_read_byte(MMX4_PLAY+12)==12 && !psx_mod_read_byte(MMX4_PLAY+13);
     if((psx_mod_read_byte(state+VISITS_OFFSET+index/8u)&(1u<<(index&7u))) ||

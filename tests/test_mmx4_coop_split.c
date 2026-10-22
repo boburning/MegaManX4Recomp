@@ -462,6 +462,83 @@ static void placement(unsigned index,int x,int y,unsigned category) {
 static uint32_t saved_camera(unsigned seat,unsigned layer) {
     return 0x801F0000u+16u+seat*0xFCu+layer*0x54u;
 }
+static void mushroom_lift_high_jump(CPUState *cpu) {
+    for(unsigned owner=0;owner<2;++owner)for(unsigned excluded=0;excluded<6;++excluded) {
+        const uint32_t lift=0x80165A30u;
+        split=ready=1;local_scope=projected=0;script_owner=-1;paired_door=0;
+        memset(ram+(CAMERA&0x1FFFFFu),0,0xFC);
+        psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,3);
+        psx_mod_write_byte(MMX4_PLAY+13,1);psx_mod_write_byte(MMX4_PLAY+0x10,0);
+        psx_mod_write_byte(MMX4_PLAY+0x1C,0);
+        psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+        psx_mod_write_byte(MMX4_PLAYER+0x5C,32);
+        second[0]=second[4]=1;second[0x5C]=32;
+        actor_position(MMX4_PLAYER,6048,1420);second_position(6072,1419);
+        psx_mod_write_byte(lift,1);psx_mod_write_byte(lift+1,14);
+        psx_mod_write_byte(lift+4,1);psx_mod_write_byte(lift+5,1);
+        psx_mod_write_half(CAMERA+0x1C,5888);psx_mod_write_half(CAMERA+0x1E,5888);
+        psx_mod_write_half(CAMERA+0x24,5888);psx_mod_write_half(CAMERA+0x26,5888);
+        psx_mod_write_word(CAMERA+12,1500u<<16|0x1234u);
+        psx_mod_write_word(CAMERA+24,1501u<<16|0x5678u);
+        psx_mod_write_half(CAMERA+0x20,1500);psx_mod_write_half(CAMERA+0x22,720);
+        mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(owner);
+        if(excluded==1)psx_mod_write_byte(MMX4_PLAY+12,12);
+        if(excluded==2)psx_mod_write_byte(MMX4_PLAY+13,0);
+        if(excluded==3)psx_mod_write_byte(lift+5,2); /* Original top exit releases follow. */
+        if(excluded==4)psx_mod_write_byte(lift+1,13);
+        if(excluded==5)psx_mod_write_half(saved_camera(owner^1u,0)+0x26,0);
+        unsigned calls_before=lift_calls;
+        mmx4_coop_split_camera(cpu,owner);
+        uint32_t camera=saved_camera(owner^1u,0);
+        CHECK(lift_calls==calls_before); /* Camera follow cannot repeat world mechanics. */
+        if(!excluded) {
+            CHECK(psx_mod_read_word(camera+12)==(1500u<<16|0x1234u));
+            CHECK(psx_mod_read_word(camera+24)==(1501u<<16|0x5678u));
+            CHECK(psx_mod_read_half(camera+0x20)==1500);
+            CHECK(psx_mod_read_half(saved_camera(owner^1u,1)+14)==1500/4);
+        }else CHECK(psx_mod_read_half(camera+14)==(owner?1420:1419)-128);
+        CHECK(!projected && mmx4_coop_split_snapshot_ready());
+    }
+    psx_mod_write_byte(MMX4_PLAY+12,0);psx_mod_write_byte(MMX4_PLAY+13,0);
+    psx_mod_write_byte(0x80165A30u,0);
+}
+static void jet_prefetched_placement(CPUState *cpu) {
+    split=ready=1;local_scope=projected=0;script_owner=-1;paired_door=0;
+    native_directional_scans=1;native_table=TABLE;allocations=0;capacity=16;
+    memset(ram+(CAMERA&0x1FFFFFu),0,0xFC);
+    psx_mod_write_byte(MMX4_PLAY,6);psx_mod_write_byte(MMX4_PLAY+12,5);
+    psx_mod_write_byte(MMX4_PLAY+13,1);
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+    psx_mod_write_byte(MMX4_PLAYER+0x5C,32);second[0]=second[4]=1;second[0x5C]=32;
+    actor_position(MMX4_PLAYER,16940,170);second_position(16964,169);
+    psx_mod_write_word(CAMERA+8,16780u<<16);psx_mod_write_word(CAMERA+20,16780u<<16);
+    psx_mod_write_half(CAMERA+0x26,16384);
+    psx_mod_write_word(0x800F43C8u+5u*8u+4u,TABLE);
+    memset(ram+(TABLE&0x1FFFFFu),0,16);
+    placement(0,17146,138,0);psx_mod_write_byte(TABLE+1,56);
+    psx_mod_write_byte(TABLE+8+3,255);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    invoke(cpu,0x80028E24u);
+    CHECK(!allocations && !(psx_mod_read_byte(TABLE)&1u));
+    /* The camera can be stationary when the door commits its new bounds.
+     * An unvisited rejected record must retry and allocate exactly once. */
+    psx_mod_write_half(CAMERA+0x26,17024);
+    invoke(cpu,0x80028E24u);
+    CHECK(allocations==1 && (psx_mod_read_byte(TABLE)&1u));
+    invoke(cpu,0x80028E24u);CHECK(allocations==1);
+    /* Original moving-edge allocation still follows retail timing, even
+     * before the new minimum commits; only supplemental prefetch waits. */
+    allocations=0;psx_mod_write_byte(TABLE,0);
+    psx_mod_write_half(CAMERA+0x26,16384);
+    psx_mod_write_word(CAMERA+20,16776u<<16);
+    mmx4_coop_split_reset();mmx4_coop_split_camera_prepare(0);
+    invoke(cpu,0x80028E24u);
+    CHECK(allocations==1 && (psx_mod_read_byte(TABLE)&1u));
+    for(unsigned excluded=0;excluded<5;++excluded)
+        CHECK(mmx4_coop_view_prefetch_allowed(excluded==0?12:5,excluded==1?0:1,
+            excluded==2?1:0,excluded==3?55:56,excluded==4?17024:16384));
+    native_directional_scans=0;
+}
 static void fortress_backgrounds(CPUState *cpu) {
     const uint32_t actor=0x80169CB8u;
     split=ready=1;local_scope=projected=0;script_owner=-1;
@@ -1812,5 +1889,7 @@ int main(void) {
     jungle_backgrounds(&cpu);
     frost_ice_ranges(&cpu);
     local_explosion_flash(&cpu);
+    mushroom_lift_high_jump(&cpu);
+    jet_prefetched_placement(&cpu);
     puts("mmx4_coop_split_test: PASS");return 0;
 }

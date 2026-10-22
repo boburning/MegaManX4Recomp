@@ -2397,6 +2397,16 @@ static int fortress_shared_scene(CPUState *cpu) {
 }
 static int script_command(CPUState *cpu,uint32_t address) {
     if(command_guard || !mmx4_coop_ready() || !gameplay_scene())return 0;
+    /* Marine Base's Chaser exit gives each rider its own native action17.
+     * Carrying the other seat as a shared scene suspends its vehicle before
+     * ejection, then restores the mounted rider at the leader's on-foot Y.
+     * Its delayed ejection starts below the landing floor. Let both original
+     * vehicles issue/release their own pose, retaining native jumps/physics. */
+    if(psx_mod_read_byte(PLAY+12)==5 && psx_mod_read_byte(PLAY+13)==1 &&
+       psx_mod_read_byte(MMX4_VEHICLE) && !psx_mod_read_byte(MMX4_VEHICLE+1) &&
+       ((address==0x80036AE4u && cpu->gpr[31]==0x8003BA84u &&
+         cpu->gpr[4]==0x17u && cpu->gpr[5]==0x40u) ||
+        (address==0x80036B18u && cpu->gpr[31]==0x8003BAC4u)))return 0;
     /* Owl's upper entry area8010AC70 sets minX2240; the adjacent rear area
      * 8010AC7C releases it to0 for backtracking. A trailing hero can occupy
      * that release after the leader crosses the entry, then warp past the

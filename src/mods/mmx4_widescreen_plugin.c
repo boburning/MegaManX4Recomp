@@ -203,6 +203,11 @@ static int mmx4_extra_placement(CPUState *cpu, uint32_t address) {
      * Categories0..2 are ordinary enemy/item allocators. Scripted categories
      * remain native. Intro type31 is an authored enemy, not a script trigger. */
     uint32_t record=cpu->gpr[18];unsigned category=psx_mod_read_byte(record);
+    if(supplemental_scan && !mmx4_coop_view_prefetch_allowed(
+       psx_mod_read_byte(MMX4_PLAY+12),psx_mod_read_byte(MMX4_PLAY+13),
+       category,psx_mod_read_byte(record-2u),psx_mod_read_half(LAYERS+0x26))) {
+        cpu->gpr[2]=0;psx_mod_counter_add("mmx4.renderer.jet-prefetch-waits",1);return 1;
+    }
     if (placement_is_trackable(record-3u)) {
         unsigned index;
         if(placement_state && psx_mod_widescreen_x_margin()>0 && placement_index(record-3u,&index) &&
