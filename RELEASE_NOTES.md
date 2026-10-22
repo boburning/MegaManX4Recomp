@@ -1,13 +1,13 @@
 # Prepared 1.0.3 - portable generated texture-pack defaults
 
-- Rebuild against the proposed framework backport for portable generated defaults.
+- Rebuild against the accepted framework backport (#747) for portable generated defaults.
   Generated texture-pack directories follow the current installation and remain
   ephemeral, including while HD textures are disabled.
 - Explicit resource selections retain their meaning. Legacy absolute selections
   are not migrated because the saved format cannot distinguish a generated value
   from an intentional player choice.
 
-This is an unsubmitted source proposal, not a published or qualified package.
+This is a source contribution, not a published or qualified package.
 See [the rebuild and two-artifact checklist](docs/PORTABLE_GENERATED_DEFAULTS.md).
 
 # Mega Man X4 Recompiled - 1.0.2 Stable Public Beta

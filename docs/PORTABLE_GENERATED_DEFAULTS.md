@@ -7,8 +7,11 @@ to that commit). No release, package build, game run or publication is claimed.
 ## Framework source
 
 The game's `psxrecomp-v4` pin advances from
-`00f484fee6ace3f7f73420f0d60b0235d23af176` to the prepared local commit
-`8c65e235a1473f01410da18a1bd872800289a925`. It is a conflict-free cherry-pick of
+`00f484fee6ace3f7f73420f0d60b0235d23af176` to the accepted commit
+`4c08013a0f4277a73583f41ce77278e15f454b92`, merged through
+RetroPortingToolKit/psxrecomp#747 into the consumed framework branch. Its tree
+`4f9a1ad91042f309be23f68de66bbffe371ade4c` exactly matches the reviewed and tested
+backport `8c65e235a1473f01410da18a1bd872800289a925`. It is a conflict-free cherry-pick of
 `572558394b5b737690138f8374c80b032c3d84ba`, the five-file portable-default repair
 merged in RetroPortingToolKit/psxrecomp#685 as
 `ac71aec441b9fa6382e687dd412fc228d9ef7f3f`. Both diffs have stable patch ID
@@ -23,25 +26,17 @@ is changed here.
 
 The declared submodule URL `https://github.com/mstan/psxrecomp.git` resolves to
 `RetroPortingToolKit/psxrecomp`. Its maintained branch
-`feat/native-font-localization-20261020` currently points at the exact consumed
-`00f484fee6ace3f7f73420f0d60b0235d23af176`. The precise prepared submission is
-`boburning/psxrecomp:feature/portable-generated-default-adoption` into
-`RetroPortingToolKit/psxrecomp:feat/native-font-localization-20261020`, based on
-that exact branch tip. The contributor framework fork already exists. This is
-a backport to the consumed branch; do not reopen the repair against framework
-`master`, where #685 is already merged.
+`feat/native-font-localization-20261020` now exposes the accepted `4c08013a`
+through that declared source. This preserves the consumed branch rather than
+replacing it with framework `master`, where #685 was already merged.
 
 The game submission target is `mstan/MegaManX4Recomp:master` (currently exact
 `a3c75e2b5c00e7283cd4de771b074cd73c037011`), from planned
 `boburning/MegaManX4Recomp:feature/portable-generated-default-adoption`. That
-contributor game fork does not currently exist; its creation, both pushes and
-both PR submissions remain unperformed. The framework patch must first be
-available through the declared submodule upstream. Read back the actual accepted
-framework commit, then use that exact reachable commit in the game gitlink;
-a squash may produce a different commit from the local `8c65e235`. Keep the
-two patches together for review, preserve this source comparison and rerun only
-checks invalidated by the final accepted bytes. Do not silently substitute an
-unrelated upstream tip or contributor URL.
+source proposal uses that exact reachable framework commit in its gitlink. No
+alternate contributor submodule URL is introduced. Source equality with the
+tested backport was checked after the upstream squash; the commit identity is
+the accepted `4c08013a`, not the contributor's earlier `8c65e235`.
 
 The repair registers generated texture directories in the existing ephemeral
 manager map rooted at the current mods directory. The launcher getter and
@@ -52,7 +47,7 @@ hide the previous default-persistence failure.
 
 ## Focused checks
 
-- Review `git -C psxrecomp-v4 diff 00f484f..8c65e23`: exactly the original header,
+- Review `git -C psxrecomp-v4 diff 00f484f..4c08013`: exactly the original header,
   package manager, runtime registration and two framework test files.
 - Run `python tests/test_release_config.py` against this game source. This checks
   the existing title/configuration contracts, not runtime relocation.
