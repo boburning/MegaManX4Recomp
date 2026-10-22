@@ -1,6 +1,6 @@
 # Co-op follow-up to 1.0.2
 
-This is an unreleased correctness pass for the opening-stage, Slash Beast,
+Included in 1.0.3 Stable Public Beta: a correctness pass for the opening-stage, Slash Beast,
 Storm Owl and Split Mushroom reports. Cyber Peacock was explicitly withdrawn
 from this pass by the owner. Shared barrier hit palettes remain original behavior.
 

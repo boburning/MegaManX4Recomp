@@ -1,4 +1,24 @@
-# Mega Man X4 Recompiled - 1.0.2 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.3 Stable Public Beta
+
+- Fixed Slash Beast and Storm Owl cannon/enemy beams appearing beside Player 1 when Player 2 leads, including both beam directions.
+- Fixed Player 2 failing to trigger Slash Beast's midboss, including when Player 1 is dead.
+- Fixed Player 2's camera staying trapped after Split Mushroom's midboss while Player 1 is alive.
+- Fixed opening-stage explosions and screen shake reaching the wrong view, missing Player 2 shake from falling structures and closing walls, and the entrance-slope camera offset.
+- Fixed Player 2 entering the opening boss fight while a distant living Player 1 causes an incorrect camera pan and soft lock.
+- Either living player can now use Select/Quit and eligible Escape from their pause menu, including with Player 1 dead. The player who opens Quit controls its confirmations.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats.
+
+**Windows x64 ZIP. The 1.0.3 Linux AppImage is pending. Both netplay peers must update.**
+Native memory-card saves carry forward; emulator save states are specific to their build.
+
+All 38 Windows production checks pass. Original-disc local Split checks cover the
+reported beams, midboss admissions, Mushroom's actual part 2 transition, opening
+camera/effects and native Quit/Escape transitions. Full campaign coverage and
+fresh online/Linux gameplay are not newly qualified. Missing opening-stage bee
+groups remain open. [Evidence and limits](docs/COOP_102_STAGE_FOLLOWUP.md).
+[Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v1.0.2 Stable Public Beta
 
 - Fixed Player 2 falling to their death when both players dismount at the end of Marine Base's bike section. Both heroes now complete their original dismounts and land normally.
 - Fixed Jet Stingray spawning too early in widened co-op views and disappearing before the fight. Supplemental placement waits for the actual boss arena.
