@@ -4,9 +4,9 @@ The optional Languages package has independent switches for Japanese FMVs,
 Japanese voices, the Rockman X4 title screen, and text translation. Nothing is
 enabled by default. All selections require a fresh boot.
 
-Fan-subtitled movies are optional **English — acediez / Hondoori** and
-**Español — El Retro Dan** choices under Japanese FMVs. Their movie-only
-packages can also be enabled standalone, without a Japanese disc. See
+The **Japanese FMVs** mod has one **Subtitles: No subtitles / English / Español**
+dropdown. No subtitles uses your Japanese donor; English (acediez/Hondoori) and
+Español (El Retro Dan) each use their imported movie pack without a Japanese disc. See
 [importing, scope and validation](FMV_SUBTITLES.md) and
 [complete upstream attribution](fmv-subtitles/CREDITS.md).
 

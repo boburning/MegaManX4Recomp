@@ -14,50 +14,10 @@ disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
 [[feature]]
 id = "japanese-media"
 name = "Japanese Media"
-description = "Select your Japanese Rockman X4 disc, then choose which media to use. Text translation is independent. Requires a fresh boot."
+description = "Choose Japanese gameplay voices and Rockman title art using your original Japanese disc. Movies are controlled by Japanese FMVs; text translation is independent. Requires a fresh boot."
 group = "Languages"
 channel = "experimental"
 default_enabled = false
-
-[[option]]
-feature = "japanese-media"
-id = "fmvs"
-label = "Japanese FMVs"
-description = "Use Japanese movies with original audio. Fan subtitle packs can also be enabled independently without a Japanese disc."
-type = "boolean"
-default = false
-
-[[option]]
-feature = "japanese-media"
-id = "subtitles"
-label = "FMV subtitles"
-description = "Import and select the matching movie data in its Languages entry first. Subtitles are part of the original fan videos; dialogue and menus stay independent."
-type = "choice"
-default = "none"
-
-[[option.choice]]
-value = "none"
-label = "None (original Japanese disc)"
-
-[[option.choice]]
-value = "en"
-label = "English — acediez / Hondoori"
-
-[[option.choice]]
-value = "es"
-label = "Español — El Retro Dan"
-
-[[requirement]]
-feature = "japanese-media"
-package = "mmx4.fmv-subtitles.en"
-requires_feature = "subtitled-fmvs"
-when = { fmvs = "true", subtitles = "en" }
-
-[[requirement]]
-feature = "japanese-media"
-package = "mmx4.fmv-subtitles.es"
-requires_feature = "subtitled-fmvs"
-when = { fmvs = "true", subtitles = "es" }
 
 [[option]]
 feature = "japanese-media"

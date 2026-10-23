@@ -73,21 +73,26 @@ class ImportTests(unittest.TestCase):
                 module.build(archive, disc, root / 'out.psxmod', root, root / 'no-decoder')
             self.assertEqual(media.read_bytes(), b'preserve')
 
-    def test_manifest_links_credit_and_isolates_both_native_movie_packages(self):
+    def test_one_manifest_selects_exactly_one_attributed_movie_resource(self):
         with tempfile.TemporaryDirectory() as temp:
             pack = Path(temp) / 'movie.x4fmv';pack.write_bytes(b'verified fixture')
             for language in ('en', 'es'):
-                manifest = tomllib.loads(module.manifest(language, pack))
-                self.assertIn(module.SOURCES[language]['author'], manifest['author'])
-                self.assertEqual(manifest['source_url'], module.SOURCES[language]['url'])
-                self.assertFalse(manifest['feature'][0]['default_enabled'])
-                self.assertNotIn('derived_disc', manifest)
-                self.assertNotIn('patch', manifest)
-                self.assertEqual(manifest['resource'][0]['sha256'], hashlib.sha256(pack.read_bytes()).hexdigest())
-                self.assertTrue(manifest['resource'][0]['required'])
-                self.assertNotIn('default', manifest['resource'][0])
-                self.assertEqual(manifest['plugin'][0]['id'], manifest['id'])
-                self.assertEqual(len(manifest['conflicts']), 1)
+                with self.assertRaisesRegex(ValueError, 'attributed release'):
+                    module.manifest(language, pack)
+        package = ROOT / 'mods/preloaded/packages/mmx4.japanese-fmvs/1.0.0'
+        manifest = tomllib.loads((package / 'manifest.toml').read_text(encoding='utf-8'))
+        self.assertEqual(len(manifest['feature']), 1)
+        self.assertFalse(manifest['feature'][0]['default_enabled'])
+        self.assertEqual(manifest['option'][0]['id'], 'subtitles')
+        self.assertEqual([(c['value'], c['label']) for c in manifest['option'][0]['choice']],
+                         [('none', 'No subtitles'), ('en', 'English'), ('es', 'Español')])
+        self.assertEqual({r['when']['subtitles'] for r in manifest['resource']}, {'none','en','es'})
+        self.assertTrue(all(r['required'] for r in manifest['resource']))
+        self.assertNotIn('derived_disc', manifest)
+        self.assertNotIn('patch', manifest)
+        self.assertEqual(manifest['plugin'][0]['id'], manifest['id'])
+        urls = {a['url'] for a in manifest['author_link']}
+        self.assertTrue(all(s['url'] in urls for s in module.SOURCES.values()))
 
     def test_raw_disc_parser_rejects_cooked_or_invalid_images(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -98,17 +103,17 @@ class ImportTests(unittest.TestCase):
 
     def test_bundled_metadata_and_attribution_match_import_provenance(self):
         for language in ('en', 'es'):
-            package = ROOT / f'mods/preloaded/packages/mmx4.fmv-subtitles.{language}/1.0.0'
+            package = ROOT / 'mods/preloaded/packages/mmx4.japanese-fmvs/1.0.0'
             manifest = tomllib.loads((package / 'manifest.toml').read_text(encoding='utf-8'))
-            provenance = json.loads((package / 'provenance.json').read_text(encoding='utf-8'))
-            resource = manifest['resource'][0]
+            provenance = json.loads((package / f'provenance/{language}.json').read_text(encoding='utf-8'))
+            resource = next(r for r in manifest['resource'] if r['when']['subtitles']==language)
             self.assertEqual(resource['sha256'], provenance['pack_sha256'])
             self.assertEqual(resource['size'], 2336 * (1 + sum(m['sectors'] for m in provenance['movies'])))
             self.assertEqual(provenance['archive_sha256'], module.SOURCES[language]['archive'])
             self.assertEqual(provenance['patch_sha256'], module.SOURCES[language]['patch'])
             self.assertEqual((package / 'CREDITS.md').read_bytes(), (module.CREDITS / 'CREDITS.md').read_bytes())
             upstream = 'acediez-Undub-v1.13-Readme.txt' if language == 'en' else 'El-Retro-Dan-Final-LEEME.txt'
-            self.assertEqual((package / 'upstream' / module.SOURCES[language]['readme']).read_bytes(), (module.CREDITS / upstream).read_bytes())
+            self.assertEqual((package / 'upstream' / upstream).read_bytes(), (module.CREDITS / upstream).read_bytes())
 
     @unittest.skipUnless(os.name == 'nt', 'Windows drive rule')
     def test_generated_data_on_system_drive_is_rejected(self):

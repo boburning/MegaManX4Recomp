@@ -1,17 +1,20 @@
 # Fan subtitles for Japanese FMVs
 
-The **Japanese Media → Japanese FMVs → FMV subtitles** choice offers original
-Japanese video, English subtitles from acediez/Hondoori, or Spanish subtitles
-from El Retro Dan. Import and select the matching movie data first. Both small
-metadata packages are bundled; the selector activates the matching package
-automatically. Missing resources reject launch. Leaving
-Japanese FMVs off does not activate the selected subtitles.
+Enable **Languages → Japanese FMVs**, then choose **Subtitles: No subtitles / English / Español**.
+There is one movie mod and one mutually exclusive language choice. The two
+standalone subtitle toggles have been removed.
 
-Each pack also has its own **Languages → Japanese FMVs — … subtitles** feature.
-Enable it for standalone use, without a Japanese donor disc or Japanese Media.
-Both packs may be installed, but enabling both is rejected. A fan pack replaces
-the ten opening/story movies once, including when original Japanese FMVs are
-enabled. The original Capcom logo movie stays unchanged. Fresh boot required.
+- **No subtitles** uses your verified original Japanese Rockman X4 disc.
+- **English** uses the imported acediez/Hondoori `.x4fmv` pack.
+- **Español** uses the imported El Retro Dan `.x4fmv` pack.
+
+Only the selected choice's picker is shown and its media required, verified
+and loaded. Both fan packs may remain selected on disk; a dropdown permits
+only one movie source per boot. English/Spanish do not require a Japanese
+donor. Turning Japanese FMVs off keeps the original USA movies.
+Japanese voices, Rockman title art and dialogue translation remain independent.
+The fan packs replace the ten opening/story movies; the original Capcom logo
+movie stays unchanged. Requires a fresh boot after changing the choice.
 
 Only the original fan-subtitled movies and their Japanese audio are imported.
 In-game script retranslations, variable-width fonts, translated menu art,
@@ -45,14 +48,16 @@ outputs are never overwritten. Tool subprocesses have bounded timeouts.
 
 The importer writes two files:
 
-- **`.psxmod`**: standalone metadata archive for builds without the bundled
-  entry. Updated builds already have it; use that entry rather than installing
-  a duplicate version. Contains metadata, author/source links,
-  `CREDITS.md`, exact supplied readmes and `provenance.json`.
-- **`.x4fmv`**: keep in a persistent location, then select it in the installed
-  pack's **Attributed fan movie pack** picker. Size and SHA-256 are verified
-  into the immutable session/netplay identity. Large media stays external,
-  preserving the framework's 256 MiB mod-archive expansion limit.
+- **`.psxmod`**: the combined Japanese FMVs metadata, for updated builds
+  without the bundled entry. Install it once; both imports use the same mod ID
+  and three-choice manifest. Updated builds already include this mod. It
+  contains all author/source links, `CREDITS.md`, both original project readmes
+  and both languages' preserved provenance.
+- **`.x4fmv`**: keep each language's sidecar in a persistent location. In
+  Japanese FMVs choose its subtitle language, then select the matching pack.
+  Exact size and SHA-256 enter the immutable session identity. Unselected
+  large media is not loaded. External media preserves the framework's
+  256 MiB mod-archive expansion limit.
 
 XDelta creates only a private temporary extraction oracle, deleted after import.
 The installed mod has no XDelta dependency, executable, EXE replacement, script,
@@ -84,14 +89,14 @@ logs and credits identify the original fan creators throughout.
 movies against the original executable. Only the ten movie LBA/size/header
 triplets change; every other EXE byte, script and font remains identical and no
 ARC is replaced. It checks EXE-entry publication, duplicate campaign suppression,
-and malformed pack rejection before mounting. Catalog checks cover conditional
-requirements, missing resources and mutually exclusive subtitle packs.
+and malformed pack rejection before mounting. Catalog checks cover conditional resources, missing selected media and
+mutually exclusive subtitle choices.
 
 Native playback, visible subtitles, XA audio progression, skipping and actual
 scene continuation require game runs. Extraction and passing asset checks alone
 do not establish those behaviors; retain per-movie results separately.
 
-Qualification on 2026-10-22:
+Historical extraction/playback qualification on 2026-10-22 (before UI consolidation):
 
 - Both supplied archives imported successfully. All twenty movie streams match
   every source sector byte for byte. Full FFmpeg MDEC/XA decode passes without
@@ -111,3 +116,10 @@ Qualification on 2026-10-22:
 - Other individual story-movie triggers/end transitions, audible listening
   review, co-op/netplay movie transitions and Linux runtime playback remain
   unverified. Full-decode and table-isolation evidence is not full-game QA.
+
+## Single-selector follow-up
+
+The owner requested the consolidated control on 2026-10-23. Framework resource
+conditions ensure only the chosen source is required and exposed in the UI.
+The updated control is being qualified separately from the historical playback
+evidence above; a changed interface does not qualify every movie transition.

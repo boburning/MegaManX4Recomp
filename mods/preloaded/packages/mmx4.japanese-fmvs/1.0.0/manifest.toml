@@ -1,0 +1,108 @@
+format_version = 10
+id = "mmx4.japanese-fmvs"
+version = "1.0.0"
+name = "Japanese FMVs"
+author = "mstan; English: acediez / Hondoori; Español: El Retro Dan; full credits in CREDITS.md"
+description = "Japanese movies with no subtitles, English subtitles or Spanish subtitles. Fan translations retain their original video and Japanese audio. See CREDITS.md and the supplied project readmes."
+resolver = "declarative"
+save_compatibility = "isolated"
+
+[[target]]
+game_id = "SLUS-00561"
+disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
+
+[[feature]]
+id = "japanese-fmvs"
+name = "Japanese FMVs"
+description = "Choose one subtitle language. No subtitles uses your original Japanese disc; English or Español uses its verified imported movie pack. Voices, title art and in-game text are independent. Requires a fresh boot."
+group = "Languages"
+channel = "experimental"
+default_enabled = false
+
+[[option]]
+feature = "japanese-fmvs"
+id = "subtitles"
+label = "Subtitles"
+description = "English: acediez Undub v1.13 / Hondoori translation. Español: El Retro Dan, based on acediez Undub. Full contributor roles, sources and original readmes are included in this mod's CREDITS.md."
+type = "choice"
+default = "none"
+
+[[option.choice]]
+value = "none"
+label = "No subtitles"
+
+[[option.choice]]
+value = "en"
+label = "English"
+
+[[option.choice]]
+value = "es"
+label = "Español"
+
+[[resource]]
+feature = "japanese-fmvs"
+id = "japanese-disc"
+label = "Original Japanese Rockman X4 disc"
+description = "SLPS-00902, required only for movies without subtitles. Fan-subtitled choices do not need this donor."
+when = { subtitles = "none" }
+file_patterns = "*.cue;*.bin;*.chd;*.iso"
+file_description = "Japanese Rockman X4 disc"
+format = "psx-mode2"
+required = true
+size = 589683488
+sha256 = "829185314c9040d74f66c5babdb08a6fa58239d299afae11fd396f4c243874d7"
+
+[[resource]]
+feature = "japanese-fmvs"
+id = "english-movies"
+label = "English movie pack — acediez / Hondoori"
+description = "Select the imported English .x4fmv. Movie data and embedded Japanese audio are preserved; all credits and source readmes are supplied with this mod."
+when = { subtitles = "en" }
+format = "file"
+file_patterns = "*.x4fmv"
+file_description = "English fan-subtitled X4 movies"
+required = true
+size = 316850368
+sha256 = "dfad1096a7bf6095e74483a61f54693ceaaa64bfdee2822b550c817a40b57de5"
+
+[[resource]]
+feature = "japanese-fmvs"
+id = "spanish-movies"
+label = "Spanish movie pack — El Retro Dan"
+description = "Select the imported Spanish .x4fmv. Movie data and embedded Japanese audio are preserved; El Retro Dan's LEEME and underlying Undub credits are supplied with this mod."
+when = { subtitles = "es" }
+format = "file"
+file_patterns = "*.x4fmv"
+file_description = "Spanish fan-subtitled X4 movies"
+required = true
+size = 316850368
+sha256 = "28baedfac109abfe96e10586ebca9d7d686b89e82a1f4190cc0db62df3bb9892"
+
+[[plugin]]
+feature = "japanese-fmvs"
+id = "mmx4.japanese-fmvs"
+order = -110
+
+[[author_link]]
+name = "acediez — Undub v1.13"
+url = "https://www.romhacking.net/forum/index.php?topic=26255.0"
+
+[[author_link]]
+name = "Hondoori — English translation"
+url = "https://hondoori.wordpress.com/2016/01/24/rockman-x4-script-translation-zero-side/"
+
+[[author_link]]
+name = "El Retro Dan — Spanish retranslation"
+url = "https://www.youtube.com/watch?v=dM_LnAhPoPI"
+
+[[author_link]]
+name = "NectarHime — Final Weapon"
+url = "https://www.reddit.com/r/Megaman/comments/b8a4k9/final_weapon_a_retranslation_undub_and_musicsound/"
+
+[[author_link]]
+name = "LameGuy64 — mkpsxiso"
+url = "https://github.com/Lameguy64/mkpsxiso"
+
+[[author_link]]
+name = "Kuumba123 — TeheManX4 Editor"
+url = "https://github.com/Kuumba123/TeheManX4_Editor"

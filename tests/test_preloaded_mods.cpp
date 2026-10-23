@@ -25,7 +25,7 @@ void no_op_plugin() {}
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 2 && argc != 7) return fail("expected mods root [English.psxmod English.x4fmv Spanish.psxmod Spanish.x4fmv Japanese-BIN]");
+    if (argc != 2 && argc != 5) return fail("expected mods root [English.x4fmv Spanish.x4fmv Japanese-BIN]");
 
     const fs::path source(argv[1]);
     const fs::path root =
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
             return fail("manifest parse failed: " + error);
         }
     }
-    if (manifest_count != 10) return fail("expected ten package manifests, including movie-only metadata");
+    if (manifest_count != 9) return fail("expected nine package manifests, including one Japanese FMVs mod");
 
     PSXRecompV4::mod_clear_plugins_for_tests();
     for (const char* id : {
@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
              "mmx4.widescreen", "mmx4.coop", "mmx4.diagnostics",
              "mmx4.ultimate_armor", "mmx4.black_zero",
              "mmx4.japanese-media", "mmx4.translation",
-             "mmx4.fmv-subtitles.en", "mmx4.fmv-subtitles.es"}) {
+             "mmx4.japanese-fmvs"}) {
         if (!PSXRecompV4::mod_register_activation_plugin(id, no_op_plugin)) {
             return fail(std::string("could not register test plugin ") + id);
         }
@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
     std::string error;
     if (!manager.scan(&error)) return fail("catalog scan failed: " + error);
     if (!manager.load_state(&error)) return fail("default state failed: " + error);
-    if (manager.packages().size() != 10)
-        return fail("expected ten package families");
+    if (manager.packages().size() != 9)
+        return fail("expected nine package families");
 
     const auto default_plan = manager.resolve(kGameId, "", kDiscSha256);
     if (!default_plan.ok || !default_plan.writes.empty() ||
@@ -207,54 +207,34 @@ int main(int argc, char** argv) {
         if(plugin.id=="mmx4.widescreen")return fail("disabled co-op forced the renderer");
     if(!solo_plan.ok)return fail("disabled co-op plan failed");
 
-    if(!manager.set_feature_enabled("mmx4.localization","japanese-media",true,&error) ||
-       !manager.set_feature_option("mmx4.localization","japanese-media","fmvs","true",&error) ||
-       !manager.set_feature_option("mmx4.localization","japanese-media","subtitles","en",&error))return fail(error);
-    const auto missing_fan=manager.resolve(kGameId,"",kDiscSha256);
+    constexpr const char* movies="mmx4.japanese-fmvs";
+    if(!manager.set_feature_enabled(movies,"japanese-fmvs",true,&error) ||
+       !manager.set_feature_option(movies,"japanese-fmvs","subtitles","en",&error))return fail(error);
+    auto missing=manager.resolve(kGameId,"",kDiscSha256);
     bool named_missing=false;
-    for(const auto& message:missing_fan.errors)named_missing|=message.find("mmx4.fmv-subtitles.en")!=std::string::npos;
-    if(missing_fan.ok || !named_missing)return fail("selected missing subtitle resource must reject launch by package name");
-    if(!manager.set_feature_enabled("mmx4.localization","japanese-media",false,&error))return fail(error);
-    if(argc==7) {
-        PSXRecompV4::ModPackageManager standalone(root/"standalone-movies");
-        if(!standalone.scan(&error))return fail(error);
-        for(int i:{2,4})if(!standalone.install_archive(argv[i],nullptr,nullptr,&error))return fail("real movie mod installation: "+error);
-        if(!standalone.scan(&error))return fail(error);
-        std::string fingerprints[2];
-        for(unsigned i=0;i<2;++i) {
-            const std::string id=i?"mmx4.fmv-subtitles.es":"mmx4.fmv-subtitles.en";
-            if(!standalone.set_feature_enabled(id,"subtitled-fmvs",true,&error))return fail(error);
-            if(standalone.resolve(kGameId,"",kDiscSha256).ok)return fail("missing external movie resource must reject launch");
-            if(!standalone.set_feature_resource_path(id,"subtitled-fmvs","movies",argv[i?5:3],&error))return fail(error);
-            const auto plan=standalone.resolve(kGameId,"",kDiscSha256);
-            if(!plan.ok || plan.resources.size()!=1 || !plan.resources[0].bytes ||
-               !plan.writes.empty() || !plan.overlays.empty() || !plan.derived_discs.empty())
-                return fail("standalone movie plan must use verified media without any disc patch or Japanese donor");
-            fingerprints[i]=plan.fingerprint;
-            if(!standalone.set_feature_enabled(i?"mmx4.fmv-subtitles.en":"mmx4.fmv-subtitles.es","subtitled-fmvs",true,&error))return fail(error);
-            if(standalone.resolve(kGameId,"",kDiscSha256).ok)return fail("two subtitle languages must conflict");
-            for(const char* pack:{"mmx4.fmv-subtitles.en","mmx4.fmv-subtitles.es"})
-                if(!standalone.set_feature_enabled(pack,"subtitled-fmvs",false,&error))return fail(error);
-            if(!manager.set_feature_resource_path(id,"subtitled-fmvs","movies",argv[i?5:3],&error))return fail(error);
-        }
-        if(fingerprints[0]==fingerprints[1])return fail("movie language and bytes must affect compatibility identity");
-        if(!manager.set_feature_resource_path("mmx4.localization","japanese-media","japanese-disc",argv[6],&error) ||
-           !manager.set_feature_enabled("mmx4.localization","japanese-media",true,&error))return fail(error);
-        for(const char* language:{"en","es"}) {
-            if(!manager.set_feature_option("mmx4.localization","japanese-media","subtitles",language,&error))return fail(error);
+    for(const auto& message:missing.errors)named_missing|=message.find("english-movies")!=std::string::npos;
+    if(missing.ok || !named_missing)return fail("selected movie resource must reject launch by resource name");
+    if(!manager.set_feature_enabled(movies,"japanese-fmvs",false,&error))return fail(error);
+    if(argc==5) {
+        if(!manager.set_feature_enabled(movies,"japanese-fmvs",true,&error))return fail(error);
+        std::string fingerprints[3];
+        const char* languages[]={"en","es","none"};
+        const char* resources[]={"english-movies","spanish-movies","japanese-disc"};
+        for(unsigned i=0;i<3;++i) {
+            if(!manager.set_feature_option(movies,"japanese-fmvs","subtitles",languages[i],&error))return fail(error);
+            if(i && manager.resolve(kGameId,"",kDiscSha256).ok)return fail("missing selected media must reject");
+            if(!manager.set_feature_resource_path(movies,"japanese-fmvs",resources[i],argv[i+2],&error))return fail(error);
             const auto plan=manager.resolve(kGameId,"",kDiscSha256);
-            if(!plan.ok || plan.implicit_features.size()!=1 || plan.resources.size()!=2)return fail("subtitle selector must derive exactly its verified movie provider");
-            int fan=-1,jp=-1;
-            for(size_t i=0;i<plan.plugins.size();++i) {
-                if(plan.plugins[i].id==std::string("mmx4.fmv-subtitles.")+language)fan=int(i);
-                if(plan.plugins[i].id=="mmx4.japanese-media")jp=int(i);
-            }
-            if(fan<0 || jp<0 || fan>=jp)return fail("fan movies must activate before the donor adapter");
+            if(!plan.ok || plan.resources.size()!=1 || !plan.resources[0].bytes ||
+               plan.resources[0].id!=resources[i] || !plan.writes.empty() ||
+               !plan.overlays.empty() || !plan.derived_discs.empty() || !plan.implicit_features.empty())
+                return fail("one selector must load only its verified media without a disc patch");
+            fingerprints[i]=plan.fingerprint;
         }
-        if(!manager.set_feature_option("mmx4.localization","japanese-media","fmvs","false",&error))return fail(error);
-        const auto disabled=manager.resolve(kGameId,"",kDiscSha256);
-        if(!disabled.ok || !disabled.implicit_features.empty())return fail("disabled Japanese FMVs must not derive subtitles");
-        std::cout<<"Real movie mod install, immutable resources, conflicts and conditional selector: PASS\n";
+        if(fingerprints[0]==fingerprints[1] || fingerprints[1]==fingerprints[2])return fail("subtitle selection must affect session identity");
+        if(!manager.set_feature_enabled(movies,"japanese-fmvs",false,&error))return fail(error);
+        if(!manager.resolve(kGameId,"",kDiscSha256).ok)return fail("disabled movies must not require media");
+        std::cout<<"One Japanese FMVs selector, immutable selected resources and language identity: PASS\n";
     }
 
     if(fs::weakly_canonical(root).parent_path()!=fs::weakly_canonical(fs::temp_directory_path()))

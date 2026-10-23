@@ -24,7 +24,7 @@ static std::shared_ptr<const std::vector<uint8_t>> donor_bytes;
 static std::vector<uint8_t> catalog,ram(2*1024*1024),exe;
 static std::map<uint32_t,uint8_t> aperture;
 static std::map<std::string,std::vector<uint8_t>> replacements;
-static std::string catalog_path,language="es";
+static std::string catalog_path,language="es",movie_subtitles="none";
 static PS1::ISOReader original;
 static unsigned options,appended;static uint32_t next_lba,next_guest;
 static void check(bool ok,const std::string& text) {if(!ok)throw std::runtime_error(text);}
@@ -38,6 +38,7 @@ int psx_mod_game_started() {return 1;}
 void psx_mod_counter_add(const char*,uint32_t) {}
 void psx_fatal_halt(const char* why) {throw std::runtime_error(why);}
 int psx_mod_option_value(const char*,const char*,const char* id,char* out,uint32_t n) {
+    if(!std::strcmp(id,"subtitles")) {std::snprintf(out,n,"%s",movie_subtitles.c_str());return 1;}
     if(!std::strcmp(id,"language")) {std::snprintf(out,n,"%s",language.c_str());return 1;}
     unsigned bit=!std::strcmp(id,"fmvs")?1:!std::strcmp(id,"voices")?2:4;
     std::snprintf(out,n,"%s",options&bit?"true":"false");return 1;
@@ -112,7 +113,8 @@ int main(int argc,char** argv) {
             std::ifstream pack_file(argv[3],std::ios::binary);
             auto pack=std::make_shared<std::vector<uint8_t>>(std::istreambuf_iterator<char>(pack_file),std::istreambuf_iterator<char>());
             const auto extents=fmv_pack(pack->data(),pack->size());donor_bytes=pack;
-            for(const char* plugin:{"mmx4.fmv-subtitles.en","mmx4.fmv-subtitles.es"}) {
+            for(const char* selected:{"en","es"}) {
+                const char* plugin="mmx4.japanese-fmvs";movie_subtitles=selected;
                 for(const auto& pair:resetters())pair.second();
                 ram=stock_ram;replacements.clear();next_lba=251793;appended=0;
                 activation().at(plugin)();
@@ -129,7 +131,7 @@ int main(int argc,char** argv) {
                 // A simultaneous Japanese-media selection must not mount a
                 // second movie campaign, preserving the native CD LBA limit.
                 options=1;activation().at("mmx4.japanese-media")();
-                check(appended==10,"standalone fan pack overrides the Japanese movie source once");
+                check(appended==10,"one selected fan campaign mounts once; voices/title do not mount movies");
                 bool duplicate_rejected=false;
                 try{activation().at(plugin)();}catch(const std::exception&){duplicate_rejected=true;}
                 check(duplicate_rejected,"second subtitle campaign refused");
@@ -170,7 +172,8 @@ int main(int argc,char** argv) {
             for(const auto& r:resetters())r.second();
             replacements.clear();aperture.clear();appended=0;next_lba=original.GetSectorCount();next_guest=0x8f100000;
             std::fill(ram.begin(),ram.end(),0);std::copy(exe.begin()+0x800,exe.end(),ram.begin()+0x10000);
-            if(options&7)activation().at("mmx4.japanese-media")();
+            if(options&1)activation().at("mmx4.japanese-fmvs")();
+            if(options&6)activation().at("mmx4.japanese-media")();
             if(options&8)activation().at("mmx4.translation")();
             const auto not_entered=ram;
             for(const auto& cb:ticks())cb.second();

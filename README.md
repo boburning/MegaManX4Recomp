@@ -5,7 +5,7 @@
 
 # Mega Man X4 Recompiled
 
-[Fan-subtitled Japanese FMVs](docs/FMV_SUBTITLES.md): optional movie-only mods
+[Fan-subtitled Japanese FMVs](docs/FMV_SUBTITLES.md): one optional Japanese FMVs mod with a subtitle dropdown
 from acediez/Hondoori (English) and El Retro Dan (Spanish), with
 [full attribution and preserved upstream readmes](docs/fmv-subtitles/CREDITS.md).
 

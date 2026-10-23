@@ -13,6 +13,7 @@ from pathlib import Path
 import shutil
 import struct
 import subprocess
+import tomllib
 import tempfile
 import zipfile
 
@@ -162,62 +163,14 @@ def extract_movies(image, output):
 
 
 def manifest(language, pack):
-    source = SOURCES[language]
-    other = 'es' if language == 'en' else 'en'
-    authors = ('acediez / Hondoori; upstream contributions detailed in CREDITS.md' if language == 'en'
-               else 'El Retro Dan; based on acediez Undub; full contributors in CREDITS.md')
-    text = f'''format_version = 9
-id = "mmx4.fmv-subtitles.{language}"
-version = "1.0.0"
-name = "Japanese FMVs — {source['name']} subtitles"
-author = "{authors}"
-description = "Ten original fan-subtitled Japanese movies. Select the imported .x4fmv beside the .psxmod. Movie-only extraction; dialogue and gameplay stay independent. See CREDITS.md."
-source_name = "{source['author']} — original fan project"
-source_url = "{source['url']}"
-resolver = "declarative"
-save_compatibility = "isolated"
-conflicts = ["mmx4.fmv-subtitles.{other}"]
-
-[[target]]
-game_id = "SLUS-00561"
-disc_sha256 = "3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"
-
-[[feature]]
-id = "subtitled-fmvs"
-name = "Japanese FMVs — {source['name']} subtitles"
-author = "{source['author']}"
-description = "Enable here for standalone movies, or select this language under Japanese Media. No Japanese disc is needed for standalone use. Fresh boot required."
-group = "Languages"
-channel = "experimental"
-default_enabled = false
-
-[[resource]]
-feature = "subtitled-fmvs"
-id = "movies"
-label = "Attributed fan movie pack"
-description = "Select the .x4fmv file produced beside this mod by the importer. Its exact size and SHA-256 are verified before launch."
-format = "file"
-file_patterns = "*.x4fmv"
-file_description = "X4 fan-subtitled movie pack"
-required = true
-size = {pack.stat().st_size}
-sha256 = "{digest(pack)}"
-
-[[plugin]]
-feature = "subtitled-fmvs"
-id = "mmx4.fmv-subtitles.{language}"
-order = -110
-'''
-    links = [
-            (source['author'], source['url']),
-            ('Hondoori', 'https://hondoori.wordpress.com/2016/01/24/rockman-x4-script-translation-zero-side/'),
-            ('NectarHime — Final Weapon', 'https://www.reddit.com/r/Megaman/comments/b8a4k9/final_weapon_a_retranslation_undub_and_musicsound/'),
-            ('LameGuy64 — mkpsxiso', 'https://github.com/Lameguy64/mkpsxiso')]
-    if language == 'es':
-        links += [('acediez — original Undub project', SOURCES['en']['url']),
-                  ('Kuumba123 — TeheManX4 Editor', 'https://github.com/Kuumba123/TeheManX4_Editor')]
-    for name, url in links:
-        text += '\n[[author_link]]\nname = ' + json.dumps(name, ensure_ascii=False) + '\nurl = ' + json.dumps(url) + '\n'
+    # Both imports use the same three-choice mod. Only the selected media is
+    # required; audiovisual data stays in its external verified sidecar.
+    template = ROOT / 'mods/preloaded/packages/mmx4.japanese-fmvs/1.0.0/manifest.toml'
+    text = template.read_text(encoding='utf-8')
+    resource_id = {'en': 'english-movies', 'es': 'spanish-movies'}[language]
+    resource = next(r for r in tomllib.loads(text)['resource'] if r['id'] == resource_id)
+    if pack.stat().st_size != resource['size'] or digest(pack) != resource['sha256']:
+        raise ValueError('Extracted movie pack does not match the attributed release')
     return text
 
 
@@ -277,9 +230,11 @@ def build(archive, disc, output, scratch, xdelta, seven_zip=None):
                 mod.writestr('manifest.toml', manifest(language, pack))
                 mod.writestr('provenance.json', json.dumps(provenance, indent=2, ensure_ascii=False) + '\n')
                 mod.write(CREDITS / 'CREDITS.md', 'CREDITS.md')
-                mod.write(readme, 'upstream/' + source['readme'])
-                if language == 'es':
-                    mod.write(CREDITS / 'acediez-Undub-v1.13-Readme.txt', 'upstream/acediez-Undub-v1.13-Readme.txt')
+                for path in sorted(CREDITS.iterdir()):
+                    if path.is_file() and path.name != 'CREDITS.md':
+                        mod.write(path, 'upstream/' + path.name)
+                for path in sorted((ROOT / 'mods/preloaded/packages/mmx4.japanese-fmvs/1.0.0/provenance').iterdir()):
+                    mod.write(path, 'provenance/' + path.name)
             # Exclusive creation also protects against a destination appearing
             # during the long decode; failed copies remove only our new file.
             created = []
@@ -309,7 +264,7 @@ def main():
     except (ValueError, OSError, KeyError, subprocess.SubprocessError, zipfile.BadZipFile) as exc:
         parser.exit(1, str(exc) + '\n')
     print(f'Created {language} native movie mod with {len(movies)} credited STR streams: {args.output}')
-    print(f'Select its movie resource in Mods: {args.output.with_suffix(".x4fmv")}')
+    print(f'Select Japanese FMVs, choose its subtitle language, then select: {args.output.with_suffix(".x4fmv")}')
 
 
 if __name__ == '__main__':
