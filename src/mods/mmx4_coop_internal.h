@@ -103,6 +103,8 @@ unsigned mmx4_coop_lifecycle_menu_fade(uint32_t buffer);
 int mmx4_coop_lifecycle_draw_menu(CPUState *cpu,unsigned seat);
 void mmx4_coop_combat_reset(void);
 unsigned mmx4_coop_vehicle_effect_owner(uint32_t actor);
+/* Allocating seat (1/2), or a captured effect's subsequently bound victim. */
+unsigned mmx4_coop_secondary_allocation_owner(uint32_t actor);
 void mmx4_coop_combat_project_end(uint32_t vehicle_mirror);
 /* Current projection's native Ride Armor; Chasers are deliberately excluded. */
 int mmx4_coop_armor_mounted(void);

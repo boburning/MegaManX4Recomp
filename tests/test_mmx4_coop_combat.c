@@ -1065,6 +1065,7 @@ static void vehicle_secondary_ownership(void) {
         allocated_actor=actor;ready=0; /* Original enrollment creates exhaust. */
         if(seat)mmx4_coop_enter_second();
         CHECK(invoke(0x8002ACA4u)==actor);
+        CHECK(mmx4_coop_secondary_allocation_owner(actor)==seat+1);
         if(seat)mmx4_coop_leave_second();
         ready=1;psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,(uint8_t)type);
         psx_mod_write_word(actor+8,(seat?10u:30u)<<16); /* Other rider is nearest. */
@@ -1078,6 +1079,7 @@ static void vehicle_secondary_ownership(void) {
         invoke(0x8002ACA4u);
         if(!seat)mmx4_coop_leave_second();
         CHECK(mmx4_coop_vehicle_effect_owner(actor)==(seat^1)+1);
+        CHECK(mmx4_coop_secondary_allocation_owner(actor)==(seat^1)+1);
         psx_mod_write_byte(actor+1,1);CHECK(!mmx4_coop_vehicle_effect_owner(actor));
     }
 }

@@ -380,6 +380,11 @@ static int allocate_actor(CPUState *cpu, uint32_t address) {
     return mmx4_coop_finish(cpu,actor);
 }
 
+unsigned mmx4_coop_secondary_allocation_owner(uint32_t actor) {
+    if(actor<SECONDARY_POOL || actor>=SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE ||
+       (actor-SECONDARY_POOL)%SECONDARY_STRIDE)return 0;
+    return secondary_owner[(actor-SECONDARY_POOL)/SECONDARY_STRIDE];
+}
 unsigned mmx4_coop_vehicle_effect_owner(uint32_t actor) {
     if(actor>=EFFECT_POOL && actor<EFFECT_POOL+EFFECT_CAPACITY*EFFECT_STRIDE &&
        !((actor-EFFECT_POOL)%EFFECT_STRIDE)) {
