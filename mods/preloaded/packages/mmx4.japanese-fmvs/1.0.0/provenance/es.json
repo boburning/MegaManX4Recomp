@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "extractor": "mmx4-fmv-import-v1",
+  "language": "es",
+  "scope": "Ten movie streams only; no executable, script, font, menu, voice bank or disc image.",
+  "archive_name": "MEGA MAN X4 RETRADUCIDO FINAL.zip",
+  "archive_sha256": "e0ca3dc5686bc94309e523a6438ec1b2f6ae3b991f111c1bc98f5b4a4b8fd189",
+  "patch_name": "MEGA MAN X4 RETRADUCIDO FINAL.xdelta",
+  "patch_sha256": "c074583f97aa21cdf8c5b77d3256d34b921eb626e8d69196697503f33478f411",
+  "source_disc_md5": "1c425b49bb25c45b3964b2d565dd0ec0",
+  "oracle_sha256": "697f4f0e06feb8a8bcf0bf405f89b936a1bbb1ee376aadaac2cbcbfa3eba53d6",
+  "pack_sha256": "28baedfac109abfe96e10586ebca9d7d686b89e82a1f4190cc0db62df3bb9892",
+  "movies": [
+    {
+      "path": "STR/OP_U.STR",
+      "oracle_lba": 14176,
+      "sectors": 13680,
+      "sha256": "1882e9fc57fc2085dbe2eb36dea4165bc25baca3490a331792b5a3943d7c70ed",
+      "video_sectors": 11970,
+      "audio_sectors": 1710,
+      "frames": 1368
+    },
+    {
+      "path": "STR/X1_U.STR",
+      "oracle_lba": 27856,
+      "sectors": 10628,
+      "sha256": "4081dd20b1c881c2609d78a85f8cd0796e302aab404b86e24cd81e3284a78ed8",
+      "video_sectors": 9300,
+      "audio_sectors": 1328,
+      "frames": 1063
+    },
+    {
+      "path": "STR/X2_U.STR",
+      "oracle_lba": 38484,
+      "sectors": 12953,
+      "sha256": "c4c58d4ef724848fc5f5120e5725dab5a5d9848123e35b9f0d28bd74dd9a0823",
+      "video_sectors": 11334,
+      "audio_sectors": 1619,
+      "frames": 1296
+    },
+    {
+      "path": "STR/X3_U.STR",
+      "oracle_lba": 51437,
+      "sectors": 10853,
+      "sha256": "6e8fe5ed083d6db749539f3c064e5c47d586a48f4330424d23d2d01b626d6d5b",
+      "video_sectors": 9497,
+      "audio_sectors": 1356,
+      "frames": 1086
+    },
+    {
+      "path": "STR/X4_U.STR",
+      "oracle_lba": 62290,
+      "sectors": 13532,
+      "sha256": "a76b26b7c4058e00080731e7f606dbcf07782f798c1f661e9548d723bc1ffeeb",
+      "video_sectors": 11841,
+      "audio_sectors": 1691,
+      "frames": 1354
+    },
+    {
+      "path": "STR/Z1_U.STR",
+      "oracle_lba": 75822,
+      "sectors": 9621,
+      "sha256": "c409c61e5955999fcfb3118351959a004e63faaa8897022fdf7046fd434a3995",
+      "video_sectors": 8419,
+      "audio_sectors": 1202,
+      "frames": 963
+    },
+    {
+      "path": "STR/Z2_U.STR",
+      "oracle_lba": 85443,
+      "sectors": 12364,
+      "sha256": "7e9d0309f83804d214b4e563c7840453e32ad04d3b021a620658251a64cc9081",
+      "video_sectors": 10819,
+      "audio_sectors": 1545,
+      "frames": 1237
+    },
+    {
+      "path": "STR/Z3_U.STR",
+      "oracle_lba": 97807,
+      "sectors": 10146,
+      "sha256": "74a5022eb6bf4e58b2b7a511aff3f61f88a9e05f992b3e89f3ab0f6db5a53133",
+      "video_sectors": 8878,
+      "audio_sectors": 1268,
+      "frames": 1015
+    },
+    {
+      "path": "STR/Z4_U.STR",
+      "oracle_lba": 107953,
+      "sectors": 31960,
+      "sha256": "7ed937bc41a19dc70613b675a29a82485fb22e146e2081c39935abc3d72f44a8",
+      "video_sectors": 27965,
+      "audio_sectors": 3995,
+      "frames": 3196
+    },
+    {
+      "path": "STR/Z5_U.STR",
+      "oracle_lba": 139913,
+      "sectors": 9900,
+      "sha256": "60e38aff86bcb9596da192b3279f046e1ebd9572a6356667ff79922d0a57df87",
+      "video_sectors": 8663,
+      "audio_sectors": 1237,
+      "frames": 990
+    }
+  ]
+}

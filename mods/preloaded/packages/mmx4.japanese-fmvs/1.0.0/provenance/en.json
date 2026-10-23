@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "extractor": "mmx4-fmv-import-v1",
+  "language": "en",
+  "scope": "Ten movie streams only; no executable, script, font, menu, voice bank or disc image.",
+  "archive_name": "Mega Man X4 (USA) [Undub v1.13 + Retranslation].7z",
+  "archive_sha256": "24d2a8a7c142d724736c999ef74e98350821a17d62de76e6b94a27cc00e610b3",
+  "patch_name": "Mega Man X4 (USA) [Undub v1.13 + Retranslation].xdelta",
+  "patch_sha256": "b3708d66af783d918d370b60297c791c447590e3794c5ae226d554111ffaac80",
+  "source_disc_md5": "1c425b49bb25c45b3964b2d565dd0ec0",
+  "oracle_sha256": "072bae55fbd1bed8dc1fa68fa8ed7fae9defe3530e026888f2881daf5d63a292",
+  "pack_sha256": "dfad1096a7bf6095e74483a61f54693ceaaa64bfdee2822b550c817a40b57de5",
+  "movies": [
+    {
+      "path": "STR/OP_U.STR",
+      "oracle_lba": 14176,
+      "sectors": 13680,
+      "sha256": "d1b43edd2ae57e51b4888bf6561aaba00a0d4b0f202f05740276466663b595eb",
+      "video_sectors": 11970,
+      "audio_sectors": 1710,
+      "frames": 1368
+    },
+    {
+      "path": "STR/X1_U.STR",
+      "oracle_lba": 27856,
+      "sectors": 10628,
+      "sha256": "4162fff2117f7a12e7595c9c30bb936c33e37f771ed2dee957c039b1b3b17f10",
+      "video_sectors": 9300,
+      "audio_sectors": 1328,
+      "frames": 992
+    },
+    {
+      "path": "STR/X2_U.STR",
+      "oracle_lba": 38484,
+      "sectors": 12953,
+      "sha256": "4a917882767fbb2f1dcf3dbadfc8a95f7563b8424888760f67b11c6bf11e8e69",
+      "video_sectors": 11334,
+      "audio_sectors": 1619,
+      "frames": 1209
+    },
+    {
+      "path": "STR/X3_U.STR",
+      "oracle_lba": 51437,
+      "sectors": 10853,
+      "sha256": "125c5a0dee9e421e81b875023cb8a9dc340cd9021822f3b172446e48e8d6e27e",
+      "video_sectors": 9497,
+      "audio_sectors": 1356,
+      "frames": 1013
+    },
+    {
+      "path": "STR/X4_U.STR",
+      "oracle_lba": 62290,
+      "sectors": 13532,
+      "sha256": "665a9511e2c9ed9db0342ff5bd1d8681bd8da208ca2f4afad9623d9fd29c1da1",
+      "video_sectors": 11841,
+      "audio_sectors": 1691,
+      "frames": 1263
+    },
+    {
+      "path": "STR/Z1_U.STR",
+      "oracle_lba": 75822,
+      "sectors": 9621,
+      "sha256": "18500699fcd3370e545e7b7cadb54132d1ee887988c97cb305b200ff2b169706",
+      "video_sectors": 8419,
+      "audio_sectors": 1202,
+      "frames": 898
+    },
+    {
+      "path": "STR/Z2_U.STR",
+      "oracle_lba": 85443,
+      "sectors": 12364,
+      "sha256": "a9cc460097a8e942a2df9b76b42ced7cf50849d1ed38b57cedfdf54c67fdfa77",
+      "video_sectors": 10819,
+      "audio_sectors": 1545,
+      "frames": 1154
+    },
+    {
+      "path": "STR/Z3_U.STR",
+      "oracle_lba": 97807,
+      "sectors": 10146,
+      "sha256": "ecb16dc9acc6c8a180aee1b22fa2911b251a52155a403054ccd3b377bc69fb5c",
+      "video_sectors": 8878,
+      "audio_sectors": 1268,
+      "frames": 947
+    },
+    {
+      "path": "STR/Z4_U.STR",
+      "oracle_lba": 107953,
+      "sectors": 31960,
+      "sha256": "5248cc76a5a32d8f22c922ec29d99548d1be293592982ef11f445c0171da30c1",
+      "video_sectors": 27965,
+      "audio_sectors": 3995,
+      "frames": 2983
+    },
+    {
+      "path": "STR/Z5_U.STR",
+      "oracle_lba": 139913,
+      "sectors": 9900,
+      "sha256": "a1e31d7d1804f484b21961f455d01bfcc8c4180936accb9030998952c5f11fc3",
+      "video_sectors": 8663,
+      "audio_sectors": 1237,
+      "frames": 924
+    }
+  ]
+}

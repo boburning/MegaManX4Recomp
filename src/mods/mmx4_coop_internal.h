@@ -65,6 +65,7 @@ void mmx4_coop_split_camera_prepare(unsigned owner);
 void mmx4_coop_split_dragoon_camera_release(uint32_t actor);
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]);
 void mmx4_coop_split_commit_scene_camera(unsigned owner);
+void mmx4_coop_split_door_camera_bounds(unsigned seats,const uint16_t bounds[4]);
 void mmx4_coop_split_scene_camera_end(unsigned owner,const uint8_t canonical[0xFC],int committed);
 void mmx4_coop_split_actors(Mmx4CoopViewActor actors[2]);
 int mmx4_coop_split_camera_copy(unsigned seat,uint8_t layers[0xFC]);
@@ -103,6 +104,8 @@ unsigned mmx4_coop_lifecycle_menu_fade(uint32_t buffer);
 int mmx4_coop_lifecycle_draw_menu(CPUState *cpu,unsigned seat);
 void mmx4_coop_combat_reset(void);
 unsigned mmx4_coop_vehicle_effect_owner(uint32_t actor);
+/* Allocating seat (1/2), or a captured effect's subsequently bound victim. */
+unsigned mmx4_coop_secondary_allocation_owner(uint32_t actor);
 void mmx4_coop_combat_project_end(uint32_t vehicle_mirror);
 /* Current projection's native Ride Armor; Chasers are deliberately excluded. */
 int mmx4_coop_armor_mounted(void);

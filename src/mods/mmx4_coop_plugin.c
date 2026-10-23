@@ -825,10 +825,26 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
     }else if(command==5) {
         fixture_invulnerable=first_arg&3u;
         psx_mod_write_word(diagnostic+0x54,1);
+    }else if(command==8 && mmx4_coop_ready() && first_arg>=2 && first_arg<=10 &&
+             !psx_mod_netplay_is_active() && psx_mod_read_byte(PLAY)==6 &&
+             !psx_mod_read_byte(PLAY+1) && !psx_mod_read_byte(PLAY+0x1C)) {
+        /* Offline QA only: prepare an authored movie gateway, bypassing its
+         * earlier campaign prerequisites. The original dispatcher plays the
+         * movie and owns all completion, dialogue and next-scene writes. */
+        if(first_arg==2 || first_arg==3 || first_arg==4 || first_arg==6 || first_arg==7) {
+            /* Native2E420 derives its movie/dialogue route from the saved
+             * campaign progress. Enter that real frontend initialization;
+             * no nested frontend call or guessed movie substate is needed. */
+            unsigned progress=first_arg==3?1u:first_arg==4?8u:first_arg==7?3u:0u;
+            psx_mod_write_byte(PLAY+0x5F,(uint8_t)progress);
+            psx_mod_write_byte(PLAY+0x59,(uint8_t)(first_arg==4?255u:first_arg==7?15u:0u));
+            psx_mod_write_word(PLAY,3u);
+        }else psx_mod_write_word(PLAY,first_arg==5 || first_arg==10?11u:10u);
+        psx_mod_write_word(diagnostic+0x54,1);
     }else if(command==7 && mmx4_coop_ready() && first_arg<2 && second_arg<=8 && third_arg<=2) {
         /* Weapon/progress setup follows the same admitted native boundary
          * in offline and development netplay; P1 still owns all progress. */
-        if(third_arg)psx_mod_write_byte(PLAY+0x59,255);
+        if(third_arg==1)psx_mod_write_byte(PLAY+0x59,255);
         if(third_arg==2) {
             psx_mod_write_byte(PLAY+0x47,15);psx_mod_write_byte(PLAY+0x48,2);
         }
@@ -887,11 +903,37 @@ static int development_fixture(CPUState *cpu,uint32_t address) {
         }
     }
     psx_mod_write_word(diagnostic+0x38,sequence);
+    if(command==8 && psx_mod_read_word(diagnostic+0x54)==1)
+        return mmx4_coop_finish(cpu,0);
 #else
     (void)cpu;
 #endif
     return 0;
 }
+
+#ifndef PSX_NO_DEBUG_TOOLS
+static unsigned development_movie_call;
+#define MOVIE_COUNTERS(n) {"mmx4.qa.movie" #n ".native-starts", \
+    "mmx4.qa.movie" #n ".native-returns", "mmx4.qa.movie" #n ".last-frame"}
+static const char *const development_movie_counters[11][3]={
+    MOVIE_COUNTERS(0),MOVIE_COUNTERS(1),MOVIE_COUNTERS(2),MOVIE_COUNTERS(3),
+    MOVIE_COUNTERS(4),MOVIE_COUNTERS(5),MOVIE_COUNTERS(6),MOVIE_COUNTERS(7),
+    MOVIE_COUNTERS(8),MOVIE_COUNTERS(9),MOVIE_COUNTERS(10)};
+#undef MOVIE_COUNTERS
+static int development_movie_observer(CPUState *cpu,uint32_t address) {
+    if(development_movie_call || !diagnostic)return 0;
+    unsigned movie=cpu->gpr[4]&255u;
+    if(movie>10)return 0;
+    /* Counter names are borrowed by the runtime and need static lifetime. */
+    psx_mod_counter_add(development_movie_counters[movie][0],1);
+    development_movie_call=1;
+    uint32_t result=guest(cpu,address,cpu->gpr[4],cpu->gpr[5]);
+    development_movie_call=0;
+    psx_mod_counter_add(development_movie_counters[movie][1],1);
+    psx_mod_counter_add(development_movie_counters[movie][2],psx_mod_read_word(0x801441C0u));
+    return mmx4_coop_finish(cpu,result);
+}
+#endif
 
 static uint32_t character_palette(unsigned character) {
     return character==counterpart?assets[character].palette:psx_mod_read_word(SCRATCH+0x28);
@@ -1463,6 +1505,9 @@ static int present_local_view(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 static int snapshot_ready(void) {
+#ifndef PSX_NO_DEBUG_TOOLS
+    if(development_movie_call)return 0;
+#endif
     return assets[0].loaded && assets[1].loaded && ultimate_archive.loaded && diagnostic && arena && hud_arena &&
         !(inside || rendering || projected || camera_call || camera_update_call || hud_call ||
           upload_guard || local_view_call || saved_cheat || psx_mod_local_view_scope()) &&
@@ -1694,6 +1739,9 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_coop) {
     psx_mod_register_function_filter_plugin(ID,0x80027A5C,camera_target);
     psx_mod_register_function_filter_plugin(ID,0x80027AAC,camera_target);
     psx_mod_register_function_filter_plugin(ID,0x8001FF50,development_fixture);
+#ifndef PSX_NO_DEBUG_TOOLS
+    psx_mod_register_function_filter_plugin(ID,0x80018000u,development_movie_observer);
+#endif
     psx_mod_register_function_filter_plugin(ID,0x80024E70,coop_hud);
     psx_mod_register_function_filter_plugin(ID,0x80024334,render_owned_effect);
     psx_mod_register_function_filter_plugin(ID,0x800EA4D0,retained_upload);

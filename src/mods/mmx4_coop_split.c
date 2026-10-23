@@ -12,7 +12,8 @@
 #define VISITS_OFFSET (16u+2u*CAMERA_BYTES)
 #define STAIRS_OFFSET (VISITS_OFFSET+MMX4_COOP_PLACEMENTS/8u)
 #define JUNGLE_OFFSET (STAIRS_OFFSET+2u*0x30u)
-#define STATE_BYTES (JUNGLE_OFFSET+2u*TRAIN_SLOTS*TRAIN_ACTOR_BYTES)
+#define INTRO_OWNER_OFFSET (JUNGLE_OFFSET+2u*TRAIN_SLOTS*TRAIN_ACTOR_BYTES)
+#define STATE_BYTES (INTRO_OWNER_OFFSET+48u*4u)
 
 static uint32_t state;
 static unsigned scanning,bounds_call,supplemental,spatial_call,background_call;
@@ -25,11 +26,15 @@ static uint32_t background_actor,background_dx;
 static unsigned background_parallax;
 static unsigned train_scene_call;
 static unsigned intro_explosion_call,intro_shake_call,intro_explosion_published;
+static unsigned intro_camera_call;
+static unsigned volcano_call,volcano_fireball_call;
+static void initialize_cameras(void);
 
 int mmx4_coop_split_snapshot_ready(void) {
     return !(scanning || bounds_call || supplemental || spatial_call || mushroom_camera_call || destructible_camera_call || lift_camera_call || jungle_background_call || frost_camera_call || background_call ||
         background_actor || background_dx || background_parallax || train_scene_call ||
-        intro_explosion_call || intro_shake_call || intro_explosion_published);
+        intro_explosion_call || intro_shake_call || intro_explosion_published || intro_camera_call ||
+        volcano_call || volcano_fireball_call);
 }
 int mmx4_coop_split_snapshot(Mmx4SnapshotIO *s) {
     /* Camera, placement and controller bytes use the guest-memory section. */
@@ -128,14 +133,58 @@ static int intro_boss(uint32_t actor) {
         !((actor-0x8013BED0u)%0x9Cu) && psx_mod_read_byte(actor) &&
         psx_mod_read_byte(actor+1)==0;
 }
-static void project_intro_sprite(uint32_t actor) {
+static uint32_t intro_owner_slot(uint32_t actor) {
+    return state+INTRO_OWNER_OFFSET+(actor-0x8013BED0u)/0x9Cu*4u;
+}
+static uint32_t intro_camera(uint32_t boss) {
+    unsigned owner=state?psx_mod_read_word(intro_owner_slot(boss)):0;
+    return owner && owner<=2 ? state+16u+(owner-1u)*CAMERA_BYTES : CAMERA;
+}
+static void intro_projectile_origin(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[16],parent=cpu->gpr[17];
+    if(!available() || psx_mod_read_byte(MMX4_PLAY+12) || psx_mod_read_byte(MMX4_PLAY+13) ||
+       actor<0x8013F328u || actor>=0x801406A8u || (actor-0x8013F328u)%0x9Cu ||
+       !psx_mod_read_byte(actor) || psx_mod_read_byte(actor+1) ||
+       psx_mod_read_word(actor+0x7C)!=parent || !intro_boss(parent) ||
+       psx_mod_read_byte(parent+0x14u)!=255)return;
+    /* Native994E0's background shots add CAMERA to their screen-relative
+     * parent. Match the body's recorded origin without another AI update. */
+    cpu->gpr[3]=psx_mod_read_word(intro_camera(parent)+(address==0x80099634u?8u:12u));
+    psx_mod_counter_add("mmx4.coop.intro-shot-view-origins",1);
+}
+static int intro_boss_camera(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(intro_camera_call || !available() || !intro_boss(actor) ||
+       psx_mod_read_byte(MMX4_PLAY+12) || psx_mod_read_byte(MMX4_PLAY+13))return 0;
+    initialize_cameras();
+    if(address==0x80041DF0u) {
+        /* Capture the participant while XY is still in world space. The
+         * following background phase has screen coordinates, so choosing a
+         * hero later would mistake the waiting player for its owner. Refresh
+         * on every world departure, including a reused native actor slot. */
+        Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+        unsigned owner=mmx4_coop_view_nearest(actors,
+            (int16_t)psx_mod_read_half(actor+10),(int16_t)psx_mod_read_half(actor+14),0);
+        psx_mod_write_word(intro_owner_slot(actor),owner+1u);
+    }
+    uint8_t canonical[CAMERA_BYTES];read_bytes(CAMERA,canonical,sizeof canonical);
+    copy_camera(CAMERA,intro_camera(actor));
+    intro_camera_call=1;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    intro_camera_call=0;
+    write_bytes(CAMERA,canonical,sizeof canonical);
+    psx_mod_counter_add("mmx4.coop.intro-dragon-view-origins",1);
+    return mmx4_coop_finish(cpu,result);
+}
+static void project_intro_sprite(uint32_t actor,uint32_t boss) {
     if(!psx_mod_read_byte(actor) || psx_mod_read_byte(actor+0x14u)!=255)return;
-    /* Native80041F00/8004205C change this boss between screen and world
+    /* Native80041DF0/8004205C change this boss between screen and world
      * coordinates; type10 attachments inherit the same layer. Rebase only
-     * in the private draw transaction, before replacing the canonical camera.
+     * in the private draw transaction, using the recorded participant's view.
      * Integer halfwords match the native emitter without fractional carry. */
-    psx_mod_write_half(actor+10,psx_mod_read_half(actor+10)+psx_mod_read_half(CAMERA+10));
-    psx_mod_write_half(actor+14,psx_mod_read_half(actor+14)+psx_mod_read_half(CAMERA+14));
+    uint32_t camera=intro_camera(boss);
+    psx_mod_write_half(actor+10,psx_mod_read_half(actor+10)+psx_mod_read_half(camera+10));
+    psx_mod_write_half(actor+14,psx_mod_read_half(actor+14)+psx_mod_read_half(camera+14));
     psx_mod_write_byte(actor+0x14u,0);
     psx_mod_counter_add("mmx4.coop.split-intro-sprite-projected",1);
 }
@@ -145,12 +194,12 @@ void mmx4_coop_split_project_intro_boss(void) {
        psx_mod_read_byte(MMX4_PLAY+13))return;
     for(unsigned i=0;i<48;++i) {
         uint32_t actor=0x8013BED0u+i*0x9Cu;
-        if(intro_boss(actor))project_intro_sprite(actor);
+        if(intro_boss(actor))project_intro_sprite(actor,actor);
     }
     for(unsigned i=0;i<32;++i) {
         uint32_t actor=0x8013E510u+i*0x70u;
         if(psx_mod_read_byte(actor+1)==10 && intro_boss(psx_mod_read_word(actor+0x50)))
-            project_intro_sprite(actor);
+            project_intro_sprite(actor,psx_mod_read_word(actor+0x50));
     }
 }
 void mmx4_coop_split_reset(void) {
@@ -159,6 +208,8 @@ void mmx4_coop_split_reset(void) {
     scanning=bounds_call=supplemental=spatial_call=mushroom_camera_call=destructible_camera_call=lift_camera_call=jungle_background_call=background_call=0;
     background_actor=background_dx=background_parallax=frost_camera_call=train_scene_call=0;
     intro_explosion_call=intro_shake_call=intro_explosion_published=0;
+    intro_camera_call=0;
+    volcano_call=volcano_fireball_call=0;
 }
 int mmx4_coop_split_activate(void) {
     state=mmx4_coop_split_views()?psx_mod_memory_alloc(STATE_BYTES,4):0;
@@ -209,7 +260,7 @@ static void cannon_laser_origin(CPUState *cpu,uint32_t address) {
     unsigned value_register=address==0x800A3C00u?3u:2u;
     unsigned stage=psx_mod_read_byte(MMX4_PLAY+12);
     uint32_t beam=cpu->gpr[16],parent=cpu->gpr[17];
-    if(!available() || (stage!=7 && stage!=8) || beam<0x8013F328u ||
+    if(!available() || (stage!=7 && stage!=8 && !(stage==11 && type==36u)) || beam<0x8013F328u ||
        beam>=0x801406A8u || (beam-0x8013F328u)%0x9Cu ||
        !psx_mod_read_byte(beam) || psx_mod_read_byte(beam+1)!=type ||
        psx_mod_read_word(beam+0x7C)!=parent || parent<0x8013BED0u ||
@@ -222,7 +273,8 @@ static void cannon_laser_origin(CPUState *cpu,uint32_t address) {
     initialize_cameras();
     /* Native9D100 and A3B04 clamp two cannon beam families against CAMERA.x,
      * dragging distant emitters into P1's view. A3BFC also derives a culling
-     * extent from that origin. Supply the actual emitter's nearest view to
+     * extent from that origin. Sigma2 reuses the same type36 beams as the
+     * earlier cannons. Supply the actual emitter's nearest view to
      * each loaded value; native collision, animation and lifetime run once,
      * retaining authored world coordinates in either facing direction. */
     cpu->gpr[value_register]=(uint32_t)(int32_t)(int16_t)
@@ -244,19 +296,27 @@ static void copy_shake_command(uint32_t destination,uint32_t source,unsigned axi
 }
 static int intro_shake(CPUState *cpu,uint32_t address) {
     if(intro_shake_call || !state || !mmx4_coop_split_views() || !mmx4_coop_ready() ||
-       psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6 ||
-       psx_mod_read_byte(MMX4_PLAY+12))return 0;
+       psx_mod_local_view_scope() || psx_mod_read_byte(MMX4_PLAY)!=6)return 0;
+    unsigned stage=psx_mod_read_byte(MMX4_PLAY+12);
+    if(stage!=0 && stage!=4)return 0;
     uint32_t caller=cpu->gpr[31];
     unsigned explosion=caller==0x800BBD08u || caller==0x800BBD50u || caller==0x800BBE58u;
     unsigned impact=caller==0x800BE6ACu || caller==0x800BE778u ||
         caller==0x800BEF58u || caller==0x800BF104u || caller==0x800BF2D0u ||
         caller==0x800C0750u || caller==0x800C07F8u;
+    if(stage==4) {
+        explosion=0;
+        impact=caller==0x800A0858u || caller==0x800A0CB8u || caller==0x800A0D6Cu ||
+            caller==0x800A0E04u || caller==0x800A1438u || caller==0x800A14C0u;
+    }
     if(!explosion && !impact)return 0;
     int x=(int16_t)psx_mod_read_half(CAMERA+10)+160;
     int y=(int16_t)psx_mod_read_half(CAMERA+14)+128;
     if(impact) {
         uint32_t actor=cpu->gpr[16];
         if(actor<0x80010000u || actor>0x801FF000u || !psx_mod_read_byte(actor))return 0;
+        if(stage==4 && (actor<0x8013F328u || actor>=0x801406A8u ||
+           (actor-0x8013F328u)%0x9Cu || psx_mod_read_byte(actor+1)!=33))return 0;
         x=(int16_t)psx_mod_read_half(actor+10);y=(int16_t)psx_mod_read_half(actor+14);
     }
     /* Subtype0 issues shake for the complete closing wall, whose authored
@@ -278,8 +338,9 @@ static int intro_shake(CPUState *cpu,uint32_t address) {
         uint32_t shadow=state+16u+seat*CAMERA_BYTES;
         if(!mmx4_coop_alive(seat) || !intro_effect_near(shadow,x,y,half_height))continue;
         copy_shake_command(shadow,CAMERA,axis);
-        if(intro_explosion_call)intro_explosion_published|=1u<<(seat*2u+axis);
-        psx_mod_counter_add(seat?"mmx4.coop.p2-intro-shakes":"mmx4.coop.p1-intro-shakes",1);
+        if(intro_explosion_call || volcano_fireball_call)intro_explosion_published|=1u<<(seat*2u+axis);
+        psx_mod_counter_add(stage==4?(seat?"mmx4.coop.p2-volcano-shakes":"mmx4.coop.p1-volcano-shakes"):
+            (seat?"mmx4.coop.p2-intro-shakes":"mmx4.coop.p1-intro-shakes"),1);
     }
     /* The world event runs once. Only its native shake command is published;
      * room limits, camera origins and the other shake axis remain personal. */
@@ -314,6 +375,71 @@ static int intro_explosions(CPUState *cpu,uint32_t address) {
                 copy_shake_command(CAMERA,state+16u+canonical_owner*CAMERA_BYTES,axis);
     }
     intro_explosion_published=0;
+    return mmx4_coop_finish(cpu,result);
+}
+static int volcano_context(void) {
+    return state && mmx4_coop_split_views() && mmx4_coop_ready() &&
+        !psx_mod_local_view_scope() && psx_mod_read_byte(MMX4_PLAY)==6 &&
+        psx_mod_read_byte(MMX4_PLAY+12)==4;
+}
+static int volcano_controller(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(volcano_call || !volcano_context() || actor<0x80142F98u || actor>=0x80143598u ||
+       (actor-0x80142F98u)%0x30u || psx_mod_read_byte(actor+1)!=33)return 0;
+    Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+    if(!actors[0].active && !actors[1].active)return 0;
+    int x=(int16_t)psx_mod_read_half(actor+10),y=(int16_t)psx_mod_read_half(actor+14);
+    unsigned subtype=psx_mod_read_byte(actor+2);
+    unsigned owner=mmx4_coop_view_nearest(actors,x,y,0);
+    if((subtype&0xF0u)!=0x20u) {
+        owner=!actors[0].active || (actors[1].active && actors[1].world_x>actors[0].world_x);
+        /* Keep an authored emitter available to a trailing living hero
+         * while the other has already left its native activation window. */
+        for(unsigned seat=0;seat<2;++seat) {
+            int dx=actors[seat].world_x-x;
+            int eligible=(subtype&0xF0u)==0 ? dx>0 && dx<=944 :
+                (subtype&15u)?dx<=-385 && dx>=-959:dx>384 && dx<=1216;
+            if(actors[seat].active && eligible)owner=seat;
+        }
+    }
+    unsigned projected=(unsigned)(mmx4_coop_projected()!=0);
+    if(projected && owner!=projected)return 0;
+    initialize_cameras();uint8_t canonical[CAMERA_BYTES];
+    read_bytes(CAMERA,canonical,sizeof canonical);
+    copy_camera(CAMERA,state+16u+owner*CAMERA_BYTES);
+    volcano_call=1;
+    if(owner!=projected)mmx4_coop_enter_second();
+    /* One original timer/emission pass. Allocation provenance already lives
+     * in combat's serialized secondary-owner table; no XY-based guess is
+     * possible for the falling branch's freshly allocated zeroed body. */
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    if(owner!=projected)mmx4_coop_leave_second();
+    volcano_call=0;write_bytes(CAMERA,canonical,sizeof canonical);
+    psx_mod_counter_add("mmx4.coop.volcano-emitter-view-ticks",1);
+    return mmx4_coop_finish(cpu,result);
+}
+static int volcano_fireball(CPUState *cpu,uint32_t address) {
+    uint32_t actor=cpu->gpr[4];
+    if(volcano_fireball_call || !volcano_context() || actor<0x8013F328u || actor>=0x801406A8u ||
+       (actor-0x8013F328u)%0x9Cu || psx_mod_read_byte(actor+1)!=33)return 0;
+    unsigned owner=mmx4_coop_secondary_allocation_owner(actor);
+    if(!owner || owner>2 || !mmx4_coop_alive(owner-1u)) {
+        Mmx4CoopViewActor actors[2];mmx4_coop_split_actors(actors);
+        owner=mmx4_coop_view_nearest(actors,(int16_t)psx_mod_read_half(actor+10),
+            (int16_t)psx_mod_read_half(actor+14),0)+1u;
+    }
+    initialize_cameras();uint8_t canonical[CAMERA_BYTES];
+    read_bytes(CAMERA,canonical,sizeof canonical);
+    copy_camera(CAMERA,state+16u+(owner-1u)*CAMERA_BYTES);
+    intro_explosion_published=0;volcano_fireball_call=1;
+    uint32_t result=mmx4_coop_call(cpu,address,actor,cpu->gpr[5]);
+    volcano_fireball_call=0;write_bytes(CAMERA,canonical,sizeof canonical);
+    unsigned canonical_owner=psx_mod_read_word(state+8u)==2u;
+    for(unsigned axis=0;axis<2;++axis)
+        if(intro_explosion_published&(1u<<(canonical_owner*2u+axis)))
+            copy_shake_command(CAMERA,state+16u+canonical_owner*CAMERA_BYTES,axis);
+    intro_explosion_published=0;
+    psx_mod_counter_add("mmx4.coop.volcano-fireball-view-ticks",1);
     return mmx4_coop_finish(cpu,result);
 }
 static uint32_t byte_word(const uint8_t *bytes,unsigned offset) {
@@ -756,11 +882,32 @@ static int fortress_background(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
-    if(!available() || owner>1 || mmx4_coop_lifecycle_script_owner()>=0 ||
-       psx_mod_read_byte(MMX4_PLAY+0x10) || psx_mod_read_byte(MMX4_PLAY+0x1C))return 0;
+    if(!available() || owner>1 || (mmx4_coop_lifecycle_script_owner()>=0 &&
+       !mmx4_coop_lifecycle_paired_door()) ||
+       psx_mod_read_byte(MMX4_PLAY+0x10) ||
+       (psx_mod_read_byte(MMX4_PLAY+0x1C) && !mmx4_coop_lifecycle_nova_active()))return 0;
+    /* Nova's personal attack lock does not move the other hero's camera.
+     * Door eligibility still runs natively, including while Both waits;
+     * its trailing visibility query needs that waiting hero's real view. */
     initialize_cameras();read_bytes(CAMERA,canonical,CAMERA_BYTES);
     copy_camera(CAMERA,state+16u+owner*CAMERA_BYTES);
     return 1;
+}
+void mmx4_coop_split_door_camera_bounds(unsigned seats,const uint16_t bounds[4]) {
+    if(!available())return;
+    initialize_cameras();
+    /* Publish the opening door's enclosure once. Subsequent camera-area
+     * crossings belong to each hero, including a retreat down the stairs. */
+    unsigned current=psx_mod_read_word(state+8u);
+    for(unsigned seat=0;seat<2;++seat)if(seats&(1u<<seat))
+        for(unsigned i=0;i<4;++i) {
+            psx_mod_write_half(state+16u+seat*CAMERA_BYTES+0x1Cu+i*2u,bounds[i]);
+            psx_mod_write_half(state+16u+seat*CAMERA_BYTES+0x24u+i*2u,bounds[i]);
+            if(current==seat+1u) {
+                psx_mod_write_half(CAMERA+0x1Cu+i*2u,bounds[i]);
+                psx_mod_write_half(CAMERA+0x24u+i*2u,bounds[i]);
+            }
+        }
 }
 void mmx4_coop_split_commit_scene_camera(unsigned owner) {
     if(!state || owner>1 || !mmx4_coop_split_views() || !mmx4_coop_ready() ||
@@ -864,13 +1011,9 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
         return;
     }
     uint32_t shadow=state+16u+other*CAMERA_BYTES;
-    /* Both participants share the door's authored room limits while it is
-     * opening, but remain independently controlled through the aperture.
-     * Retain each origin and run ordinary follow for the other body rather
-     * than substituting the opener's whole camera/HUD until they cross. */
-    if(paired)for(unsigned offset=0x1C;offset<0x2C;offset+=2)
-        psx_mod_write_half(shadow+offset,(uint16_t)(canonical[offset]|
-            (uint16_t)canonical[offset+1]<<8));
+    /* The opening door publishes its enclosure once. Recopying these limits
+     * each frame also copies a trailing hero's later return-area bounds,
+     * which can clamp the partner back through the open doorway. */
     /* Current/target limits, dead zones and authored room metadata belong
      * to the individual view. Shared scripts synchronize whole records above. */
     for(unsigned offset=0;offset<8u;++offset)psx_mod_write_byte(shadow+offset,canonical[offset]);
@@ -932,6 +1075,7 @@ static int spatial_stage_actor(CPUState *cpu,uint32_t address) {
                 actors[seat].world_x>=(int16_t)psx_mod_read_half(actor+10u));
     }
     int scene=mmx4_coop_lifecycle_script_owner();
+    if(!kind && mmx4_coop_lifecycle_paired_door())scene=-1;
     unsigned target=scene>=0?(unsigned)scene:mmx4_coop_view_nearest(
         eligible[0].active || eligible[1].active?eligible:actors,
         (int16_t)psx_mod_read_half(actor+10u),(int16_t)psx_mod_read_half(actor+14u),0);
@@ -1087,11 +1231,13 @@ static int placement_allocate(CPUState *cpu,uint32_t address) {
     }
     unsigned refight_portal=category==4u && psx_mod_read_byte(record+1u)==27u &&
         psx_mod_read_byte(MMX4_PLAY+12)==12 && !psx_mod_read_byte(MMX4_PLAY+13);
+    unsigned volcano_emitter=category==3u && psx_mod_read_byte(record+1u)==33u &&
+        psx_mod_read_byte(MMX4_PLAY+12)==4;
     if((psx_mod_read_byte(state+VISITS_OFFSET+index/8u)&(1u<<(index&7u))) ||
        (supplemental && (psx_mod_read_byte(record)&0x70u)) ||
        (supplemental && !(category<3u ||
             (category==4u && (psx_mod_read_byte(record+1u)==4u ||
-                             psx_mod_read_byte(record+1u)==8u)) || refight_portal))) {
+                             psx_mod_read_byte(record+1u)==8u)) || refight_portal || volcano_emitter))) {
         psx_mod_counter_add("mmx4.coop.split-respawn-suppressed",1);
         return mmx4_coop_finish(cpu,0);
     }
@@ -1273,6 +1419,12 @@ static int frost_ice_range(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,0);
 }
 PSX_MOD_CONSTRUCTOR(mmx4_register_coop_split) {
+    psx_mod_register_instruction_plugin(COOP_ID,0x80099634u,0x8E240008u,intro_projectile_origin);
+    psx_mod_register_instruction_plugin(COOP_ID,0x80099650u,0x00000000u,intro_projectile_origin);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800BC748u,volcano_controller);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x800A03B8u,volcano_fireball);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x80041DF0u,intro_boss_camera);
+    psx_mod_register_function_filter_plugin(COOP_ID,0x8004205Cu,intro_boss_camera);
     psx_mod_register_instruction_plugin(COOP_ID,0x8009D104u,0x8623000Au,cannon_laser_origin);
     psx_mod_register_instruction_plugin(COOP_ID,0x800A3B08u,0x8623000Au,cannon_laser_origin);
     psx_mod_register_instruction_plugin(COOP_ID,0x800A3C00u,0x8622000Au,cannon_laser_origin);

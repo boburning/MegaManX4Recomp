@@ -8,6 +8,7 @@
 #include "crash_trace.h"
 #include "mmx4_resident_catalog.h"
 #include "mmx4_language_assets.h"
+#include "mmx4_fmv_pack.h"
 #include <array>
 #include <cstdio>
 #include <iterator>
@@ -20,12 +21,14 @@ using namespace Mmx4Language;
 constexpr const char* Package="mmx4.localization";
 constexpr const char* Media="mmx4.japanese-media";
 constexpr const char* Translation="mmx4.translation";
+constexpr const char* Movies="mmx4.japanese-fmvs";
 struct Patch {uint32_t address,original,value;};
 std::vector<Patch> patches;
 std::vector<std::pair<uint32_t,std::vector<uint8_t>>> guest_blobs;
 std::map<unsigned,std::vector<Member>> archives;
 std::map<unsigned,std::vector<uint8_t>> archive_headers;
 bool applied=false,exe_entered=false;
+bool fan_movies_active=false;
 
 void fail(const std::string& message) {psx_fatal_halt(("X4 language mod: "+message).c_str());}
 std::string sha(const std::vector<uint8_t>& data) {
@@ -69,7 +72,7 @@ unsigned index_for(const char* name) {
     for(unsigned i=0;i<std::size(MMX4Files);++i)if(!std::strcmp(name,MMX4Files[i].path))return i;
     throw std::runtime_error("Missing native X4 archive contract");
 }
-void reset() {patches.clear();guest_blobs.clear();archives.clear();archive_headers.clear();applied=false;exe_entered=false;}
+void reset() {patches.clear();guest_blobs.clear();archives.clear();archive_headers.clear();applied=false;exe_entered=false;fan_movies_active=false;}
 void publish() {
     if(!exe_entered || applied || patches.empty())return;
     // Wait for the EXE. Validate the whole transaction before its first write.
@@ -132,13 +135,49 @@ void stream(const ModMode2Disc& donor,const uint8_t* raw,const Stream& s) {
     patch(s.table,s.lba,mounted);patch(s.table+4,s.size,(size/2048)*2336);
     patch(s.table+8,s.first,u32(raw+uint64_t(lba)*2336));
 }
+void fan_activate(const char* resource,const char* attribution) {
+    try {
+        if(fan_movies_active)throw std::runtime_error("Choose one fan subtitle language per session");
+        const uint8_t* bytes=nullptr;uint64_t size=0;
+        if(!psx_mod_current_resource_bytes(resource,&bytes,&size))
+            throw std::runtime_error("Select the matching imported .x4fmv under Japanese FMVs (tools/import_fmv_subtitles.py)");
+        const auto extents=fmv_pack(bytes,size); // Validate the entire pack before mounting.
+        for(unsigned i=0;i<extents.size();++i) {
+            const auto& extent=extents[i];const auto& movie=movies[i+1];uint32_t mounted=0;
+            if(!psx_mod_append_disc_extent(resource,extent.offset,extent.sectors,&mounted))
+                throw std::runtime_error("Cannot mount fan movie stream");
+            patch(movie.table,movie.lba,mounted);
+            patch(movie.table+4,movie.size,extent.sectors*2336);
+            patch(movie.table+8,movie.first,u32(bytes+extent.offset));
+        }
+        fan_movies_active=true;
+        std::fprintf(stderr,"mmx4.language: ten fan-subtitled Japanese movies mounted (%s); see Japanese FMVs CREDITS.md and provenance/\n",attribution);
+    } catch(const std::exception& e) {fail(e.what());}
+}
+void movies_activate() {
+    char subtitles[16]{};
+    psx_mod_option_value(Movies,"japanese-fmvs","subtitles",subtitles,sizeof subtitles);
+    if(!std::strcmp(subtitles,"en")) {
+        fan_activate("english-movies","acediez Undub v1.13 / Hondoori translation");
+    } else if(!std::strcmp(subtitles,"es")) {
+        fan_activate("spanish-movies","El Retro Dan Retraducido Final; based on acediez Undub");
+    } else if(!std::strcmp(subtitles,"none")) {
+        try {
+            const uint8_t* bytes=nullptr;uint64_t size=0;
+            if(!psx_mod_current_resource_bytes("japanese-disc",&bytes,&size))
+                throw std::runtime_error("Select the verified original Japanese disc for movies without subtitles");
+            ModMode2Disc donor(bytes,size);
+            for(const auto& s:movies)stream(donor,bytes,s);
+            std::fprintf(stderr,"mmx4.language: original Japanese movies mounted without subtitles\n");
+        } catch(const std::exception& e) {fail(e.what());}
+    } else fail("Unsupported Japanese movie subtitle selection");
+}
 void media_activate() {
     try {
-        if(!enabled("fmvs") && !enabled("voices") && !enabled("title-screen"))return;
+        if(!enabled("voices") && !enabled("title-screen"))return;
         const uint8_t* bytes=nullptr;uint64_t size=0;
         if(!psx_mod_current_resource_bytes("japanese-disc",&bytes,&size))throw std::runtime_error("Select a verified Japanese disc");
         ModMode2Disc donor(bytes,size);
-        if(enabled("fmvs"))for(const auto& s:movies)stream(donor,bytes,s);
         if(enabled("title-screen")) {
             // US spawns the wordmark before its separate X/4 objects. JP's
             // word extends across X and must be drawn in front. Reorder only
@@ -238,7 +277,7 @@ void media_activate() {
                 mount_archive(i);
             }
         }
-        std::fprintf(stderr,"mmx4.language: Japanese media prepared fmvs=%u voices=%u title=%u\n",enabled("fmvs"),enabled("voices"),enabled("title-screen"));
+        std::fprintf(stderr,"mmx4.language: Japanese media prepared voices=%u title=%u\n",enabled("voices"),enabled("title-screen"));
     } catch(const std::exception& e) {fail(e.what());}
 }
 
@@ -313,7 +352,9 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_languages) {
     psx_mod_register_session_reset_plugin(Media,reset);
     psx_mod_register_activation_plugin(Media,media_activate);
     psx_mod_register_activation_plugin(Translation,translate_activate);
-    for(const char* id:{Media,Translation}) {
+    psx_mod_register_session_reset_plugin(Movies,reset);
+    psx_mod_register_activation_plugin(Movies,movies_activate);
+    for(const char* id:{Media,Translation,Movies}) {
         psx_mod_register_function_entry_plugin(id,0x800dae8c,entry);
         psx_mod_register_vblank_plugin(id,publish);
         psx_mod_register_savestate_plugin(id,restored);
