@@ -1,4 +1,4 @@
-# Prepared 1.0.4 - portable generated texture-pack defaults
+# Prepared 1.0.5 - portable generated texture-pack defaults
 
 - Rebuild against the accepted framework backport (#747) for portable generated defaults.
   Generated texture-pack directories follow the current installation and remain
