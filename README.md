@@ -5,6 +5,10 @@
 
 # Mega Man X4 Recompiled
 
+[Fan-subtitled Japanese FMVs](docs/FMV_SUBTITLES.md): optional movie-only mods
+from acediez/Hondoori (English) and El Retro Dan (Spanish), with
+[full attribution and preserved upstream readmes](docs/fmv-subtitles/CREDITS.md).
+
 **X and Zero. Together.**
 
 Mega Man X4 on Windows and Linux. **1.0.4 Stable Public Beta**, with two-player co-op.

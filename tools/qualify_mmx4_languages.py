@@ -22,6 +22,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for key in ('exe','game','disc','output'):parser.add_argument('--'+key,type=Path,required=True)
     parser.add_argument('--jp-disc',type=Path)
+    parser.add_argument('--fmv-mod',type=Path,help='Imported movie-only .psxmod')
+    parser.add_argument('--fmv-pack',type=Path,help='Matching verified .x4fmv resource')
+    parser.add_argument('--fmv-language',choices=('en','es'),default='en')
+    parser.add_argument('--fmv-via-selector',action='store_true',help='Choose fan movies through Japanese Media rather than standalone')
+    parser.add_argument('--fmv-watch-story',action='store_true',help='Capture and allow the first campaign movie to finish naturally before dialogue input')
     parser.add_argument('--japanese',nargs='*',choices=('fmvs','voices','title-screen'),default=[])
     parser.add_argument('--catalog',type=Path,help='Package an edited catalog, exercising the community authoring path')
     parser.add_argument('--language',choices=('es','pt-br'),default='es')
@@ -34,6 +39,8 @@ def main():
     qa=args.output.resolve()
     if os.name=='nt' and qa.drive.lower()=='c:':parser.error('Qualification output must be on a non-C: drive')
     if args.japanese and not args.jp_disc:parser.error('--japanese requires --jp-disc')
+    if bool(args.fmv_mod)!=bool(args.fmv_pack):parser.error('--fmv-mod and --fmv-pack are required together')
+    if args.fmv_via_selector and (not args.fmv_mod or not args.jp_disc):parser.error('--fmv-via-selector requires a fan mod and Japanese donor')
     qa.mkdir(parents=True,exist_ok=False)
     source=args.exe.resolve(strict=True);exe=qa/source.name
     shutil.copy2(source,exe)
@@ -43,15 +50,27 @@ def main():
     state='format_version = 2\n'
     if args.original_loader:
         state+='[[feature]]\npackage_id = "mmx4.enhancement.resident-loading"\nid = "resident-loading"\nenabled = false\n'
-    if args.japanese:
+    if args.japanese or args.fmv_via_selector:
         state+='[[feature]]\npackage_id = "mmx4.localization"\nid = "japanese-media"\nenabled = true\n[feature.values]\n'
-        state+=''.join(f'{key} = {str(key in args.japanese).lower()}\n' for key in ('fmvs','voices','title-screen'))
+        state+=''.join(f'{key} = {str(key in args.japanese or (key=="fmvs" and args.fmv_via_selector)).lower()}\n' for key in ('fmvs','voices','title-screen'))
+        if args.fmv_via_selector:state+='subtitles = '+json.dumps(args.fmv_language)+'\n'
         state+='[feature.resources]\njapanese-disc = '+json.dumps(args.jp_disc.resolve().as_posix())+'\n'
     state+='[[feature]]\npackage_id = "mmx4.localization"\nid = "translation"\nenabled = true\n'
     state+='[feature.values]\nlanguage = '+json.dumps(args.language)+'\n'
     if args.coop:
         state+='[[feature]]\npackage_id = "mmx4.coop"\nid = "coop"\nenabled = true\n[feature.values]\ncameras = "unified"\nlocal_cameras = "unified"\n'
     (qa/'mods/state.toml').write_text(state,encoding='utf-8')
+    if args.fmv_mod:
+        package_id='mmx4.fmv-subtitles.'+args.fmv_language
+        with zipfile.ZipFile(args.fmv_mod) as package:
+            # Only the trusted local importer's metadata archive belongs here.
+            # User-installed packages normally go through the launcher's installer.
+            expected={'manifest.toml','provenance.json','CREDITS.md','upstream/Readme.txt','upstream/LEEME.txt','upstream/acediez-Undub-v1.13-Readme.txt'}
+            if not set(package.namelist())<=expected:raise ValueError('Unexpected movie mod payload')
+            package.extractall(qa/'mods/installed'/package_id/'1.0.0')
+        with (qa/'mods/state.toml').open('a',encoding='utf-8') as statefile:
+            statefile.write('[[feature]]\npackage_id = '+json.dumps(package_id)+'\nid = "subtitled-fmvs"\n')
+            statefile.write('enabled = '+str(not args.fmv_via_selector).lower()+'\n[feature.resources]\nmovies = '+json.dumps(args.fmv_pack.resolve().as_posix())+'\n')
     if args.catalog:
         archive=qa/'community-translation.psxmod';build(args.catalog,archive)
         with zipfile.ZipFile(archive) as package:
@@ -77,6 +96,7 @@ def main():
             stdout=log,stderr=log,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     (qa/'owned.json').write_text(json.dumps(dict(pid=process.pid,port=port)))
     r=Runtime(port);report=dict(campaign=args.campaign,coop=args.coop,japanese=args.japanese,language=args.language,
+        fmv_language=args.fmv_language if args.fmv_mod else None,fmv_via_selector=args.fmv_via_selector,
         original_loader=args.original_loader,resolution=args.resolution,status='running')
     try:
         deadline=time.monotonic()+60
@@ -85,7 +105,7 @@ def main():
             except OSError:
                 assert process.poll() is None and time.monotonic()<deadline,'Runtime unavailable'
                 time.sleep(.2)
-        time.sleep(20 if 'fmvs' in args.japanese else 3)
+        time.sleep(20 if 'fmvs' in args.japanese or args.fmv_mod else 3)
         report['opening_fmv']=r.request('fmv_state');report['opening_cd']=r.request('cdrom_state')
         try:r.request('screenshot_file',path=str(qa/'opening.png'))
         except RuntimeError:pass # scanout can still be disabled during boot
@@ -126,6 +146,23 @@ def main():
                 if '24bpp' in str(error):r.request('screenshot_file',path=str(qa/f'loading-{i:02}.png'))
                 elif 'display disabled' not in str(error):raise
             time.sleep(.03)
+        if args.fmv_mod and args.fmv_watch_story:
+            table=0x800f14d8 if args.campaign else 0x800f14a8
+            lba,length,header=struct.unpack('<III',r.read(table,12))
+            report['story_movie']=dict(lba=lba,bytes=length,first=header,before=r.request('fmv_state'),samples=[])
+            started=time.monotonic()
+            for sample in range(8):
+                time.sleep(3)
+                report['story_movie']['samples'].append(dict(elapsed=time.monotonic()-started,
+                    fmv=r.request('fmv_state'),cd=r.request('cdrom_state')))
+                r.request('screenshot_file',path=str(qa/f'story-fmv-{sample:02}.png'))
+            # Two-speed native CD timeline. Waiting observes natural movie
+            # completion; it never changes the movie ID or success flags.
+            remaining=length/2336/150+4-(time.monotonic()-started)
+            while remaining>0:
+                time.sleep(min(remaining,1));remaining=length/2336/150+4-(time.monotonic()-started)
+            report['story_movie']['after']=r.request('fmv_state')
+            r.request('screenshot_file',path=str(qa/'story-fmv-completed.png'))
         deadline=time.monotonic()+140;captures=0;iteration=0
         while True:
             play=r.read(0x801721c0,0x20)

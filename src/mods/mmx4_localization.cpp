@@ -8,6 +8,7 @@
 #include "crash_trace.h"
 #include "mmx4_resident_catalog.h"
 #include "mmx4_language_assets.h"
+#include "mmx4_fmv_pack.h"
 #include <array>
 #include <cstdio>
 #include <iterator>
@@ -20,12 +21,15 @@ using namespace Mmx4Language;
 constexpr const char* Package="mmx4.localization";
 constexpr const char* Media="mmx4.japanese-media";
 constexpr const char* Translation="mmx4.translation";
+constexpr const char* FanEnglish="mmx4.fmv-subtitles.en";
+constexpr const char* FanSpanish="mmx4.fmv-subtitles.es";
 struct Patch {uint32_t address,original,value;};
 std::vector<Patch> patches;
 std::vector<std::pair<uint32_t,std::vector<uint8_t>>> guest_blobs;
 std::map<unsigned,std::vector<Member>> archives;
 std::map<unsigned,std::vector<uint8_t>> archive_headers;
 bool applied=false,exe_entered=false;
+bool fan_movies_active=false;
 
 void fail(const std::string& message) {psx_fatal_halt(("X4 language mod: "+message).c_str());}
 std::string sha(const std::vector<uint8_t>& data) {
@@ -69,7 +73,7 @@ unsigned index_for(const char* name) {
     for(unsigned i=0;i<std::size(MMX4Files);++i)if(!std::strcmp(name,MMX4Files[i].path))return i;
     throw std::runtime_error("Missing native X4 archive contract");
 }
-void reset() {patches.clear();guest_blobs.clear();archives.clear();archive_headers.clear();applied=false;exe_entered=false;}
+void reset() {patches.clear();guest_blobs.clear();archives.clear();archive_headers.clear();applied=false;exe_entered=false;fan_movies_active=false;}
 void publish() {
     if(!exe_entered || applied || patches.empty())return;
     // Wait for the EXE. Validate the whole transaction before its first write.
@@ -132,13 +136,36 @@ void stream(const ModMode2Disc& donor,const uint8_t* raw,const Stream& s) {
     patch(s.table,s.lba,mounted);patch(s.table+4,s.size,(size/2048)*2336);
     patch(s.table+8,s.first,u32(raw+uint64_t(lba)*2336));
 }
+void fan_activate(const char* attribution) {
+    try {
+        if(fan_movies_active)throw std::runtime_error("Choose one fan subtitle language per session");
+        const uint8_t* bytes=nullptr;uint64_t size=0;
+        if(!psx_mod_current_resource_bytes("movies",&bytes,&size))
+            throw std::runtime_error("Select the imported .x4fmv in its Languages entry (tools/import_fmv_subtitles.py)");
+        const auto extents=fmv_pack(bytes,size); // Validate the entire pack before mounting.
+        for(unsigned i=0;i<extents.size();++i) {
+            const auto& extent=extents[i];const auto& movie=movies[i+1];uint32_t mounted=0;
+            if(!psx_mod_append_disc_extent("movies",extent.offset,extent.sectors,&mounted))
+                throw std::runtime_error("Cannot mount fan movie stream");
+            patch(movie.table,movie.lba,mounted);
+            patch(movie.table+4,movie.size,extent.sectors*2336);
+            patch(movie.table+8,movie.first,u32(bytes+extent.offset));
+        }
+        fan_movies_active=true;
+        std::fprintf(stderr,"mmx4.language: ten fan-subtitled Japanese movies mounted (%s); see installed pack CREDITS.md and provenance.json\n",attribution);
+    } catch(const std::exception& e) {fail(e.what());}
+}
+void fan_english_activate() {fan_activate("acediez Undub v1.13 / Hondoori translation");}
+void fan_spanish_activate() {fan_activate("El Retro Dan Retraducido Final; based on acediez Undub");}
 void media_activate() {
     try {
         if(!enabled("fmvs") && !enabled("voices") && !enabled("title-screen"))return;
         const uint8_t* bytes=nullptr;uint64_t size=0;
         if(!psx_mod_current_resource_bytes("japanese-disc",&bytes,&size))throw std::runtime_error("Select a verified Japanese disc");
         ModMode2Disc donor(bytes,size);
-        if(enabled("fmvs"))for(const auto& s:movies)stream(donor,bytes,s);
+        // A required or independently enabled fan pack activates first. Mount
+        // only one set: two whole campaigns can exceed the native CD timeline.
+        if(enabled("fmvs") && !fan_movies_active)for(const auto& s:movies)stream(donor,bytes,s);
         if(enabled("title-screen")) {
             // US spawns the wordmark before its separate X/4 objects. JP's
             // word extends across X and must be drawn in front. Reorder only
@@ -313,7 +340,12 @@ PSX_MOD_CONSTRUCTOR(mmx4_register_languages) {
     psx_mod_register_session_reset_plugin(Media,reset);
     psx_mod_register_activation_plugin(Media,media_activate);
     psx_mod_register_activation_plugin(Translation,translate_activate);
-    for(const char* id:{Media,Translation}) {
+    for(const char* id:{FanEnglish,FanSpanish}) {
+        psx_mod_register_session_reset_plugin(id,reset);
+    }
+    psx_mod_register_activation_plugin(FanEnglish,fan_english_activate);
+    psx_mod_register_activation_plugin(FanSpanish,fan_spanish_activate);
+    for(const char* id:{Media,Translation,FanEnglish,FanSpanish}) {
         psx_mod_register_function_entry_plugin(id,0x800dae8c,entry);
         psx_mod_register_vblank_plugin(id,publish);
         psx_mod_register_savestate_plugin(id,restored);

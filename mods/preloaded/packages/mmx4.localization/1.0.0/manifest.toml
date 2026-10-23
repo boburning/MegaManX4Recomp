@@ -23,9 +23,41 @@ default_enabled = false
 feature = "japanese-media"
 id = "fmvs"
 label = "Japanese FMVs"
-description = "Use the Japanese opening and story movies, including their original audio."
+description = "Use Japanese movies with original audio. Fan subtitle packs can also be enabled independently without a Japanese disc."
 type = "boolean"
 default = false
+
+[[option]]
+feature = "japanese-media"
+id = "subtitles"
+label = "FMV subtitles"
+description = "Import and select the matching movie data in its Languages entry first. Subtitles are part of the original fan videos; dialogue and menus stay independent."
+type = "choice"
+default = "none"
+
+[[option.choice]]
+value = "none"
+label = "None (original Japanese disc)"
+
+[[option.choice]]
+value = "en"
+label = "English — acediez / Hondoori"
+
+[[option.choice]]
+value = "es"
+label = "Español — El Retro Dan"
+
+[[requirement]]
+feature = "japanese-media"
+package = "mmx4.fmv-subtitles.en"
+requires_feature = "subtitled-fmvs"
+when = { fmvs = "true", subtitles = "en" }
+
+[[requirement]]
+feature = "japanese-media"
+package = "mmx4.fmv-subtitles.es"
+requires_feature = "subtitled-fmvs"
+when = { fmvs = "true", subtitles = "es" }
 
 [[option]]
 feature = "japanese-media"
