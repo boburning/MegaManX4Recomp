@@ -14,9 +14,17 @@ for streaming FMV/audio (X4 streams STR/*.STR MDEC movies + XA/*.XA BGM/voice).
 | Size (.bin) | 592,217,136 bytes |
 | MD5 | `1C425B49BB25C45B3964B2D565DD0EC0` |
 | SHA-1 | `26FFE24A79384B24AF7571674251EE575E889B38` |
+| SHA-256 | `3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b` |
 
 Verified 2026-07-05: locally computed MD5 + SHA-1 + .bin size + serial. Source archive
 `Mega Man X4.7z` (kept bin/cue; never converted to ISO).
+
+The runtime requires this original disc SHA-256 before boot, independently of
+all mod selections. A matching serial or unchanged boot executable is not enough:
+modified movies, audio, text, assets or padding also reject the image. All
+changes must be installed as mods over the original disc; modified disc images
+are never supported. CUE and BIN selections verify the same data-track bytes;
+a lossless CHD is checked through its decoded raw sectors.
 
 Boot EXE: `SLUS_005.61` — PS-EXE header (little-endian):
 - entry (pc0):   `0x800DAE8C`

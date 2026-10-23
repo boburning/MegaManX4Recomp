@@ -51,8 +51,13 @@ The netplay host chooses the shared options.
 ## Start playing
 
 1. Download the **Windows ZIP** and extract it. The **1.0.3 Linux AppImage is pending**; earlier AppImages require x86_64 and glibc 2.38 or newer.
-2. Select your own **Mega Man X4 USA (SLUS-00561)** disc image. Choose the `.cue` from a `.cue` + `.bin` set. OpenBIOS is included; a separate BIOS dump is optional.
+2. Select your own **original, unmodified Mega Man X4 USA (SLUS-00561)** disc image. Choose the `.cue` from a `.cue` + `.bin` set. OpenBIOS is included; a separate BIOS dump is optional.
 3. For **local co-op**, enable **Mods → X + Zero Co-op**, assign Player 1 and Player 2 in **Controls**, and choose **Local co-op display** for Unified or side by side 8:3, then press **Play**. For **netplay**, press **Netplay** and host or join using **X + Zero Co-op**. Both peers need the same release.
+
+Only the [verified original USA disc](DISC.md) is accepted, including when every
+mod is disabled. All changes belong in **Mods**. Patched discs, undubs and
+retranslated disc images are unsupported; use the corresponding mods over the
+original disc.
 
 Co-op requires OpenGL and takes effect on a fresh game boot. Single-player remains available.
 
