@@ -106,6 +106,9 @@ def main():
                 time.sleep(.2)
         time.sleep(20 if 'fmvs' in args.japanese or args.fmv_pack else 3)
         report['opening_fmv']=r.request('fmv_state');report['opening_cd']=r.request('cdrom_state')
+        if args.fmv_pack or 'fmvs' in args.japanese:
+            report['opening_movie_table']=struct.unpack('<III',r.read(0x800f149c,12))
+            assert report['opening_movie_table'][0]>=251793,'Selected movies did not replace the native opening table'
         try:r.request('screenshot_file',path=str(qa/'opening.png'))
         except RuntimeError:pass # scanout can still be disabled during boot
         deadline=time.monotonic()+100

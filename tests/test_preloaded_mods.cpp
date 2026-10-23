@@ -97,11 +97,12 @@ int main(int argc, char** argv) {
     if(!manager.set_feature_enabled("mmx4.diagnostics","inputs",false,&error))return fail(error);
     for(const char* feature:{"japanese-media","translation"})
         if(manager.feature_enabled("mmx4.localization",feature))return fail("language mods must default off");
-    for(const char* option:{"fmvs","voices","title-screen"})
+    for(const char* option:{"voices","title-screen"})
         if(manager.feature_option_value("mmx4.localization","japanese-media",option)!="false")
             return fail("Japanese media switches must default off independently");
-    if(manager.feature_option_value("mmx4.localization","japanese-media","subtitles")!="none")
-        return fail("fan subtitles must default off");
+    if(manager.feature_enabled("mmx4.japanese-fmvs","japanese-fmvs") ||
+       manager.feature_option_value("mmx4.japanese-fmvs","japanese-fmvs","subtitles")!="none")
+        return fail("Japanese FMVs must default off with no subtitles selected");
     if(!manager.set_feature_enabled("mmx4.localization","translation",true,&error))return fail(error);
     const auto spanish=manager.resolve(kGameId,"",kDiscSha256);
     if(!spanish.ok || spanish.resources.size()!=2 || !spanish.resources[0].bytes || !spanish.resources[1].bytes)

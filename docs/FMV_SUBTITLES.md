@@ -121,5 +121,24 @@ Historical extraction/playback qualification on 2026-10-22 (before UI consolidat
 
 The owner requested the consolidated control on 2026-10-23. Framework resource
 conditions ensure only the chosen source is required and exposed in the UI.
-The updated control is being qualified separately from the historical playback
-evidence above; a changed interface does not qualify every movie transition.
+Qualification of the consolidated control:
+
+- All39 Windows title checks pass. Framework checks pass on Windows(3/3)
+  and Linux(4/4), including cached preparation and portable hashing paths.
+- Both real imported packs pass the native table/isolation test, all16
+  Japanese-movie/voice/title/text asset combinations pass, and all three
+  selector choices resolve exactly one verified media resource with distinct
+  session identities. Missing or corrupt selected media rejects; inactive
+  media is not required or loaded.
+- Muted Windows/OpenGL native runs for English/X, Spanish/Zero and original
+  Japanese/no subtitles all publish extended opening-movie tables, progress
+  MDEC and XA, accept native skip/input and reach intro gameplay. English and
+  Spanish are run without a Japanese donor configured.
+- Rendered recomp-ui checks show one Japanese FMVs entry, the three dropdown
+  choices, and exactly its matching credited picker. The two old subtitle
+  entries are absent. Metadata exports from either real sidecar produce the
+  same combined manifest, preserving both source readmes and provenance.
+
+Private evidence: `x4-fmv-consolidation` and `x4-fmv-one-selector` task folders.
+This UI change does not newly qualify every movie trigger/end transition,
+audible listening, co-op/netplay movie transitions or Linux playback.
