@@ -115,11 +115,5 @@ class ImportTests(unittest.TestCase):
             upstream = 'acediez-Undub-v1.13-Readme.txt' if language == 'en' else 'El-Retro-Dan-Final-LEEME.txt'
             self.assertEqual((package / 'upstream' / upstream).read_bytes(), (module.CREDITS / upstream).read_bytes())
 
-    @unittest.skipUnless(os.name == 'nt', 'Windows drive rule')
-    def test_generated_data_on_system_drive_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, 'F: or G:'):
-            module.non_system_path('C:/Temp/x4-fmv')
-
-
 if __name__ == '__main__':
     unittest.main()

@@ -120,6 +120,9 @@ void mmx4_coop_menu_assets(CPUState *cpu,unsigned seat) {
         ++late_menu_assets;
 }
 static unsigned scene_camera_commits,scene_camera_owner;
+void mmx4_coop_split_door_camera_bounds(unsigned seats,const uint16_t bounds[4]) {
+    (void)seats;(void)bounds;
+}
 void mmx4_coop_split_commit_scene_camera(unsigned owner) {
     ++scene_camera_commits;scene_camera_owner=owner;
 }
@@ -3149,7 +3152,7 @@ int main(void) {
     CHECK(mmx4_coop_lifecycle_snapshot(&pair_io));
     CHECK(!memcmp(&saved_pair,&both_door,sizeof saved_pair));
     CHECK(mmx4_coop_lifecycle_digest(2166136261u)==paired_digest);
-    uint32_t door_end=pair_bytes-32u*(1u+0x30u);
+    uint32_t door_end=pair_bytes-32u*(1u+0x30u)-sizeof both_door.bounds;
     paired_snapshot[door_end-4]=6;
     pair_io=(Mmx4SnapshotIO){NULL,paired_snapshot,pair_bytes,0,MMX4_SNAPSHOT_VALIDATE,1};
     CHECK(!mmx4_coop_lifecycle_snapshot(&pair_io) && both_door.phase==2);

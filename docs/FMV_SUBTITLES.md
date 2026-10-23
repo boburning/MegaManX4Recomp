@@ -1,8 +1,15 @@
 # Fan subtitles for Japanese FMVs
 
 Enable **Languages → Japanese FMVs**, then choose **Subtitles: No subtitles / English / Español**.
-There is one movie mod and one mutually exclusive language choice. The two
-standalone subtitle toggles have been removed.
+
+This is one mod with one selected movie source. English and Español cannot be
+selected together. Japanese voices, Japanese title art, in-game text languages,
+Custom Renderer and local co-op are separate choices and can be combined with
+it. Restart the game after changing movie sources. The title's current online
+co-op profile activates its own simulation and renderer settings; offline
+language/movie selections are not carried into that profile. Fan movies are
+therefore currently an offline option, including local co-op.
+The two standalone subtitle toggles have been removed.
 
 - **No subtitles** uses your verified original Japanese Rockman X4 disc.
 - **English** uses the imported acediez/Hondoori `.x4fmv` pack.
@@ -12,7 +19,6 @@ Only the selected choice's picker is shown and its media required, verified
 and loaded. Both fan packs may remain selected on disk; a dropdown permits
 only one movie source per boot. English/Spanish do not require a Japanese
 donor. Turning Japanese FMVs off keeps the original USA movies.
-Japanese voices, Rockman title art and dialogue translation remain independent.
 The fan packs replace the ten opening/story movies; the original Capcom logo
 movie stays unchanged. Requires a fresh boot after changing the choice.
 
@@ -43,7 +49,7 @@ python tools/import_fmv_subtitles.py `
 
 For Spanish supply `MEGA MAN X4 RETRADUCIDO FINAL.zip` and a different output
 name. Language is identified by SHA-256, not filename. At least 2 GiB free
-scratch space is required. Windows scratch/output on C: is rejected. Existing
+scratch space is required. Choose a scratch drive with enough free space. Existing
 outputs are never overwritten. Tool subprocesses have bounded timeouts.
 
 The importer writes two files:
@@ -140,5 +146,7 @@ Qualification of the consolidated control:
   same combined manifest, preserving both source readmes and provenance.
 
 Private evidence: `x4-fmv-consolidation` and `x4-fmv-one-selector` task folders.
-This UI change does not newly qualify every movie trigger/end transition,
-audible listening, co-op/netplay movie transitions or Linux playback.
+The subsequent [1.0.5 native matrix](FMV_105_MATRIX.md) qualifies all nine story
+movies naturally and with Start skipping for all three selector choices, plus
+three natural openings. It includes local co-op and native Linux playback.
+Audible listening, full campaign traversal and fan-movie netplay are not claimed.

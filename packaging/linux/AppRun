@@ -56,7 +56,7 @@ if [ -d "$payload/overlay_toolchain" ]; then
         ln -sfn "$payload/overlay_toolchain" "$data_dir/overlay_toolchain"
     fi
 fi
-for file in game.toml LICENSE THIRD_PARTY_NOTICES.md README.md RELEASE_NOTES.md APPIMAGE_README.md START_HERE.txt; do
+for file in game.toml LICENSE THIRD_PARTY_NOTICES.md DISC.md README.md RELEASE_NOTES.md APPIMAGE_README.md START_HERE.txt; do
     if [ -f "$payload/$file" ]; then
         cp -f "$payload/$file" "$data_dir/$file"
         chmod u+rw "$data_dir/$file"

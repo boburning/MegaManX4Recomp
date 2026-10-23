@@ -260,7 +260,7 @@ static void cannon_laser_origin(CPUState *cpu,uint32_t address) {
     unsigned value_register=address==0x800A3C00u?3u:2u;
     unsigned stage=psx_mod_read_byte(MMX4_PLAY+12);
     uint32_t beam=cpu->gpr[16],parent=cpu->gpr[17];
-    if(!available() || (stage!=7 && stage!=8) || beam<0x8013F328u ||
+    if(!available() || (stage!=7 && stage!=8 && !(stage==11 && type==36u)) || beam<0x8013F328u ||
        beam>=0x801406A8u || (beam-0x8013F328u)%0x9Cu ||
        !psx_mod_read_byte(beam) || psx_mod_read_byte(beam+1)!=type ||
        psx_mod_read_word(beam+0x7C)!=parent || parent<0x8013BED0u ||
@@ -273,7 +273,8 @@ static void cannon_laser_origin(CPUState *cpu,uint32_t address) {
     initialize_cameras();
     /* Native9D100 and A3B04 clamp two cannon beam families against CAMERA.x,
      * dragging distant emitters into P1's view. A3BFC also derives a culling
-     * extent from that origin. Supply the actual emitter's nearest view to
+     * extent from that origin. Sigma2 reuses the same type36 beams as the
+     * earlier cannons. Supply the actual emitter's nearest view to
      * each loaded value; native collision, animation and lifetime run once,
      * retaining authored world coordinates in either facing direction. */
     cpu->gpr[value_register]=(uint32_t)(int32_t)(int16_t)
@@ -881,11 +882,32 @@ static int fortress_background(CPUState *cpu,uint32_t address) {
     return mmx4_coop_finish(cpu,result);
 }
 int mmx4_coop_split_scene_camera_begin(unsigned owner,uint8_t canonical[0xFC]) {
-    if(!available() || owner>1 || mmx4_coop_lifecycle_script_owner()>=0 ||
-       psx_mod_read_byte(MMX4_PLAY+0x10) || psx_mod_read_byte(MMX4_PLAY+0x1C))return 0;
+    if(!available() || owner>1 || (mmx4_coop_lifecycle_script_owner()>=0 &&
+       !mmx4_coop_lifecycle_paired_door()) ||
+       psx_mod_read_byte(MMX4_PLAY+0x10) ||
+       (psx_mod_read_byte(MMX4_PLAY+0x1C) && !mmx4_coop_lifecycle_nova_active()))return 0;
+    /* Nova's personal attack lock does not move the other hero's camera.
+     * Door eligibility still runs natively, including while Both waits;
+     * its trailing visibility query needs that waiting hero's real view. */
     initialize_cameras();read_bytes(CAMERA,canonical,CAMERA_BYTES);
     copy_camera(CAMERA,state+16u+owner*CAMERA_BYTES);
     return 1;
+}
+void mmx4_coop_split_door_camera_bounds(unsigned seats,const uint16_t bounds[4]) {
+    if(!available())return;
+    initialize_cameras();
+    /* Publish the opening door's enclosure once. Subsequent camera-area
+     * crossings belong to each hero, including a retreat down the stairs. */
+    unsigned current=psx_mod_read_word(state+8u);
+    for(unsigned seat=0;seat<2;++seat)if(seats&(1u<<seat))
+        for(unsigned i=0;i<4;++i) {
+            psx_mod_write_half(state+16u+seat*CAMERA_BYTES+0x1Cu+i*2u,bounds[i]);
+            psx_mod_write_half(state+16u+seat*CAMERA_BYTES+0x24u+i*2u,bounds[i]);
+            if(current==seat+1u) {
+                psx_mod_write_half(CAMERA+0x1Cu+i*2u,bounds[i]);
+                psx_mod_write_half(CAMERA+0x24u+i*2u,bounds[i]);
+            }
+        }
 }
 void mmx4_coop_split_commit_scene_camera(unsigned owner) {
     if(!state || owner>1 || !mmx4_coop_split_views() || !mmx4_coop_ready() ||
@@ -989,13 +1011,9 @@ void mmx4_coop_split_camera(CPUState *cpu,unsigned owner) {
         return;
     }
     uint32_t shadow=state+16u+other*CAMERA_BYTES;
-    /* Both participants share the door's authored room limits while it is
-     * opening, but remain independently controlled through the aperture.
-     * Retain each origin and run ordinary follow for the other body rather
-     * than substituting the opener's whole camera/HUD until they cross. */
-    if(paired)for(unsigned offset=0x1C;offset<0x2C;offset+=2)
-        psx_mod_write_half(shadow+offset,(uint16_t)(canonical[offset]|
-            (uint16_t)canonical[offset+1]<<8));
+    /* The opening door publishes its enclosure once. Recopying these limits
+     * each frame also copies a trailing hero's later return-area bounds,
+     * which can clamp the partner back through the open doorway. */
     /* Current/target limits, dead zones and authored room metadata belong
      * to the individual view. Shared scripts synchronize whole records above. */
     for(unsigned offset=0;offset<8u;++offset)psx_mod_write_byte(shadow+offset,canonical[offset]);
@@ -1057,6 +1075,7 @@ static int spatial_stage_actor(CPUState *cpu,uint32_t address) {
                 actors[seat].world_x>=(int16_t)psx_mod_read_half(actor+10u));
     }
     int scene=mmx4_coop_lifecycle_script_owner();
+    if(!kind && mmx4_coop_lifecycle_paired_door())scene=-1;
     unsigned target=scene>=0?(unsigned)scene:mmx4_coop_view_nearest(
         eligible[0].active || eligible[1].active?eligible:actors,
         (int16_t)psx_mod_read_half(actor+10u),(int16_t)psx_mod_read_half(actor+14u),0);

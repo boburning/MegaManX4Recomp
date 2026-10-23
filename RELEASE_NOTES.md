@@ -1,4 +1,30 @@
-# Mega Man X4 Recompiled - 1.0.4 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.5 Stable Public Beta
+
+- **One Japanese FMVs mod**, with **Subtitles: No subtitles / English / Español**. Only the selected source is required. English credits acediez/Hondoori; Spanish credits El Retro Dan and the underlying Undub contributors. Original readmes and full attribution ship with both packages. Movie packs are imported locally and remain external to the public download.
+- Fixed Sigma 1's waiting door disappearing during Nova Strike and its stair-return camera softlock. Retreating and re-entering the first door now preserves the partner's position and room limits.
+- Fixed Sigma 2's reused cannon beams appearing beside the wrong player.
+- Fixed the opening dragon's corner/flyby effects using the other player's view, including its return and projectiles.
+- Fixed Magma Dragoon's fireball/effect camera ownership and distant Player 2 boss-entry pan. Both upper and Ride Armor admissions preserve the fight and near-boss checkpoint.
+- Rechecked the opening flying bee groups and Magma's Giga Death with either leader. No extra spawn patch was necessary. The deliberate Mushroom panel-edge death follows the original crush rules.
+- The verified **original, unmodified USA disc remains mandatory**, including with all mods disabled. Custom Renderer remains enabled by default with adaptive sizing. CD Speed, Fast Loading and developer cheats are absent from public packages; diagnostics stay off by default.
+
+**Windows x64 ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Native memory-card saves carry forward. Emulator save states are specific to
+their build. Language/movie selections currently apply offline, including local
+co-op; the online title profile uses its own simulation and renderer settings.
+
+Windows production checks pass 39/39; Linux production checks pass 34/34.
+All [54 story play/skip checks and three natural openings](docs/FMV_105_MATRIX.md)
+pass. The native movie matrix exercises real MDEC/XA progression, natural endings,
+Start skipping and native continuation, with campaign prerequisites explicitly
+bypassed for coverage. See [movie setup and attribution](docs/FMV_SUBTITLES.md)
+and [stage evidence and limits](docs/COOP_103_SIGMA_MAGMA_FOLLOWUP.md).
+
+The supplied one-off Magma process exit remains unreproduced and is not claimed
+fixed. Intermittent stutters were withdrawn by the reporter. This release does
+not claim a new full-campaign playthrough or an audible listening review.
+
+## Previous v1.0.4 Stable Public Beta
 
 - The verified original USA disc is now required before launch, including with every mod disabled. Incorrect or modified images receive a clear original-disc error instead of failing later on an individual mod such as Custom Renderer.
 - Apply undubs, translations, widescreen and other changes through **Mods** over the original disc. Patched disc images are unsupported.

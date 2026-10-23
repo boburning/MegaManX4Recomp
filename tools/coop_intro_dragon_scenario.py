@@ -21,7 +21,7 @@ def intro_dragon_views(s,restore=False):
         r.fixture(5, 3)
         r.teleport(leader, 1200, 427)
         time.sleep(3)
-        folder = s.output / ('dragon-leader-%d' % leader)
+        folder = s.output / (('dragon-snapshot-leader-%d' if restore else 'dragon-leader-%d') % leader)
         folder.mkdir()
         rows, captures, phases = [], 0, set()
         restored=False

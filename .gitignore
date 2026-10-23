@@ -8,6 +8,7 @@
 /generated/
 
 # Release packaging artifacts
+/dist/
 /release-stage/
 /release-linux/
 *.AppImage

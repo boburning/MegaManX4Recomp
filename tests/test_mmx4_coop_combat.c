@@ -937,11 +937,15 @@ static void mushroom_shared_palette(void) {
 }
 static void split_native_targets(void) {
     const uint32_t pools[]={0x80021234u,0x8002144Cu};
+    for(unsigned admission=0;admission<2;++admission)
     for(unsigned camera_mode=0;camera_mode<2;++camera_mode) {
         target_camera_mode=camera_mode;setup_split_actors(0);
-        psx_mod_write_byte(MMX4_PLAY+12,3);
+        psx_mod_write_byte(MMX4_PLAY+12,admission?4:3);
+        psx_mod_write_byte(MMX4_PLAY+13,admission);
         psx_mod_write_byte(0x8013BED0u,0);
-        psx_mod_write_byte(0x8013BED0u+0x9Cu+1,33);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+1,admission?65:33);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+4,admission?1:0);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+5,admission?2:0);
         psx_mod_write_half(0x801419BAu,1000);
         scene_camera_model=1;scene_camera_begins=scene_camera_ends=0;
         invoke(0x80021234u);

@@ -41,10 +41,7 @@ def digest(path, algorithm='sha256'):
 
 
 def non_system_path(path):
-    path = Path(path).resolve()
-    if os.name == 'nt' and path.drive.lower() == 'c:':
-        raise ValueError('Use F: or G: for scratch and generated mod files')
-    return path
+    return Path(path).resolve()
 
 
 class Disc:

@@ -1993,6 +1993,15 @@ int main(void) {
     CHECK(psx_mod_read_half(CAMERA+10)==(uint16_t)(1200-160));
     psx_mod_write_half(CAMERA+0x26,768);mmx4_coop_split_scene_camera_end(1,canonical,0);
     CHECK(psx_mod_read_half(CAMERA+10)==original_x && psx_mod_read_half(CAMERA+0x26)==512);
+    /* An unrelated scene lock still rejects, but a native Nova lock must
+     * retain the waiting partner's door culling scope without committing it. */
+    psx_mod_write_byte(MMX4_PLAY+0x1C,1);nova_active=0;
+    CHECK(!mmx4_coop_split_scene_camera_begin(1,canonical));
+    nova_active=1;CHECK(mmx4_coop_split_scene_camera_begin(1,canonical));
+    CHECK(psx_mod_read_half(CAMERA+10)==(uint16_t)(1200-160));
+    mmx4_coop_split_scene_camera_end(1,canonical,0);
+    CHECK(psx_mod_read_half(CAMERA+10)==original_x);
+    nova_active=0;psx_mod_write_byte(MMX4_PLAY+0x1C,0);
     CHECK(mmx4_coop_split_scene_camera_begin(1,canonical));
     psx_mod_write_half(CAMERA+0x26,1024);mmx4_coop_split_scene_camera_end(1,canonical,1);
     script_owner=1;mmx4_coop_split_camera_prepare(1);CHECK(psx_mod_read_half(CAMERA+0x26)==1024);
@@ -2119,7 +2128,10 @@ int main(void) {
     mushroom_lift_high_jump(&cpu);
     jet_prefetched_placement(&cpu);
     intro_effect_views(&cpu);
-    for(unsigned site=0;site<3;++site)for(unsigned stage=7;stage<=8;++stage)for(unsigned owner=0;owner<2;++owner) {
+    const unsigned laser_stages[]={7,8,11};
+    for(unsigned site=0;site<3;++site)for(unsigned stage_index=0;stage_index<3;++stage_index)for(unsigned owner=0;owner<2;++owner) {
+        unsigned stage=laser_stages[stage_index];
+        if(stage==11 && !site)continue;
         const uint32_t sites[]={0x8009D104u,0x800A3B08u,0x800A3C00u};
         unsigned value_register=site==2?3u:2u;
         mmx4_coop_split_reset();script_owner=-1;local_scope=0;projected=0;
@@ -2266,5 +2278,24 @@ int main(void) {
         }
         CHECK(matched==1);
     }
+    /* An opening publishes the room once. A later stair return changes only
+     * its own view; touching the still-open door can restore that view alone. */
+    split=ready=1;projected=local_scope=0;script_owner=-1;paired_door=0;
+    psx_mod_write_byte(MMX4_PLAYER,1);psx_mod_write_byte(MMX4_PLAYER+4,1);
+    second[0]=1;second[4]=1;
+    actor_position(MMX4_PLAYER,4130,923);second_position(4300,922);
+    actor_position(CAMERA,3970,736);mmx4_coop_split_reset();
+    mmx4_coop_split_camera(&cpu,0);
+    const uint16_t doorway_bounds[]={4160,3776,736,736};
+    mmx4_coop_split_door_camera_bounds(3,doorway_bounds);
+    script_owner=0;paired_door=1;
+    psx_mod_write_half(CAMERA+0x1C,3776);psx_mod_write_half(CAMERA+0x24,3776);
+    mmx4_coop_split_camera(&cpu,0);
+    CHECK(mmx4_coop_split_camera_copy(1,view));
+    CHECK((view[0x24]|(unsigned)view[0x25]<<8)==4160);
+    CHECK(second[10]==(4300&255) && second[11]==(4300>>8));
+    mmx4_coop_split_door_camera_bounds(1,doorway_bounds);
+    CHECK(psx_mod_read_half(CAMERA+0x24)==4160);
+    CHECK(mmx4_coop_split_camera_copy(1,view) && (view[0x24]|(unsigned)view[0x25]<<8)==4160);
     puts("mmx4_coop_split_test: PASS");return 0;
 }

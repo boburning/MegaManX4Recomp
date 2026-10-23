@@ -33,6 +33,7 @@ typedef struct {
     uint32_t actor,serial;
     uint16_t old_min,target_min,right;
     uint8_t phase,owner,stage,section;
+    uint16_t bounds[4];
 } BothDoor;
 /* 1 opening, 2 physical traversal, 3 camera commitment, 4 next boss
  * admission, 5 its conversation. C4 remains the retail boss admission gate
@@ -162,6 +163,7 @@ int mmx4_coop_lifecycle_snapshot(Mmx4SnapshotIO *s) {
     if(s->mode==MMX4_SNAPSHOT_READ)both_door.phase=(uint8_t)door_phase;
     MMX4_SNAPSHOT_BOOL(s,both_door.owner);
     MMX4_SNAPSHOT_U8(s,both_door.stage);MMX4_SNAPSHOT_U8(s,both_door.section);
+    for(unsigned i=0;i<4;++i)MMX4_SNAPSHOT_U16(s,both_door.bounds[i]);
     for(unsigned i=0;i<32;++i) {
         MMX4_SNAPSHOT_BOOL(s,surface_valid[i]);
         mmx4_snapshot_bytes(s,surface_second[i],sizeof surface_second[i]);
@@ -720,6 +722,18 @@ static void both_door_tick(CPUState *cpu) {
         !psx_mod_read_byte(both_door.actor) || psx_mod_read_byte(both_door.actor+1)!=8 ||
         psx_mod_read_byte(both_door.actor+4)!=1 || !psx_mod_read_byte(both_door.actor+5))))
         both_door_abort(cpu);
+    if(both_door.phase>=2 && both_door.phase<=3) {
+        /* A hero may retreat through a camera return strip while this door
+         * remains open. On touching its original admission box again, restore
+         * that hero's authored enclosure; do not clamp the distant partner. */
+        unsigned seats=0;
+        for(unsigned seat=0;seat<2;++seat)if(mmx4_coop_alive(seat)) {
+            if(seat)mmx4_coop_enter_second();
+            if(mmx4_coop_call(cpu,0x800C1E7Cu,both_door.actor,0))seats|=1u<<seat;
+            if(seat)mmx4_coop_leave_second();
+        }
+        if(seats)mmx4_coop_split_door_camera_bounds(seats,both_door.bounds);
+    }
 }
 static void start_outgoing(CPUState *cpu,unsigned seat) {
     mmx4_coop_armor_dismount(cpu,seat);
@@ -843,6 +857,13 @@ static int safe_return_position(CPUState *cpu,unsigned seat) {
         psx_mod_write_byte(PLAYER+0x79,0);psx_mod_write_byte(PLAYER+0x89,0);
         mmx4_coop_call(cpu,0x8002C614u,PLAYER,0);
         unsigned contact=psx_mod_read_byte(PLAYER+0x70)|psx_mod_read_byte(PLAYER+0x71);
+#ifndef PSX_NO_DEBUG_TOOLS
+        psx_mod_counter_add("mmx4.coop.warp-return-terrain-probes",1);
+        if((contact&12u)==12u)psx_mod_counter_add("mmx4.coop.warp-return-vertical-crush",1);
+        if((contact&3u)==3u)psx_mod_counter_add("mmx4.coop.warp-return-horizontal-crush",1);
+        if(psx_mod_read_byte(PLAYER+0x79))psx_mod_counter_add("mmx4.coop.warp-return-hazard",1);
+        if(psx_mod_read_byte(PLAYER+0x5C)!=body[0x5C])psx_mod_counter_add("mmx4.coop.warp-return-health-change",1);
+#endif
         if((contact&12u)!=12u && (contact&3u)!=3u &&
            !psx_mod_read_byte(PLAYER+0x79) && psx_mod_read_byte(PLAYER+0x5C)==body[0x5C] &&
            (!i || (contact&8u))) {safe=1;break;}
@@ -2298,6 +2319,8 @@ static int scene_actor_canonical(CPUState *cpu,uint32_t address) {
          * through so 27BE4 cannot push a waiting player into the doorway. */
         both_door.target_min=psx_mod_read_half(0x801419D6u);
         psx_mod_write_half(0x801419D6u,both_door.old_min);
+        for(unsigned i=0;i<4;++i)both_door.bounds[i]=psx_mod_read_half(0x801419D4u+i*2u);
+        mmx4_coop_split_door_camera_bounds(3,both_door.bounds);
         if(owner)mmx4_coop_enter_second();
         mmx4_coop_call(cpu,0x80035EA4u,PLAYER,0);
         if(owner)mmx4_coop_leave_second();
@@ -2633,6 +2656,7 @@ uint32_t mmx4_coop_lifecycle_digest(uint32_t seed) {
     seed=hash_word(seed,both_door.right);seed=hash_byte(seed,both_door.phase);
     seed=hash_byte(seed,both_door.owner);seed=hash_byte(seed,both_door.stage);
     seed=hash_byte(seed,both_door.section);
+    for(unsigned i=0;i<4;++i)seed=hash_word(seed,both_door.bounds[i]);
     for(unsigned i=0;i<32;++i) {
         seed=hash_byte(seed,surface_valid[i]);
         for(unsigned j=0;j<sizeof surface_second[i];++j)seed=hash_byte(seed,surface_second[i][j]);

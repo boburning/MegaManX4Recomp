@@ -1,5 +1,12 @@
 # 1.0.3 stage feedback
 
+The 1.0.5 release integrates these correctness fixes. Fresh generation and
+native controls confirm the P2 corner and snapshot/projectile return; all
+opening flying-group emitters are now qualified separately. The owner withdrew
+the intermittent stutter report. Idle Dragoon slowdown remains unreproduced in
+bounded current-host controls, with no performance fix claimed. See the
+[updated findings and limits](COOP_103_SIGMA_MAGMA_FOLLOWUP.md).
+
 Report/video: [Thomu's recorded playtest](https://youtu.be/0cGH_DNk2pg),
 supplied with `1.0.3 bugs.zip`. The private diagnostics identify an offline
 local 8:3 Split run on 1.0.3. The owner approved the opening stages, Storm Owl,
