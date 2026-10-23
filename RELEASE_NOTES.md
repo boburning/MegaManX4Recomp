@@ -1,4 +1,18 @@
-# Mega Man X4 Recompiled - 1.0.3 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.4 Stable Public Beta
+
+- The verified original USA disc is now required before launch, including with every mod disabled. Incorrect or modified images receive a clear original-disc error instead of failing later on an individual mod such as Custom Renderer.
+- Apply undubs, translations, widescreen and other changes through **Mods** over the original disc. Patched disc images are unsupported.
+- Custom Renderer remains enabled by default with adaptive sizing; fixed 16:9 is available in its Aspect option.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats.
+
+**Windows x64 ZIP. The 1.0.4 Linux AppImage is pending. Both netplay peers must update.**
+Native memory-card saves carry forward; emulator save states are specific to their build.
+
+This is an original-disc validation hotfix based on v1.0.3. Gameplay changes from
+the ongoing stage investigations and fan-subtitled movie work are separate.
+See [disc requirements](DISC.md) and [validation evidence](docs/ORIGINAL_DISC_RELEASE_GATE.md).
+
+## Previous v1.0.3 Stable Public Beta
 
 - Fixed Slash Beast and Storm Owl cannon/enemy beams appearing beside Player 1 when Player 2 leads, including both beam directions.
 - Fixed Player 2 failing to trigger Slash Beast's midboss, including when Player 1 is dead.

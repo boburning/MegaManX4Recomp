@@ -12,6 +12,12 @@ def config(path):
 
 
 class ReleaseConfigTest(unittest.TestCase):
+    def test_original_disc_is_required_even_without_mods(self):
+        expected = ["3ceab06ac99add4035f912188bcbf5b16c02056f46a33d38ff0c8dbce6cb613b"]
+        for path in (ROOT / "game.toml", ROOT / "packaging/release/game.toml"):
+            with self.subTest(path=path):
+                self.assertEqual(config(path)["game"]["required_disc_sha256"], expected)
+
     def test_two_player_launcher_contract(self):
         # This selects both the visible Netplay entry point and the P2
         # Controls row; compiling netplay support alone does not expose them.
