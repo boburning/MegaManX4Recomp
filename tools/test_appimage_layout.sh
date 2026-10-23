@@ -31,6 +31,7 @@ for file in game.toml input.ini START_HERE.txt LICENSE THIRD_PARTY_NOTICES.md RE
             docs/PLAYTESTING.md docs/images/README.md DISC.md \
             docs/fmv-subtitles/CREDITS.md docs/fmv-subtitles/acediez-Undub-v1.13-Readme.txt \
             docs/fmv-subtitles/El-Retro-Dan-Final-LEEME.txt \
+            tools/import_fmv_subtitles.py \
             bios/openbios.bin bios/OpenBIOS.LICENSE .appimage-layout-version; do
     check_file "$file"
 done

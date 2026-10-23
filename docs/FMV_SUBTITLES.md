@@ -33,6 +33,10 @@ Japanese voices and title art remain independent. The runtime uses the stock dis
 Use Python 3.11+, [xdelta3](https://github.com/jmacd/xdelta), and 7-Zip for the
 English archive. Supply the original USA raw MODE2/2352 BIN in [DISC.md](../DISC.md).
 The importer checks the exact archive, patch and source disc before extraction.
+It is included in the download: run the command from the extracted Windows
+release folder, or the AppImage's writable data folder (which contains `tools`,
+`mods` and `docs`). A source checkout also works. Supply your own disc path in
+place of the example below; the game download contains no disc image.
 
 ```powershell
 $env:TEMP = 'F:\Temp\Codex\psxrecomp\x4-subtitles'
