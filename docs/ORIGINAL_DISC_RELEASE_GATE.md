@@ -21,7 +21,9 @@ Original USA SLUS-00561 raw BIN SHA-256:
 ```
 
 CUE and direct BIN resolve to the same data. CHD verification hashes decoded
-raw sectors. A matching serial or executable alone does not qualify a disc.
+raw sectors. The mounted track map must also match the original. Changed
+track offsets or added audio tracks are rejected even over an unchanged BIN.
+A matching serial or executable alone does not qualify a disc.
 All changes are mods over the original image. Native memory cards are
 unaffected.
 
@@ -34,8 +36,29 @@ unaffected.
   mandatory policy active, including an uninitialized mod catalog.
 - The portable release config is checked against the development config's
   original-disc policy.
-- Production packaging and exact-archive launch results will be recorded
-  before publication.
+- All38 Windows production checks pass. Five framework checks also pass on
+  Linux, including native, cached and forced-portable mod preparation,
+  canonical identity and strict config parsing.
+- The extracted Windows candidate accepts original USA CUE and direct BIN.
+  Native hidden/muted launches reach runtime execution with Custom Renderer
+  at Adaptive and16:9, without a package-target error.
+- With every mod disabled, a changed asset with unchanged serial, added CUE
+  audio track, changed INDEX offset and missing image fail identity queries
+  and direct no-launcher boot. Selecting the original for a subsequent launch
+  succeeds both with all mods off and with widescreen enabled again.
+- Rendered recomp-ui checks toggle Custom Renderer off/on, select Adaptive
+  and16:9, and launch through PLAY. Modified media produces verdict3 and a
+  clear original-disc message; PLAY stays blocked even after enabling the
+  renderer. Windows same-process Browse recovery was not automated because
+  the native file picker is outside the hidden launcher protocol.
+- Release staging verifies the catalog, static system-only dependencies,
+  execution identity, notices/OpenBIOS and absence of private data. Neither
+  CD Speed nor Fast Loading is included.
+
+Game code is based on160818e(v1.0.3), with framework91fc45d and unchanged
+recomp-ui b964eabe. Private evidence is retained in the
+`x4-release-widescreen-audit`, `x4-widescreen-diagnosis`, and `x4-release104`
+task directories. Final artifact hashes are published in SHA256SUMS.txt.
 
 The hotfix is based on v1.0.3. It does not qualify additional stage fixes,
 fan-subtitled FMVs, full campaign coverage, or fresh online gameplay.

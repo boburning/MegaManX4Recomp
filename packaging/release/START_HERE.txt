@@ -4,8 +4,8 @@ MegaManX4Recomp - Mega Man X4, recompiled
 
 WHAT YOU NEED
   Your own original, unmodified Mega Man X4 (USA, SLUS-00561) disc image.
-  A .cue + .bin pair is
-  preferred; a bare .bin also works. Do not convert it to a 2048-byte cooked
+  A .cue + .bin pair is preferred; a bare .bin also works.
+  Do not convert it to a 2048-byte cooked
   .iso: that discards the XA sectors used for the game's FMV and audio.
 
   Only the verified original disc listed in DISC.md is accepted, even with
