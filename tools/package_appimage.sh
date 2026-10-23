@@ -212,6 +212,8 @@ cp "$root/packaging/release/START_HERE.txt" "$payload/START_HERE.txt"
 cp "$root/packaging/linux/README.md" "$payload/APPIMAGE_README.md"
 cp "$root/LICENSE" "$root/README.md" "$root/THIRD_PARTY_NOTICES.md" "$root/DISC.md" "$payload/"
 cp -a "$root/docs" "$payload/docs"
+mkdir -p "$payload/tools"
+cp "$root/tools/import_fmv_subtitles.py" "$payload/tools/"
 [ ! -f "$root/RELEASE_NOTES.md" ] || cp "$root/RELEASE_NOTES.md" "$payload/"
 # Keep the same complete attribution/readme paths as the Windows package,
 # including both upstream fan-movie readmes. Media itself remains external.

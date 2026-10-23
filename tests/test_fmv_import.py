@@ -2,6 +2,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 import struct
 import tempfile
@@ -36,6 +37,23 @@ class FixtureDisc:
 
 
 class ImportTests(unittest.TestCase):
+    def test_importer_uses_bundled_metadata_without_a_source_checkout(self):
+        source = module.metadata_directory()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bundled = root / 'mods/bundled/mmx4.japanese-fmvs/1.0.0'
+            shutil.copytree(source, bundled)
+            pack = root / 'invalid.x4fmv';pack.write_bytes(b'invalid')
+            with patch.object(module, 'ROOT', root):
+                self.assertEqual(module.metadata_directory(), bundled)
+                self.assertTrue((module.metadata_directory() / 'provenance/en.json').is_file())
+                self.assertTrue((module.metadata_directory() / 'provenance/es.json').is_file())
+                with self.assertRaisesRegex(ValueError, 'attributed release'):
+                    module.manifest('en', pack)
+            with patch.object(module, 'ROOT', root / 'missing'):
+                with self.assertRaisesRegex(ValueError, 'metadata is missing'):
+                    module.metadata_directory()
+
     def test_movie_extraction_preserves_xa_headers_audio_and_subtitle_pixels(self):
         with tempfile.TemporaryDirectory() as temp, patch.object(module, 'Disc', FixtureDisc):
             pack = Path(temp) / 'test.x4fmv'

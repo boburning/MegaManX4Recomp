@@ -159,10 +159,18 @@ def extract_movies(image, output):
         disc.close()
 
 
+def metadata_directory():
+    for layout in ('mods/preloaded/packages', 'mods/bundled'):
+        directory = ROOT / layout / 'mmx4.japanese-fmvs/1.0.0'
+        if (directory / 'manifest.toml').is_file() and (directory / 'provenance').is_dir():
+            return directory
+    raise ValueError('Japanese FMVs metadata is missing; run from the release folder or a source checkout')
+
+
 def manifest(language, pack):
     # Both imports use the same three-choice mod. Only the selected media is
     # required; audiovisual data stays in its external verified sidecar.
-    template = ROOT / 'mods/preloaded/packages/mmx4.japanese-fmvs/1.0.0/manifest.toml'
+    template = metadata_directory() / 'manifest.toml'
     text = template.read_text(encoding='utf-8')
     resource_id = {'en': 'english-movies', 'es': 'spanish-movies'}[language]
     resource = next(r for r in tomllib.loads(text)['resource'] if r['id'] == resource_id)
@@ -183,6 +191,7 @@ def build(archive, disc, output, scratch, xdelta, seven_zip=None):
     language = next((key for key, item in SOURCES.items() if item['archive'] == identity), None)
     if language is None:
         raise ValueError('Unrecognized archive; supported releases and SHA-256 hashes are in docs/FMV_SUBTITLES.md')
+    metadata = metadata_directory()
     if disc.stat().st_size != 592217136 or digest(disc, 'md5') != DISC_MD5:
         raise ValueError('Expected the unmodified USA SLUS-00561 raw BIN documented in DISC.md')
     source = SOURCES[language]
@@ -230,7 +239,7 @@ def build(archive, disc, output, scratch, xdelta, seven_zip=None):
                 for path in sorted(CREDITS.iterdir()):
                     if path.is_file() and path.name != 'CREDITS.md':
                         mod.write(path, 'upstream/' + path.name)
-                for path in sorted((ROOT / 'mods/preloaded/packages/mmx4.japanese-fmvs/1.0.0/provenance').iterdir()):
+                for path in sorted((metadata / 'provenance').iterdir()):
                     mod.write(path, 'provenance/' + path.name)
             # Exclusive creation also protects against a destination appearing
             # during the long decode; failed copies remove only our new file.
