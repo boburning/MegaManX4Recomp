@@ -4,6 +4,12 @@ The optional Languages package has independent switches for Japanese FMVs,
 Japanese voices, the Rockman X4 title screen, and text translation. Nothing is
 enabled by default. All selections require a fresh boot.
 
+The **Japanese FMVs** mod has one **Subtitles: No subtitles / English / Español**
+dropdown. No subtitles uses your Japanese donor; English (acediez/Hondoori) and
+Español (El Retro Dan) each use their imported movie pack without a Japanese disc. See
+[importing, scope and validation](FMV_SUBTITLES.md) and
+[complete upstream attribution](fmv-subtitles/CREDITS.md).
+
 The base game remains the USA SLUS-00561 revision. Select an owner-provided
 Japanese SLPS-00902 CUE/BIN, CHD, or raw 2352-byte ISO in the Japanese Media
 feature. A cooked 2048-byte ISO cannot preserve the XA video/audio streams.

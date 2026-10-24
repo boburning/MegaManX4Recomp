@@ -12,11 +12,109 @@ import shutil
 import struct
 import subprocess
 import time
+import tomllib
 from coop_debug import Runtime
 from test_mmx4_coop_doors import snapshot
 
 
 class Scenarios:
+    def magma_pillars(self):
+        from coop_magma_105_scenarios import magma_pillars
+        return magma_pillars(self)
+    def magma_quake(self):
+        from coop_magma_105_scenarios import magma_quake
+        return magma_quake(self)
+    def sigma_ladder_survivor(self):
+        from coop_fortress_followup_scenario import sigma_ladder_survivor
+        return sigma_ladder_survivor(self)
+    def intro_bees(self):
+        from coop_intro_bees_scenario import intro_bees
+        return intro_bees(self)
+    def magma_giga_death(self):
+        from coop_fortress_followup_scenario import magma_giga_death
+        return magma_giga_death(self)
+    def fmv_transitions(self):
+        from coop_fmv_transition_scenario import fmv_transitions
+        return fmv_transitions(self)
+    def magma_distant_entry(self):
+        from coop_fortress_followup_scenario import magma_distant_entry
+        return magma_distant_entry(self)
+    def sigma1_doors(self):
+        from coop_fortress_followup_scenario import sigma1_doors
+        return sigma1_doors(self)
+    def sigma2_lasers(self):
+        from coop_fortress_followup_scenario import sigma2_lasers
+        return sigma2_lasers(self)
+
+    def fortress_probe(self):
+        from coop_fortress_followup_scenario import fortress_probe
+        return fortress_probe(self)
+
+    def intro_dragon_snapshot(self):
+        from coop_intro_dragon_scenario import intro_dragon_views
+        return intro_dragon_views(self,restore=True)
+
+    def magma_idle_resolution(self):
+        from coop_magma_effects_scenario import magma_idle_resolution
+        return magma_idle_resolution(self)
+
+    def mushroom_lift_crush(self):
+        from coop_mushroom_lift_scenario import mushroom_lift_crush
+        return mushroom_lift_crush(self)
+
+    def magma_effects_field(self):
+        from coop_magma_effects_scenario import magma_effects
+        return magma_effects(self,field=True)
+
+    def magma_effects(self):
+        from coop_magma_effects_scenario import magma_effects
+        return magma_effects(self)
+
+    def intro_dragon_views(self):
+        from coop_intro_dragon_scenario import intro_dragon_views
+        return intro_dragon_views(self)
+
+    def intro_effect_corridor(self):
+        from coop_opening_102_scenarios import intro_effect_corridor
+        return intro_effect_corridor(self)
+
+    def intro_distant_entry(self):
+        from coop_opening_102_scenarios import intro_distant_entry
+        return intro_distant_entry(self)
+
+    def intro_structure_shake(self):
+        from coop_opening_102_scenarios import intro_structure_shake
+        return intro_structure_shake(self)
+
+    def intro_closing_shake(self):
+        from coop_opening_102_scenarios import intro_closing_shake
+        return intro_closing_shake(self)
+
+    def p2_pause_quit(self):
+        from coop_opening_102_scenarios import p2_pause_quit
+        return p2_pause_quit(self)
+
+    def p2_pause_escape(self):
+        from coop_opening_102_scenarios import p2_pause_escape
+        return p2_pause_escape(self)
+
+
+    def slash_midboss_entry(self):
+        from coop_stage_followup_scenarios import slash_midboss_entry
+        return slash_midboss_entry(self)
+
+    def slash_cannon_origins(self):
+        from coop_stage_followup_scenarios import slash_cannon_origins
+        return slash_cannon_origins(self)
+
+    def owl_cannon_origins(self):
+        from coop_stage_followup_scenarios import owl_cannon_origins
+        return owl_cannon_origins(self)
+
+    def mushroom_midboss_exit(self):
+        from coop_stage_followup_scenarios import mushroom_midboss_exit
+        return mushroom_midboss_exit(self)
+
     def mushroom_lift_high_jump(self):
         from coop_mushroom_lift_scenario import mushroom_lift_high_jump
         return mushroom_lift_high_jump(self)
@@ -2199,6 +2297,9 @@ class Scenarios:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--exe', type=Path, required=True)
+    parser.add_argument('--settings',type=Path,help='Use supplied video settings, preserving the QA boot and split layout')
+    parser.add_argument('--diagnostic-watchdog-seconds',type=int,choices=(120,),
+                        help='Diagnostic-only extended host-stall deadline; never a release setting')
     parser.add_argument('--bios', type=Path, required=True)
     parser.add_argument('--disc', type=Path, required=True)
     parser.add_argument('--game', type=Path, default=Path('game.toml'))
@@ -2213,17 +2314,26 @@ def main():
     parser.add_argument('--cameras',choices=('unified','split'),default='unified')
     parser.add_argument('--local-cameras',choices=('unified','split'),default='unified')
     parser.add_argument('--hidden-window',action='store_true',help='Hidden drawable for composed presentation checks')
+    parser.add_argument('--quick-boot',action='store_true',help='Use turbo only for input-only boot navigation')
     parser.add_argument('--custom-renderer',action='store_true')
     parser.add_argument('--boss-doors',choices=('either','both'),default='either')
     parser.add_argument('--both-story-bosses',action='store_true')
     parser.add_argument('--boss-scaling',action='store_true')
     parser.add_argument('--separate-etanks',action='store_true')
+    parser.add_argument('--ultimate-armor',action='store_true',help='Enable the original X code for Nova checks')
+    parser.add_argument('--fmv-media',type=Path,help='Verified movie pack or original Japanese disc')
+    parser.add_argument('--fmv-language',choices=('none','en','es'),default='en')
+    parser.add_argument('--fmv-ids',type=int,nargs='+',default=[2,3,4,5],choices=range(2,11))
+    parser.add_argument('--fmv-skip',action='store_true',help='Exercise native Start after video/audio begin')
+    parser.add_argument('--fmv-both',action='store_true',help='Test natural completion and native skipping independently')
+    parser.add_argument('--fmv-turbo',action='store_true',help='Fast-forward movie observation without skipping native completion')
+    parser.add_argument('--fmv-opening',action='store_true',help='Observe a neutral cold-boot opening before navigating Game Start')
     parser.add_argument('--sigma-entry-cases', nargs='+',
                         choices=('p2-survivor', 'p1-survivor', 'both'),
                         default=['p2-survivor', 'p1-survivor', 'both'])
     parser.add_argument('--individual-pausing',action='store_true',help='Use the legacy one-owner menu instead of independent simultaneous menus')
     parser.add_argument('--boss-cooldowns',choices=('per_player','shared'),default='per_player')
-    parser.add_argument('--cases', nargs='+', choices=('personal_menus','local_pair','local_canvas','jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
+    parser.add_argument('--cases', nargs='+', choices=('magma_pillars','magma_quake','sigma_ladder_survivor','intro_bees','magma_giga_death','fmv_transitions','magma_distant_entry','sigma1_doors','sigma2_lasers','fortress_probe','intro_dragon_snapshot','magma_idle_resolution','mushroom_lift_crush','magma_effects_field','magma_effects','intro_dragon_views','intro_effect_corridor','intro_distant_entry','intro_structure_shake','intro_closing_shake','p2_pause_quit','p2_pause_escape','slash_midboss_entry','slash_cannon_origins','owl_cannon_origins','mushroom_midboss_exit','personal_menus','local_pair','local_canvas','jet','jet_intro','bike_probe', 'cyber','handoff_dash','section_health','weapon_cycle','dash_effects','zero_elemental','fire_weakness','initial_arrivals','stationary_arrivals','intro_arrivals','web_walljump','train_background','dialogue_native','cyber_flip_probe','cyber_flip','snow_base_survivor','frost_late_path', 'intro','intro_entry','trail_probe','post_victory_trails','open_airdash','train_visual','door_death','train_return','train_deaths','train_boss','arrival_death','combat','jet_boss',
                         'mushroom_lift_high_jump','intro_first_drop','mushroom_survivor_colors','marine_dismount','sigma_entry','spider_balance','boss_balance','story_bosses','boss_door_policy','spider_visual','cyber_missiles','spider_hole','victory','dragoon_survivor_reward','diagnostics','audio',
                         'cyber_orb','cyber_course','cyber_course_leader','cyber_indicator','cyber_moving','volcano_probe','ride_armor','volcano_entry','save_loop','second_save_loop','stage_reentry','portrait_exit','portrait_escape','reload_save','enemy_activation','x_armor','spider_capture','storm_survivor_exit','storm_team_exit','storm_exit_race','storm_midboss_exit','intro_platform_leader','teleport_fall','balance_saved_control','balance_saved_slashes','frost_shaft'), default=['jet', 'cyber', 'intro'])
     args = parser.parse_args()
@@ -2250,18 +2360,36 @@ def main():
         'both_story_bosses = '+str(args.both_story_bosses).lower()+'\n'
         'boss_scaling = '+str(args.boss_scaling).lower()+'\n'
         'separate_etanks = '+str(args.separate_etanks).lower()+'\n'
+        'ultimate_armor_x = '+str(args.ultimate_armor).lower()+'\n'
         'simultaneous_menus = '+str(not args.individual_pausing).lower()+'\n'
         'boss_cooldowns = "'+args.boss_cooldowns+'"\n\n[[feature]]\n'
         'package_id = "mmx4.enhancement.widescreen"\nid = "widescreen"\nenabled = '+str(args.custom_renderer).lower()+'\n\n[[feature]]\n'
         'package_id = "mmx4.diagnostics"\nid = "inputs"\nenabled = true\n')
+    if args.fmv_media:
+        resource={'none':'japanese-disc','en':'english-movies','es':'spanish-movies'}[args.fmv_language]
+        with (args.output/'mods/state.toml').open('a',encoding='utf-8') as state:
+            state.write('\n[[feature]]\npackage_id = "mmx4.japanese-fmvs"\nid = "japanese-fmvs"\nenabled = true\n'
+                '[feature.values]\nsubtitles = '+json.dumps(args.fmv_language)+'\n'
+                '[feature.resources]\n'+resource+' = '+json.dumps(args.fmv_media.resolve().as_posix())+'\n')
     config = args.game.read_text(encoding="utf-8").replace('exe = "mmx4/SLUS_005.61"',
         'exe = ' + json.dumps((args.game.parent / 'mmx4/SLUS_005.61').as_posix()))
     config = config.replace('internal_resolution = "1080p"', 'internal_resolution = "native"')
     (args.output / 'game.toml').write_text(config,encoding='utf-8',newline='\n')
+    if args.settings:
+        video=tomllib.loads(args.settings.read_text(encoding='utf-8'))['video']
+        # Settings also contain BIOS/boot, rewind, cards and owner devices.
+        # Copy only presentation fields; the QA setup retains those contracts.
+        for key in ('bios_hle','fast_boot','aspect_ratio','rewind','rewind_depth','rewind_interval'):
+            video.pop(key,None)
+        video['fullscreen']=0
+        (args.output/'settings.toml').write_text('[video]\n'+''.join(
+            key+' = '+json.dumps(value)+'\n' for key,value in video.items()),encoding='utf-8')
     env = {key: value for key, value in os.environ.items()
            if not key.upper().startswith(('PSX_', 'RNET_', 'MMX4_DIAGNOSTIC_'))}
     env['PATH'] = r'C:\msys64\mingw64\bin;' + env.get('PATH', '')
     env['SDL_AUDIODRIVER']='dummy'
+    if args.diagnostic_watchdog_seconds:
+        env['PSX_STARVATION_TIMEOUT_US']=str(args.diagnostic_watchdog_seconds*1000000)
     if any(case in args.cases for case in ('local_pair','local_canvas','personal_menus')):
         env['PSX_RENDER_PASS_VERIFY']='1'
     argv = [str(executable), '--hidden-window' if args.hidden_window else '--headless-opengl', '--no-launcher', '--debug-port', str(args.port),
@@ -2269,20 +2397,27 @@ def main():
             '--memcard-dir', str(args.output / 'saves')]
     runtime = Runtime(args.port)
     scenarios = Scenarios(runtime, args.output, args.campaign,args.victory_seat,args.clears)
+    scenarios.capture_composed=args.hidden_window
     scenarios.boss_doors=args.boss_doors
     scenarios.both_story_bosses=args.both_story_bosses
     scenarios.boss_scaling=args.boss_scaling
     scenarios.boss_cooldowns=args.boss_cooldowns
     scenarios.separate_etanks=args.separate_etanks
     scenarios.sigma_entry_cases=args.sigma_entry_cases
+    scenarios.ultimate_armor=args.ultimate_armor
+    scenarios.fmv_ids=args.fmv_ids
+    scenarios.fmv_skip=args.fmv_skip
+    scenarios.fmv_both=args.fmv_both
+    scenarios.fmv_turbo=args.fmv_turbo
     scenarios.simultaneous_menus=not args.individual_pausing
-    report = dict(campaign=args.campaign, cases=[], argv=argv)
+    report = dict(campaign=args.campaign, cases=[], argv=argv,
+                  diagnostic_watchdog_seconds=args.diagnostic_watchdog_seconds)
     with (args.output / 'runtime.log').open('wb') as log:
         process = subprocess.Popen(argv, cwd=args.output, env=env, stdout=log, stderr=log,
                                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         report['pid'] = process.pid
         try:
-            ready_deadline=time.monotonic()+100
+            ready_deadline=time.monotonic()+(180 if args.diagnostic_watchdog_seconds else 100)
             while time.monotonic()<ready_deadline:
                 if process.poll() is not None:raise RuntimeError('Owned runtime exited before debug readiness')
                 try:
@@ -2291,8 +2426,17 @@ def main():
                 except OSError:
                     time.sleep(.1)
             else:raise TimeoutError('Owned runtime debug server did not become ready')
+            if args.fmv_opening:
+                from coop_fmv_transition_scenario import opening_transition
+                report['opening']=opening_transition(runtime,args.output,args.fmv_turbo)
             if args.card_seed:runtime.boot_continue(args.campaign,args.clears)
-            else:runtime.boot(campaign=args.campaign)
+            else:
+                if args.quick_boot:
+                    runtime.request('turbo',enabled=1)
+                    sleep=time.sleep;time.sleep=lambda t:sleep(t*.15)
+                    try:runtime.boot(timeout=180,campaign=args.campaign)
+                    finally:time.sleep=sleep;runtime.request('turbo',enabled=0)
+                else:runtime.boot(timeout=180 if args.diagnostic_watchdog_seconds else 90,campaign=args.campaign)
             folder=next(path for path in (args.output/'saves/diagnostics').iterdir()
                         if path.is_dir() and path.name.startswith('session-'))
             shutil.copytree(folder,args.output/'input-only-prefix')
@@ -2315,7 +2459,9 @@ def main():
                 pass
             if args.hold_on_failure:
                 print('Owned hidden failure process retained for TCP inspection',flush=True)
-                time.sleep(max(0,min(300,args.hold_on_failure)))
+                hold_deadline=time.monotonic()+max(0,min(1800,args.hold_on_failure))
+                while process.poll() is None and time.monotonic()<hold_deadline:
+                    time.sleep(.25)
             raise
         finally:
             if process.poll() is None:

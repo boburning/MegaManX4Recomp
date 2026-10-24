@@ -5,6 +5,12 @@ page. The catalog owns MMX4's game-specific display enhancements as well as a
 testing cheat for reproducing late-game bug reports without repeated full
 playthroughs.
 
+The Languages group includes one Japanese FMVs mod with a Subtitles dropdown:
+No subtitles, English (acediez/Hondoori), or Español (El Retro Dan).
+Only metadata and full upstream credits are bundled;
+import the owner's supplied patch locally and select its verified movie file.
+See `docs/FMV_SUBTITLES.md` and each package's `CREDITS.md` and upstream readmes.
+
 Widescreen and resident asset loading are enabled by default. The damage
 override remains at one (original damage). Interpolation is archived and
 unavailable. These packages target the verified USA

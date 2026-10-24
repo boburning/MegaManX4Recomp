@@ -1,0 +1,124 @@
+---ESPAÑOL---
+
+Este proyecto nace de la idea de retraducir completamente
+Mega Man X4 directamente desde los textos en japonés. Para ello
+se utilizaron distintos traductores de texto, se buscaron
+variaciones de significados, conjugaciones y demás, con el fin
+de lograr una traducción coherente y fiel al material original.
+
+Se rediseñaron las texturas del menú principal, pantallas de
+carga, selección de niveles, presentaciones de los Maverick y
+los textos del nivel de Cyber Peacock, además de subtitular
+todas las cinemáticas del juego completamente al español.
+
+Únicamente por limitaciones técnicas no se modificaron los
+menús de opciones, guardado de partidas, ni los textos de
+WARNING y READY (en el caso de WARNING, específicamente por
+limitaciones técnicas).
+
+Por otra parte, también se modificó el ícono del tanque de
+Armas con una "A" para tener concordancia con el nombre en
+español, y esto se aplica también a su ranura vacía.
+
+Todas las nuevas texturas en español son de mi propia autoría,
+utilizando programas de diseño y aplicando técnicas de pixel
+art en casos específicos.
+
+ACLARACIÓN:
+
+Este proyecto está trabajado en base a Mega Man X4 Undub +
+Retranslation, con el fin de aprovechar su fuente de texto más
+optimizada, por lo que doy los créditos correspondientes a:
+acediez, DarkSamus993, NectarHime y Hondoori.
+
+Todos los cambios fueron implementados en gran parte con
+TehemanX4 Editor, así que agradecimientos también 
+para Kuumba123.
+
+ACTUALIZACIÓN:
+
+La versión 0.9001 soluciona un error que congelaba la partida
+de Zero en sus textos introductorios del cuartel general.
+
+Se mejoró el suavizado de algunas texturas y se corrigieron
+errores tipograficos en los dialogos.
+
+VERSIÓN FINAL:
+Se corrigieron los errores de ortografía, se aumentó el tamaño
+de los subtítulos y se agregó la letra en japonés y subtítulos en
+español para la canción de intro. Además se logró traducir todos
+los textos de los menús que no se pudieron traducir en versiones
+anteriores y se tradujeron los textos de READY y WARNING. De 
+esta forma, la traducción se encuentra completa al 100%.
+
+-----------------------------------------------------------------------------------
+
+Este proyecto tomó casi 2 meses para ser completado, así que
+realmente espero que lo disfruten.
+
+NOTAS: (En el juego se menciona "Dash" como "impulso" y
+"learned move" como "ataque especial", basandose más
+en el termino "hisatsu" utilizado en la versión japonesa.
+
+---ENGLISH---
+
+This project was born from the idea of completely
+re-translating Mega Man X4 directly from the original Japanese
+text. To achieve this, various translation tools were used,
+along with research into different meanings, verb forms, and
+linguistic nuances, in order to produce a coherent translation
+that remains faithful to the source material.
+
+The textures for the main menu, loading screens, stage select
+screen, Maverick introduction screens, and the text found in
+Cyber Peacock's stage were redesigned. In addition, all of the
+game's cutscenes were fully subtitled in Spanish.
+
+Due to technical limitations, the Options menu, Save Game menu,
+and the WARNING and READY texts were not modified (with the
+WARNING text being restricted specifically by technical
+limitations).
+
+Additionally, the Weapon Tank icon was changed to display an
+"A" in order to match its Spanish name, and this change also
+applies to its empty slot icon.
+
+All new Spanish textures were created by me, using graphic
+design software and applying pixel art techniques where
+necessary.
+
+DISCLAIMER:
+
+This project is based on Mega Man X4 Undub + Retranslation in
+order to take advantage of its more optimized text
+implementation. Special thanks and credit go to acediez,
+DarkSamus993, NectarHime, and Hondoori for their work.
+
+Most of the changes were implemented using TehemanX4 Editor,
+so special thanks also go to Kuumba123.
+
+UPDATE
+
+Version 0.9001 fixes an issue that caused the game to freeze 
+during Zero's introductory dialogue at Headquarters.
+
+Texture smoothing has been improved for certain textures, 
+and several typographical errors in the dialogue have been corrected.
+
+FINAL VERSION:
+Spelling errors have been corrected, the subtitle size has been increased, 
+and the Japanese lyrics with Spanish subtitles have been added for the 
+opening song. All menu text that could not be translated in previous 
+versions has now been translated, along with the **READY** and **WARNING**
+texts (the latter, as well as the menus, thanks to the help of Blade133bo).
+
+Finally, the Japanese voice actors have been credited, and the opening and 
+ending songs have also been properly credited.
+
+With these improvements, the translation is now 100% complete.
+
+
+---------------------------------------------------------------------------------------------
+
+This project took almost two months to complete, and I rerally hope
+you enjoy it.

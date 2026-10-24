@@ -937,11 +937,15 @@ static void mushroom_shared_palette(void) {
 }
 static void split_native_targets(void) {
     const uint32_t pools[]={0x80021234u,0x8002144Cu};
+    for(unsigned admission=0;admission<2;++admission)
     for(unsigned camera_mode=0;camera_mode<2;++camera_mode) {
         target_camera_mode=camera_mode;setup_split_actors(0);
-        psx_mod_write_byte(MMX4_PLAY+12,3);
+        psx_mod_write_byte(MMX4_PLAY+12,admission?4:3);
+        psx_mod_write_byte(MMX4_PLAY+13,admission);
         psx_mod_write_byte(0x8013BED0u,0);
-        psx_mod_write_byte(0x8013BED0u+0x9Cu+1,33);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+1,admission?65:33);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+4,admission?1:0);
+        psx_mod_write_byte(0x8013BED0u+0x9Cu+5,admission?2:0);
         psx_mod_write_half(0x801419BAu,1000);
         scene_camera_model=1;scene_camera_begins=scene_camera_ends=0;
         invoke(0x80021234u);
@@ -1065,6 +1069,7 @@ static void vehicle_secondary_ownership(void) {
         allocated_actor=actor;ready=0; /* Original enrollment creates exhaust. */
         if(seat)mmx4_coop_enter_second();
         CHECK(invoke(0x8002ACA4u)==actor);
+        CHECK(mmx4_coop_secondary_allocation_owner(actor)==seat+1);
         if(seat)mmx4_coop_leave_second();
         ready=1;psx_mod_write_byte(actor,1);psx_mod_write_byte(actor+1,(uint8_t)type);
         psx_mod_write_word(actor+8,(seat?10u:30u)<<16); /* Other rider is nearest. */
@@ -1078,6 +1083,7 @@ static void vehicle_secondary_ownership(void) {
         invoke(0x8002ACA4u);
         if(!seat)mmx4_coop_leave_second();
         CHECK(mmx4_coop_vehicle_effect_owner(actor)==(seat^1)+1);
+        CHECK(mmx4_coop_secondary_allocation_owner(actor)==(seat^1)+1);
         psx_mod_write_byte(actor+1,1);CHECK(!mmx4_coop_vehicle_effect_owner(actor));
     }
 }

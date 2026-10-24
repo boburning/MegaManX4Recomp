@@ -28,7 +28,10 @@ check_file() { [ -f "$data_dir/$1" ] || { echo "MISSING file: $1" >&2; fail=1; }
 check_dir() { [ -d "$data_dir/$1" ] || { echo "MISSING dir: $1" >&2; fail=1; }; }
 for dir in saves cache mods mods/bundled assets bios; do check_dir "$dir"; done
 for file in game.toml input.ini START_HERE.txt LICENSE THIRD_PARTY_NOTICES.md README.md RELEASE_NOTES.md \
-            docs/PLAYTESTING.md docs/images/README.md \
+            docs/PLAYTESTING.md docs/images/README.md DISC.md \
+            docs/fmv-subtitles/CREDITS.md docs/fmv-subtitles/acediez-Undub-v1.13-Readme.txt \
+            docs/fmv-subtitles/El-Retro-Dan-Final-LEEME.txt \
+            tools/import_fmv_subtitles.py \
             bios/openbios.bin bios/OpenBIOS.LICENSE .appimage-layout-version; do
     check_file "$file"
 done
@@ -36,6 +39,10 @@ done
 got_version=$(tr -d ' \t\r\n' < "$data_dir/.appimage-layout-version")
 [ "$got_version" = "$expected_version" ] ||
     { echo "version marker '$got_version' != '$expected_version'" >&2; fail=1; }
+for banned in psx.enhancement.cd-speed psx.enhancement.fast-loading; do
+    [ ! -d "$data_dir/mods/bundled/$banned" ] ||
+        { echo "release contains retired loading package: $banned" >&2; fail=1; }
+done
 legacy_packages=$(find "$data_dir/mods" -path "$data_dir/mods/packages" -type d | wc -l)
 [ "$legacy_packages" -eq 0 ] ||
     { echo "seeded legacy mods/packages catalog" >&2; fail=1; }

@@ -1,6 +1,6 @@
-# Prepared 1.0.5 - portable generated texture-pack defaults
+# Prepared 1.0.7 - portable generated texture-pack defaults
 
-- Rebuild against the accepted framework backport (#747) for portable generated defaults.
+- Rebuild against the portable-default backport (#747), integrated with current framework changes.
   Generated texture-pack directories follow the current installation and remain
   ephemeral, including while HD textures are disabled.
 - Explicit resource selections retain their meaning. Legacy absolute selections
@@ -10,7 +10,91 @@
 This is a source contribution, not a published or qualified package.
 See [the rebuild and two-artifact checklist](docs/PORTABLE_GENERATED_DEFAULTS.md).
 
-# Mega Man X4 Recompiled - 1.0.2 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.6 Stable Public Beta
+
+- Fixed Sigma 1's camera staying trapped near the first boss door after Player 1 dies. The surviving Player 2 can descend the ladder and land on the lower platform normally.
+- Fixed Player 2 failing to trigger the platform-breaking fireballs at the beginning of Magma Dragoon's second area. The original fireball timers and terrain destruction now run with either player leading.
+- Corrected Magma Dragoon's placed fireballs using the distant allocating player's camera for their shake guard. Nearby impacts now retain the correct view's native shake timing.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats. The original, unmodified USA disc remains required.
+
+**Windows x64 ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Native memory-card saves carry forward; emulator save states are build-specific.
+Japanese movies, voices and title art, plus Spanish and Brazilian Portuguese
+text, retain their existing independent mod options.
+
+Bounded native regressions cover both character rosters, either leader's pillar
+sequence, both survivor roles at the Sigma ladder, nearby fireball shake and
+Dragoon's upper boss-entry camera. The pillar fixture uses position/damage
+protection while the original actors destroy terrain; it does not qualify
+ordinary traversal survival on a collapsing pillar. See
+[stage evidence and limits](docs/COOP_105_STAGE_FOLLOWUP.md).
+
+The wider Magma part 1 end audit and the earlier unreproduced process exit
+remain open. This release does not claim a new full-campaign playthrough,
+fresh online gameplay or cross-OS netplay qualification. Language/movie mods
+retain their existing offline scope, including local co-op.
+
+## Previous v1.0.5 Stable Public Beta
+
+- **One Japanese FMVs mod**, with **Subtitles: No subtitles / English / Español**. Only the selected source is required. English credits acediez/Hondoori; Spanish credits El Retro Dan and the underlying Undub contributors. Original readmes and full attribution ship with both packages. Movie packs are imported locally and remain external to the public download.
+- Fixed Sigma 1's waiting door disappearing during Nova Strike and its stair-return camera softlock. Retreating and re-entering the first door now preserves the partner's position and room limits.
+- Fixed Sigma 2's reused cannon beams appearing beside the wrong player.
+- Fixed the opening dragon's corner/flyby effects using the other player's view, including its return and projectiles.
+- Fixed Magma Dragoon's fireball/effect camera ownership and distant Player 2 boss-entry pan. Both upper and Ride Armor admissions preserve the fight and near-boss checkpoint.
+- Rechecked the opening flying bee groups and Magma's Giga Death with either leader. No extra spawn patch was necessary. The deliberate Mushroom panel-edge death follows the original crush rules.
+- The verified **original, unmodified USA disc remains mandatory**, including with all mods disabled. Custom Renderer remains enabled by default with adaptive sizing. CD Speed, Fast Loading and developer cheats are absent from public packages; diagnostics stay off by default.
+
+**Windows x64 ZIP and Linux x86_64 AppImage. Both netplay peers must update.**
+Native memory-card saves carry forward. Emulator save states are specific to
+their build. Language/movie selections currently apply offline, including local
+co-op; the online title profile uses its own simulation and renderer settings.
+
+Windows production checks pass 39/39; Linux production checks pass 34/34.
+All [54 story play/skip checks and three natural openings](docs/FMV_105_MATRIX.md)
+pass. The native movie matrix exercises real MDEC/XA progression, natural endings,
+Start skipping and native continuation, with campaign prerequisites explicitly
+bypassed for coverage. See [movie setup and attribution](docs/FMV_SUBTITLES.md)
+and [stage evidence and limits](docs/COOP_103_SIGMA_MAGMA_FOLLOWUP.md).
+
+The supplied one-off Magma process exit remains unreproduced and is not claimed
+fixed. Intermittent stutters were withdrawn by the reporter. This release does
+not claim a new full-campaign playthrough or an audible listening review.
+
+## Previous v1.0.4 Stable Public Beta
+
+- The verified original USA disc is now required before launch, including with every mod disabled. Incorrect or modified images receive a clear original-disc error instead of failing later on an individual mod such as Custom Renderer.
+- Apply undubs, translations, widescreen and other changes through **Mods** over the original disc. Patched disc images are unsupported.
+- Custom Renderer remains enabled by default with adaptive sizing; fixed 16:9 is available in its Aspect option.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats.
+
+**Windows x64 ZIP. The 1.0.4 Linux AppImage is pending. Both netplay peers must update.**
+Native memory-card saves carry forward; emulator save states are specific to their build.
+
+This is an original-disc validation hotfix based on v1.0.3. Gameplay changes from
+the ongoing stage investigations and fan-subtitled movie work are separate.
+See [disc requirements](DISC.md) and [validation evidence](docs/ORIGINAL_DISC_RELEASE_GATE.md).
+
+## Previous v1.0.3 Stable Public Beta
+
+- Fixed Slash Beast and Storm Owl cannon/enemy beams appearing beside Player 1 when Player 2 leads, including both beam directions.
+- Fixed Player 2 failing to trigger Slash Beast's midboss, including when Player 1 is dead.
+- Fixed Player 2's camera staying trapped after Split Mushroom's midboss while Player 1 is alive.
+- Fixed opening-stage explosions and screen shake reaching the wrong view, missing Player 2 shake from falling structures and closing walls, and the entrance-slope camera offset.
+- Fixed Player 2 entering the opening boss fight while a distant living Player 1 causes an incorrect camera pan and soft lock.
+- Either living player can now use Select/Quit and eligible Escape from their pause menu, including with Player 1 dead. The player who opens Quit controls its confirmations.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats.
+
+**Windows x64 ZIP. The 1.0.3 Linux AppImage is pending. Both netplay peers must update.**
+Native memory-card saves carry forward; emulator save states are specific to their build.
+
+All 38 Windows production checks pass. Original-disc local Split checks cover the
+reported beams, midboss admissions, Mushroom's actual part 2 transition, opening
+camera/effects and native Quit/Escape transitions. Full campaign coverage and
+fresh online/Linux gameplay are not newly qualified. Missing opening-stage bee
+groups remain open. [Evidence and limits](docs/COOP_102_STAGE_FOLLOWUP.md).
+[Known issues](docs/COOP_PLAYTEST_FEEDBACK_20261010.md).
+
+## Previous v1.0.2 Stable Public Beta
 
 - Fixed Player 2 falling to their death when both players dismount at the end of Marine Base's bike section. Both heroes now complete their original dismounts and land normally.
 - Fixed Jet Stingray spawning too early in widened co-op views and disappearing before the fight. Supplemental placement waits for the actual boss arena.

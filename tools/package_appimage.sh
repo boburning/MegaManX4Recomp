@@ -87,7 +87,7 @@ echo "version=$version SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
 # A partial generated checkout can still configure and then quietly omit game
 # code. Pin the expected split count and ensure every shard is in the CMake
 # build graph.
-static_count=$(find "$root/generated" -maxdepth 1 -name 'SLUS_005.61_full_*.c' | wc -l)
+static_count=$(find -H "$root/generated" -maxdepth 1 -name 'SLUS_005.61_full_*.c' | wc -l)
 if [ "$static_count" -ne "$EXPECTED_STATIC_SHARDS" ]; then
     echo "expected $EXPECTED_STATIC_SHARDS generated static shards, found $static_count" >&2
     exit 1
@@ -105,19 +105,24 @@ psx_release_stage_init "$fw"
 generator=Ninja
 command -v ninja >/dev/null 2>&1 || generator="Unix Makefiles"
 bios_build=${PSXRECOMP_BIOS_BUILD:-recompiler/build-linux}
-recompiler_bin=$fw/$bios_build/psxrecomp-game
+bios_build=$(to_unix_path "$bios_build")
+case "$bios_build" in
+    /*) ;;
+    *) bios_build=$fw/$bios_build ;;
+esac
+recompiler_bin=$bios_build/psxrecomp-game
 
 if [ "$skip_build" = 0 ]; then
     # The recompiler is both the shard producer and the authority for the
     # packaged config hash. Always rebuild it against this pinned framework.
-    cmake -S "$fw/recompiler" -B "$fw/$bios_build" -G "$generator" \
+    cmake -S "$fw/recompiler" -B "$bios_build" -G "$generator" \
         -DCMAKE_BUILD_TYPE=Release
-    cmake --build "$fw/$bios_build" --target psxrecomp-game -j "$jobs"
+    cmake --build "$bios_build" --target psxrecomp-game -j "$jobs"
 
     # Regenerate redistributable OpenBIOS on every release cut. Its generated
     # backend carries an emitter fingerprint; merely checking that the files
     # exist can silently link a backend from an older framework revision.
-    cmake --build "$fw/$bios_build" --target psxrecomp-bios -j "$jobs"
+    cmake --build "$bios_build" --target psxrecomp-bios -j "$jobs"
     (cd "$fw" && PSXRECOMP_BIOS_BUILD="$bios_build" \
         tools/regen_bios.sh --config bios/OpenBIOS.toml)
 
@@ -193,7 +198,8 @@ esac
 psx_add_overlay_cache --game-id "$game_id" \
                       --cache-src-root "$cache_src_root" \
                       --stage "$payload" \
-                      --cg-tag "$cg_tag"
+                      --cg-tag "$cg_tag" \
+                      --ship-without-overlay-cache-because "Original-disc inventory found no separate X4 executable overlay; the complete resident boot program is statically compiled. Eligible uncovered dirty-RAM code can use the bundled native toolchain. No private capture or unqualified cache is shipped."
 psx_add_overlay_toolchain --stage "$payload" \
                           --recomp-dir "$(dirname -- "$recompiler_bin")" \
                           --recomp-tools "$fw/tools" \
@@ -204,8 +210,22 @@ cp "$player_toml" "$payload/game.toml"
 cp "$root/packaging/release/input.ini" "$payload/input.ini"
 cp "$root/packaging/release/START_HERE.txt" "$payload/START_HERE.txt"
 cp "$root/packaging/linux/README.md" "$payload/APPIMAGE_README.md"
-cp "$root/LICENSE" "$root/README.md" "$payload/"
+cp "$root/LICENSE" "$root/README.md" "$root/THIRD_PARTY_NOTICES.md" "$root/DISC.md" "$payload/"
+cp -a "$root/docs" "$payload/docs"
+mkdir -p "$payload/tools"
+cp "$root/tools/import_fmv_subtitles.py" "$payload/tools/"
 [ ! -f "$root/RELEASE_NOTES.md" ] || cp "$root/RELEASE_NOTES.md" "$payload/"
+# Keep the same complete attribution/readme paths as the Windows package,
+# including both upstream fan-movie readmes. Media itself remains external.
+cp -a "$fw/runtime/licenses/." "$payload/licenses/"
+cp "$fw/LICENSE" "$payload/licenses/psxrecomp-LICENSE"
+cp "$fw/THIRD_PARTY_ATTRIBUTION.md" "$payload/licenses/"
+cp "$root/recomp-ui/LICENSE" "$payload/licenses/recomp-ui-LICENSE"
+cp "$root/recomp-ui/src/third_party/imgui/LICENSE.txt" "$payload/licenses/imgui-LICENSE.txt"
+cp "$fw/lib/recomp-net/LICENSE" "$payload/licenses/recomp-net-LICENSE"
+for kind in fonts img; do
+    cp "$root/recomp-ui/assets/common/$kind/NOTICE.md" "$payload/assets/$kind/NOTICE.md"
+done
 
 # recomp-ui resolves immutable assets relative to the real ELF path.
 ln -s "../share/$PAYLOAD_DIR/assets" "$appdir/usr/bin/assets"
@@ -232,15 +252,15 @@ appimagetool=$tools_dir/appimagetool-x86_64.AppImage
 appimage_runtime=$tools_dir/runtime-x86_64
 fetch_tool \
     https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage \
-    421ca71d5c69ea97c6309276232990d43df1dcece0edfaa26bbf926ff96ed12e \
+    8aea8da0f7f7039d2a2cecb14657d752a222a5e1d3825caeef186c82f751cdd1 \
     "$linuxdeploy"
 fetch_tool \
     https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
-    a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0 \
+    95cbe7cce9717fce90c484e34052ee7c7f1d7635b33c12525b4776826a7d29b6 \
     "$appimagetool"
 fetch_tool \
     https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64 \
-    1cc49bcf1e2ccd593c379adb17c9f85a36d619088296504de95b1d06215aebbf \
+    617aa77314d57c8b8e4fae9c3f0b35af7b30d5529cb69e98f64f92510ed98a46 \
     "$appimage_runtime"
 
 export NO_STRIP=1

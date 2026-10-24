@@ -3,6 +3,7 @@
 #include "iso_reader.h"
 #include "psx_sha256.h"
 #include "mmx4_language_assets.h"
+#include "mmx4_fmv_pack.h"
 #include <array>
 #include <filesystem>
 #include <fstream>
@@ -23,7 +24,7 @@ static std::shared_ptr<const std::vector<uint8_t>> donor_bytes;
 static std::vector<uint8_t> catalog,ram(2*1024*1024),exe;
 static std::map<uint32_t,uint8_t> aperture;
 static std::map<std::string,std::vector<uint8_t>> replacements;
-static std::string catalog_path,language="es";
+static std::string catalog_path,language="es",movie_subtitles="none";
 static PS1::ISOReader original;
 static unsigned options,appended;static uint32_t next_lba,next_guest;
 static void check(bool ok,const std::string& text) {if(!ok)throw std::runtime_error(text);}
@@ -37,6 +38,7 @@ int psx_mod_game_started() {return 1;}
 void psx_mod_counter_add(const char*,uint32_t) {}
 void psx_fatal_halt(const char* why) {throw std::runtime_error(why);}
 int psx_mod_option_value(const char*,const char*,const char* id,char* out,uint32_t n) {
+    if(!std::strcmp(id,"subtitles")) {std::snprintf(out,n,"%s",movie_subtitles.c_str());return 1;}
     if(!std::strcmp(id,"language")) {std::snprintf(out,n,"%s",language.c_str());return 1;}
     unsigned bit=!std::strcmp(id,"fmvs")?1:!std::strcmp(id,"voices")?2:4;
     std::snprintf(out,n,"%s",options&bit?"true":"false");return 1;
@@ -87,6 +89,55 @@ static std::vector<uint8_t> read_file(const std::string& path) {
 }
 int main(int argc,char** argv) {
     try {
+        std::vector<uint8_t> movie_fixture(11*2336);
+        std::memcpy(movie_fixture.data(),"X4FMV001",8);put32(movie_fixture,8,10);put32(movie_fixture,12,2336);
+        for(unsigned i=0;i<10;++i) {
+            put32(movie_fixture,16+i*16,i+1);put32(movie_fixture,20+i*16,1);
+            put32(movie_fixture,24+i*16,(i+1)*2336);
+        }
+        check(fmv_pack(movie_fixture.data(),movie_fixture.size())[9].offset==23360,"movie pack inventory");
+        for(unsigned corruption:{8u,12u,16u,20u,24u,28u,2336u}) {
+            auto bad_pack=movie_fixture;bad_pack[corruption]^=1;bool rejected=false;
+            try{fmv_pack(bad_pack.data(),bad_pack.size());}catch(const std::exception&){rejected=true;}
+            check(rejected,"malformed movie pack rejected before mounting");
+        }
+        bool trailing_rejected=false;
+        movie_fixture.push_back(0);
+        try{fmv_pack(movie_fixture.data(),movie_fixture.size());}catch(const std::exception&){trailing_rejected=true;}
+        check(trailing_rejected,"trailing movie bytes rejected");
+        if(argc==4 && !std::strcmp(argv[1],"--fan")) {
+            check(original.Open(argv[2]),"open original US disc for movie-only qualification");
+            exe=read_file("SLUS_005.61");
+            std::copy(exe.begin()+2048,exe.end(),ram.begin()+0x10000);
+            const auto stock_ram=ram;
+            std::ifstream pack_file(argv[3],std::ios::binary);
+            auto pack=std::make_shared<std::vector<uint8_t>>(std::istreambuf_iterator<char>(pack_file),std::istreambuf_iterator<char>());
+            const auto extents=fmv_pack(pack->data(),pack->size());donor_bytes=pack;
+            for(const char* selected:{"en","es"}) {
+                const char* plugin="mmx4.japanese-fmvs";movie_subtitles=selected;
+                for(const auto& pair:resetters())pair.second();
+                ram=stock_ram;replacements.clear();next_lba=251793;appended=0;
+                activation().at(plugin)();
+                check(appended==10 && replacements.empty(),"only ten stream extents are mounted");
+                check(ram==stock_ram,"no table publication before executable entry");
+                entries().at(plugin)(nullptr,0x800dae8c);
+                auto expected=stock_ram;uint32_t lba=251793;
+                for(unsigned i=0;i<10;++i) {
+                    const unsigned at=0xf149c+i*12;
+                    put32(expected,at,lba);put32(expected,at+4,extents[i].sectors*2336);
+                    put32(expected,at+8,u32(pack->data()+extents[i].offset));lba+=extents[i].sectors;
+                }
+                check(ram==expected,"movie-only changes preserve every other executable/script/font byte");
+                // A simultaneous Japanese-media selection must not mount a
+                // second movie campaign, preserving the native CD LBA limit.
+                options=1;activation().at("mmx4.japanese-media")();
+                check(appended==10,"one selected fan campaign mounts once; voices/title do not mount movies");
+                bool duplicate_rejected=false;
+                try{activation().at(plugin)();}catch(const std::exception&){duplicate_rejected=true;}
+                check(duplicate_rejected,"second subtitle campaign refused");
+            }
+            std::cout<<"PASS: real fan movies, native LBA contract and script/font/gameplay isolation\n";return 0;
+        }
         std::vector<Member> fixture{{9,{1,2,3}},{0x10001,std::vector<uint8_t>(32768,0)}};
         const auto built=pack(fixture);check(unpack(built)[0].data==fixture[0].data,"ARC round trip");
         std::vector<uint8_t> opaque_header(built.begin(),built.begin()+2048);opaque_header[2047]=0xa7;
@@ -121,7 +172,8 @@ int main(int argc,char** argv) {
             for(const auto& r:resetters())r.second();
             replacements.clear();aperture.clear();appended=0;next_lba=original.GetSectorCount();next_guest=0x8f100000;
             std::fill(ram.begin(),ram.end(),0);std::copy(exe.begin()+0x800,exe.end(),ram.begin()+0x10000);
-            if(options&7)activation().at("mmx4.japanese-media")();
+            if(options&1)activation().at("mmx4.japanese-fmvs")();
+            if(options&6)activation().at("mmx4.japanese-media")();
             if(options&8)activation().at("mmx4.translation")();
             const auto not_entered=ram;
             for(const auto& cb:ticks())cb.second();

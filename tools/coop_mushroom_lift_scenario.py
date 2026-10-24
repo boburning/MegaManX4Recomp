@@ -10,6 +10,44 @@ import time
 from coop_debug import capture_pair
 
 
+def mushroom_lift_crush(s):
+    """Trace the reported idle position through real lift/ceiling collision.
+
+    An observation probe: no panels, collision data or death outcomes are set.
+    Damage protection excludes enemy hits but deliberately preserves crushes.
+    """
+    r=s.r
+    s.load(3,1,2);r.fixture(5,3)
+    initial=s.wait('lift-crush-riders',lambda v:all(p['grounded'] for p in v['players']),15)
+    for seat,x in ((0,6030),(1,6052)):
+        r.teleport(seat,x,round(initial['players'][seat]['y']))
+    r.request('wtrace_range',lo='0x80141924',hi='0x80141925')
+    r.request('wtrace_clear')
+    rows=[];started=time.monotonic()
+    try:
+        while time.monotonic()-started<120:
+            row=s.sample('lift-crush-%d'%len(rows))
+            row['contacts']=[list(b[0x70:0x7a]) for b in r.players()]
+            lift=r.read(0x80165a30,32*0x8c)
+            row['lifts']=[dict(slot=n,phase=list(b[4:8]),
+                x=struct.unpack_from('<i',b,8)[0]/65536,
+                y=struct.unpack_from('<i',b,12)[0]/65536)
+                for n in range(32) if (b:=lift[n*0x8c:(n+1)*0x8c])[0] and b[1]==14]
+            rows.append(row)
+            if len(rows)%60==1 and getattr(s,'capture_composed',True):
+                capture_pair(r,s.output/('lift-creep-%03d.png'%len(rows)))
+            if any(p['hp']==0 for p in row['players']):
+                (s.output/'lift-terminal-writes.json').write_text(json.dumps(
+                    r.request('wtrace_dump',count=4096,newest=1),indent=2))
+                if getattr(s,'capture_composed',True):capture_pair(r,s.output/'lift-creep-terminal.png')
+                break
+            time.sleep(.06)
+    finally:
+        r.release()
+        (s.output/'lift-creep-observations.json').write_text(json.dumps(rows,indent=2)+'\n')
+    return dict(observation_only=True,terminal=rows[-1],panels_cleared=False)
+
+
 def mushroom_lift_high_jump(s):
     r = s.r
     state = next(c['count'] for c in r.request('mod_counters')['counters']

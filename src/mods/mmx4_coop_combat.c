@@ -380,6 +380,11 @@ static int allocate_actor(CPUState *cpu, uint32_t address) {
     return mmx4_coop_finish(cpu,actor);
 }
 
+unsigned mmx4_coop_secondary_allocation_owner(uint32_t actor) {
+    if(actor<SECONDARY_POOL || actor>=SECONDARY_POOL+SECONDARY_CAPACITY*SECONDARY_STRIDE ||
+       (actor-SECONDARY_POOL)%SECONDARY_STRIDE)return 0;
+    return secondary_owner[(actor-SECONDARY_POOL)/SECONDARY_STRIDE];
+}
 unsigned mmx4_coop_vehicle_effect_owner(uint32_t actor) {
     if(actor>=EFFECT_POOL && actor<EFFECT_POOL+EFFECT_CAPACITY*EFFECT_STRIDE &&
        !((actor-EFFECT_POOL)%EFFECT_STRIDE)) {
@@ -809,9 +814,14 @@ static void update_actor(CPUState *cpu,uint32_t address) {
     uint32_t stage_colors=mushroom_palette?psx_mod_read_word(0x1F800024u):0;
     uint32_t stage_palette=mushroom_palette?psx_mod_read_word(0x1F800028u):0;
     uint8_t scene_camera[0xFC];
+    unsigned dragoon_admission=psx_mod_read_byte(MMX4_PLAY+12)==4 &&
+        psx_mod_read_byte(MMX4_PLAY+13)==1 && psx_mod_read_byte(actor+1)==65 &&
+        psx_mod_read_byte(actor+4)==1 && psx_mod_read_byte(actor+5)==2 &&
+        !psx_mod_read_byte(actor+6);
     int own_scene_camera=target && actor_pool==0x80021234u &&
-        psx_mod_read_byte(MMX4_PLAY+12)==3 && !psx_mod_read_byte(MMX4_PLAY+13) &&
-        psx_mod_read_byte(actor+1)==33 && !psx_mod_read_byte(actor+4) &&
+        (dragoon_admission || (psx_mod_read_byte(MMX4_PLAY+12)==3 &&
+        !psx_mod_read_byte(MMX4_PLAY+13) && psx_mod_read_byte(actor+1)==33 &&
+        !psx_mod_read_byte(actor+4))) &&
         mmx4_coop_split_scene_camera_begin(target,scene_camera);
     uint32_t result=0;
     if(actors[target].active || vehicle_owner || captured) {
@@ -849,9 +859,9 @@ static void update_actor(CPUState *cpu,uint32_t address) {
                 (uint8_t)(psx_mod_read_byte(0x80166BB0u)|palette_refresh));
         }
     }
-    /* The Mushroom midboss issues its intro directly on allocation. Start
-     * that one scene from its entering hero's actual view; otherwise the
-     * native pan begins at a distant P1 camera and initially hides P2.
+    /* Mushroom's allocation and Dragoon's7DF50 directly admit a shared
+     * scene. Start that scene from its entering hero's actual view;
+     * otherwise the native pan begins at a distant P1 camera and hides P2.
      * Normal fight targeting and other enemy camera state stay unchanged. */
     if(own_scene_camera)mmx4_coop_split_scene_camera_end(target,scene_camera,
         mmx4_coop_lifecycle_script_owner()==(int)target);

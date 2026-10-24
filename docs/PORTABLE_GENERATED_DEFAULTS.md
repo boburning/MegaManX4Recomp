@@ -1,42 +1,34 @@
 # Portable generated-default adoption and rebuild
 
-This is a source contribution prepared from game commit
+This source contribution originally started from game commit
 `a3c75e2b5c00e7283cd4de771b074cd73c037011` (the annotated `v1.0.2` tag resolves
 to that commit). No release, package build, game run or publication is claimed.
 
 ## Framework source
 
-The game's `psxrecomp-v4` pin advances from
-`00f484fee6ace3f7f73420f0d60b0235d23af176` to the accepted commit
-`4c08013a0f4277a73583f41ce77278e15f454b92`, merged through
-RetroPortingToolKit/psxrecomp#747 into the consumed framework branch. Its tree
-`4f9a1ad91042f309be23f68de66bbffe371ade4c` exactly matches the reviewed and tested
-backport `8c65e235a1473f01410da18a1bd872800289a925`. It is a conflict-free cherry-pick of
-`572558394b5b737690138f8374c80b032c3d84ba`, the five-file portable-default repair
-merged in RetroPortingToolKit/psxrecomp#685 as
-`ac71aec441b9fa6382e687dd412fc228d9ef7f3f`. Both diffs have stable patch ID
-`132bcc399628b3368dec7c612d7fb29eb918584d`.
+The October 24 conflict resolution merges game master
+`8032596` (the 1.0.6 release) into this proposal. The framework gitlink is
+`5d5238ba0a686b4f347d41876e8e57da7a05408e`, a merge of the current game's
+`a251a98616f0c8f9e45c90c7ca71d20da71b8b21` with the accepted portable-default
+backport `4c08013a0f4277a73583f41ce77278e15f454b92` (#747).
+Both parents are ancestors: original-disc content/geometry checks and conditional
+FMV resource selection are preserved alongside the generated-default repair.
+The two textual framework conflicts retain both adjacent manager methods and
+both runtime regression blocks. The combined resolver retains the condition
+filter and passes the generated fallback into effective resource resolution.
 
-This preserves the complete consumed framework lineage. Replacing it wholesale
-with `ac71aec` would also change unrelated framework behavior: the two histories
-diverge at `68425a4add89acd0a6ca325bf90e3f8a69d6377f`. `recomp-ui` remains pinned
-to `b964eabe5a3438b8ed121064354ba27c1accef3f`. No generated game C, disc data,
-BIOS profile, renderer, netplay policy, explicit player path or game configuration
-is changed here.
+This integration commit is retained on
+[boburning/psxrecomp:feature/mmx4-portable-defaults-integration](https://github.com/boburning/psxrecomp/tree/feature/mmx4-portable-defaults-integration).
+It is a contributor integration, not a newly accepted upstream framework merge.
+A fresh empty Git repository successfully fetched its exact SHA through the
+unchanged declared URL `https://github.com/mstan/psxrecomp.git` on October 24.
+`recomp-ui` remains `b964eabe5a3438b8ed121064354ba27c1accef3f`.
+No disc data, generated game C or built game output is included.
 
-The declared submodule URL `https://github.com/mstan/psxrecomp.git` resolves to
-`RetroPortingToolKit/psxrecomp`. Its maintained branch
-`feat/native-font-localization-20261020` now exposes the accepted `4c08013a`
-through that declared source. This preserves the consumed branch rather than
-replacing it with framework `master`, where #685 was already merged.
-
-The game submission target is `mstan/MegaManX4Recomp:master` (currently exact
-`a3c75e2b5c00e7283cd4de771b074cd73c037011`), from planned
-`boburning/MegaManX4Recomp:feature/portable-generated-default-adoption`. That
-source proposal uses that exact reachable framework commit in its gitlink. No
-alternate contributor submodule URL is introduced. Source equality with the
-tested backport was checked after the upstream squash; the commit identity is
-the accepted `4c08013a`, not the contributor's earlier `8c65e235`.
+The earlier accepted backport `4c08013a` had tree
+`4f9a1ad91042f309be23f68de66bbffe371ade4c`, matching the reviewed/tested
+`8c65e235a1473f01410da18a1bd872800289a925`. Those historical byte-equality
+claims apply to that backport, not the new integration tree.
 
 The repair registers generated texture directories in the existing ephemeral
 manager map rooted at the current mods directory. The launcher getter and
@@ -47,22 +39,29 @@ hide the previous default-persistence failure.
 
 ## Focused checks
 
-- Review `git -C psxrecomp-v4 diff 00f484f..4c08013`: exactly the original header,
-  package manager, runtime registration and two framework test files.
-- Run `python tests/test_release_config.py` against this game source. This checks
-  the existing title/configuration contracts, not runtime relocation.
-- In a disposable resource-admitted framework build, compile and run the existing
-  `mod_packages_test` and `mod_runtime_test` targets. The repair's disabled-default
-  relocation, launcher/resolver, cwd, explicit selection, containment and
-  shared-source refusal assertions must remain intact. Earlier native framework
-  checks at other source pins do not qualify this new integration. The previously
-  observed same-size/restored-mtime file-identity failure remains recorded; do not
-  claim the complete runtime suite passes without its actual result.
+October 24 source validation:
+
+- All seven `python tests/test_release_config.py` checks passed.
+- A fresh Release CMake build of the existing `mod_packages_test` and
+  `mod_runtime_test` targets passed with two compile jobs and the game's exact
+  recomp-ui header (`RECOMP_LAUNCHER=1`). Both test executables passed, including
+  retained conditional-picker and portable relocation assertions. The runtime
+  executable also passed all four registered netplay argument variants:
+  `--missing-profile`, `--missing-renderer`, `--profile-options` and
+  `--option-renderer-missing`.
+- This focused framework configuration disables netplay, rewind, setup wizard
+  and Vulkan and allows absent BIOS; it builds test targets, not a game artifact.
+  The first configure refused the absent rewind backend; the corrected configure
+  explicitly disabled rewind. CTest was unavailable in PATH, so the six exact
+  registered executable/argument combinations were run directly.
+- Whitespace checks passed. Earlier framework file-identity and native game
+  default-persistence failures retain their historical scope; these passing
+  focused tests do not reclassify them or qualify runtime relocation in a game.
 
 ## Produce two genuine game artifacts
 
-The concrete proposed next pair is Windows `v1.0.5` and the following ordinary
-`v1.0.6` release, each rebuilt from its own exact game source and the fixed
+The concrete proposed next pair is Windows `v1.0.7` and the following ordinary
+`v1.0.8` release, each rebuilt from its own exact game source and the fixed
 framework. These labels are prepared release inputs, not existing releases or
 publisher authorization. A maintainer may select the actual next ordinary
 versions, but must retain two different exact source/tag/asset identities.
@@ -77,26 +76,26 @@ versions, but must retain two different exact source/tag/asset identities.
    `PSX_DEBUG_TOOLS=OFF`, `MMX4_COOP_NETPLAY_DEBUG=OFF`, `PSX_STATIC_RUNTIME=ON`
    and `PSX_EXECUTION_PROFILE=ENHANCED`, with both framework-root CMake variables
    pointing at this exact checkout. Preserve the existing BIOS/recompiler setup.
-   Both version files now propose `v1.0.5`; CMake reads
+   Both version files now propose `v1.0.7`; CMake reads
    `packaging/release/VERSION`. A rebuilt executable/version stamp must match it.
 3. Stage with the existing non-destructive packager, supplying the actual fresh
    build and binary directories:
 
    ```text
-   python tools/package_coop_playtest.py --build-dir BUILD_A --binary-dir BIN_A --output-dir release-portable-1.0.5
+   python tools/package_coop_playtest.py --build-dir BUILD_A --binary-dir BIN_A --output-dir release-portable-1.0.7
    ```
 
    It requires a new output directory, production CMake settings, the exact
    version stamp and current mod catalog. It applies the existing framework
    executable/manifest, license, system-DLL, toolchain and private-data gates.
-   Expected artifact: `MegaManX4Recomp-v1.0.5-windows-x64.zip`, with its generated
+   Expected artifact: `MegaManX4Recomp-v1.0.7-windows-x64.zip`, with its generated
    `SHA256SUMS.txt` and `package-report.json`. Retain source/tree/framework pin,
    CMake cache, complete build log, executable SHA-256, execution manifest and
    package SHA-256. A version stamp alone does not authenticate the executable.
-4. For the following ordinary `v1.0.6` source, advance the normal version files,
+4. For the following ordinary `v1.0.8` source, advance the normal version files,
    keep the repaired framework, regenerate/rebuild in different fresh directories
    and use a different fresh package output. Expected second artifact:
-   `MegaManX4Recomp-v1.0.6-windows-x64.zip`. Do not rezip an old executable,
+   `MegaManX4Recomp-v1.0.8-windows-x64.zip`. Do not rezip an old executable,
    rename framework test binaries or reuse the first package as a second artifact.
 5. The maintainer's normal release publication must bind each actual tag/source
    and complete asset inventory/digest. Then verify the downloaded bytes and
@@ -106,7 +105,7 @@ versions, but must retain two different exact source/tag/asset identities.
 The historical public `v1.0.0` Windows asset was `663658987`, release `420007858`,
 36,291,201 bytes, provider SHA-256
 `2d6863b02a0baf32900b257d65b4607b580e0f9cb17e2964b3217582e541b68c`.
-Its source still uses the unfixed framework. Public v1.0.1, v1.0.2 and v1.0.3 sources also retain the same unpatched framework00f. The occupied v1.0.3 release421284185 points to source160818ef7b77d5e349e9f86f5429dfcf5b2657ca and asset667335830; it does not incorporate this repair. Public v1.0.4 is now occupied too: release422093155, source458f5bfbecec78ce02cfb5d9325952f691a19a62 and Windows asset669763307 (35,997,076bytes, provider SHA25643532dabe39e1015b21dbc0d0e397af147a67f850611b1e4bed05b6464970519). Its framework pin91fc45d4151eb3cbe20b3773a6c7a55cb8423e10 still lacks the generated-default API and registers an absolute texture-pack directory through set_feature_resource_path. It does not incorporate this repair; no package execution is claimed. Fresh exact tag reads for v1.0.5 and v1.0.6 returned404 on October23; proposed labels must be rechecked before any future release. Their occupied release labels are not reused for the proposed repaired pair. This is provider/source inspection
+Its source still uses the unfixed framework. Public v1.0.1, v1.0.2 and v1.0.3 sources also retain the same unpatched framework00f. The occupied v1.0.3 release421284185 points to source160818ef7b77d5e349e9f86f5429dfcf5b2657ca and asset667335830; it does not incorporate this repair. Public v1.0.4 is now occupied too: release422093155, source458f5bfbecec78ce02cfb5d9325952f691a19a62 and Windows asset669763307 (35,997,076bytes, provider SHA25643532dabe39e1015b21dbc0d0e397af147a67f850611b1e4bed05b6464970519). Its framework pin91fc45d4151eb3cbe20b3773a6c7a55cb8423e10 still lacks the generated-default API and registers an absolute texture-pack directory through set_feature_resource_path. It does not incorporate this repair; no package execution is claimed. Historical exact tag reads for v1.0.5 and v1.0.6 returned404 on October23; those labels have since been used upstream. On October24, exact tag reads found no v1.0.7 or v1.0.8; proposed labels must be rechecked before any future release. Their occupied release labels are not reused for the proposed repaired pair. This is provider/source inspection
 only: that package was not downloaded or run in this preparation. The earlier
 real `.35`/`.36` full-default-persistence failures remain failures; `.42`/`.43`
 also retain their unrepaired-source scope.

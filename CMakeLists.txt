@@ -239,6 +239,9 @@ if(BUILD_TESTING)
     add_test(NAME mmx4_coop_background_test COMMAND mmx4_coop_background_test)
     find_package(Python3 3.11 COMPONENTS Interpreter QUIET)
     if(Python3_Interpreter_FOUND)
+        add_test(NAME mmx4_fmv_import_test
+            COMMAND "${Python3_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_fmv_import.py")
         add_test(NAME mmx4_translation_mod_test
             COMMAND "${Python3_EXECUTABLE}"
                     "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_translation_mod.py")
