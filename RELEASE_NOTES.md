@@ -1,4 +1,22 @@
-# Mega Man X4 Recompiled - 1.0.6 Stable Public Beta
+# Mega Man X4 Recompiled - 1.0.7 Stable Public Beta
+
+- Fixed X's stored charged-shot indicators appearing under Zero's HUD. The icons now belong to the X player in Split and follow that player's HUD layout in Unified, including when Zero is Player 1.
+- Fixed missing screen shake when Player 2 leads down Magma Dragoon's first slope ahead of the rolling boulders. Each eligible camera retains its own native shake timing.
+- Fixed Web Spider's upper-ladder camera becoming trapped after Player 1 dies. The surviving Player 2 can descend to the lower floor and climb back normally; the existing Sigma 1 ladder correction is retained.
+- Diagnostic recording remains optional and **off by default**. Public packages omit CD Speed, Fast Loading and developer cheats. The original, unmodified USA disc remains required.
+
+**Both netplay peers must update.** Native memory-card saves carry forward;
+emulator save states are build-specific. Japanese movies, voices and title art,
+plus Spanish and Brazilian Portuguese text, retain their existing mod options.
+
+This is a focused two-player co-op update. See the
+[integration checks and qualification limits](docs/COOP_107_INTEGRATION.md),
+[stored-charge HUD evidence](docs/COOP_STORED_CHARGE_HUD.md),
+[first-slope evidence](docs/COOP_106_SLOPE_RUMBLE.md), and
+[survivor-ladder evidence](docs/COOP_WEB_SPIDER_LADDER_106.md).
+Full-campaign coverage and fresh cross-OS netplay remain unqualified.
+
+## Previous v1.0.6 Stable Public Beta
 
 - Fixed Sigma 1's camera staying trapped near the first boss door after Player 1 dies. The surviving Player 2 can descend the ladder and land on the lower platform normally.
 - Fixed Player 2 failing to trigger the platform-breaking fireballs at the beginning of Magma Dragoon's second area. The original fireball timers and terrain destruction now run with either player leading.
